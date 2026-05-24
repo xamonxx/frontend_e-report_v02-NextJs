@@ -49,8 +49,10 @@ import {
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 
 export default function MasterDataPage() {
+  const confirm = useConfirm()
   const [activeTab, setActiveTab] = useState<'categories' | 'statuses' | 'users'>('categories')
 
   const [userSearch, setUserSearch] = useState('')
@@ -270,8 +272,16 @@ export default function MasterDataPage() {
     }
   }
 
-  const handleDeleteCat = (id: number) => {
-    if (confirm('Hapus kategori kebutuhan ini? Kategori yang masih digunakan tidak dapat dihapus.')) {
+  const handleDeleteCat = async (id: number) => {
+    const isConfirmed = await confirm({
+      title: 'Hapus Kategori?',
+      description: 'Hapus kategori kebutuhan ini? Kategori yang masih digunakan tidak dapat dihapus.',
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (isConfirmed) {
       deleteCat.mutate(id, {
         onSuccess: (res) => toast.success(res.message || 'Kategori kebutuhan berhasil dihapus.'),
         onError: (err: any) => toast.error(err.message || 'Kategori ini masih digunakan.'),
@@ -279,8 +289,16 @@ export default function MasterDataPage() {
     }
   }
 
-  const handleDeleteStat = (id: number) => {
-    if (confirm('Hapus status pipeline ini? Status yang masih digunakan tidak dapat dihapus.')) {
+  const handleDeleteStat = async (id: number) => {
+    const isConfirmed = await confirm({
+      title: 'Hapus Status?',
+      description: 'Hapus status pipeline ini? Status yang masih digunakan tidak dapat dihapus.',
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (isConfirmed) {
       deleteStat.mutate(id, {
         onSuccess: (res) => toast.success(res.message || 'Status berhasil dihapus.'),
         onError: (err: any) => toast.error(err.message || 'Status ini masih digunakan.'),
@@ -288,8 +306,16 @@ export default function MasterDataPage() {
     }
   }
 
-  const handleDeleteUser = (id: number) => {
-    if (confirm('Hapus akun pengguna admin ini? Seluruh riwayat audit log operator akan tetap dipertahankan.')) {
+  const handleDeleteUser = async (id: number) => {
+    const isConfirmed = await confirm({
+      title: 'Hapus User?',
+      description: 'Hapus akun pengguna admin ini? Seluruh riwayat audit log operator akan tetap dipertahankan.',
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (isConfirmed) {
       deleteUser.mutate(id, {
         onSuccess: (res) => {
           toast.success(res.message || 'User berhasil dihapus.')

@@ -26,8 +26,10 @@ import {
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
 import { buildExportUrl } from '@/lib/api/client'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 
 export default function AccountsPage() {
+  const confirm = useConfirm()
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
   const [page, setPage] = useState(1)
@@ -125,8 +127,16 @@ export default function AccountsPage() {
     }
   }
 
-  const handleDelete = (id: number) => {
-    if (confirm('Apakah Anda yakin ingin menghapus cabang ini? Seluruh admin yang terhubung akan dilepaskan cabangnya.')) {
+  const handleDelete = async (id: number) => {
+    const isConfirmed = await confirm({
+      title: 'Hapus Cabang?',
+      description: 'Apakah Anda yakin ingin menghapus cabang ini? Seluruh admin yang terhubung akan dilepaskan cabangnya.',
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (isConfirmed) {
       deleteMutation.mutate(id, {
         onSuccess: (res) => {
           toast.success(res.message || 'Cabang berhasil dihapus.')

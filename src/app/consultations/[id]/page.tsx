@@ -38,12 +38,14 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { cn, rawPhoneDigits } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 
 type PageParams = {
   id: string
 }
 
 export default function ConsultationDetailPage({ params }: { params: Promise<PageParams> }) {
+  const confirm = useConfirm()
   const resolvedParams = use(params)
   const consultationId = parseInt(resolvedParams.id, 10)
 
@@ -112,8 +114,16 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
     })
   }
 
-  const handleNoteDelete = (noteId: number) => {
-    if (confirm('Hapus catatan ini dari timeline?')) {
+  const handleNoteDelete = async (noteId: number) => {
+    const isConfirmed = await confirm({
+      title: 'Hapus Catatan?',
+      description: 'Hapus catatan ini dari timeline?',
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (isConfirmed) {
       deleteNoteMutation.mutate(noteId, {
         onSuccess: () => {
           toast.success('Catatan berhasil dihapus')
@@ -147,8 +157,16 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
     )
   }
 
-  const handleReminderDelete = (reminderId: number) => {
-    if (confirm('Hapus reminder ini?')) {
+  const handleReminderDelete = async (reminderId: number) => {
+    const isConfirmed = await confirm({
+      title: 'Hapus Pengingat?',
+      description: 'Hapus reminder ini?',
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (isConfirmed) {
       deleteReminderMutation.mutate(reminderId, {
         onSuccess: () => {
           toast.success('Reminder berhasil dihapus')
@@ -241,6 +259,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
+                {/* Nama Lengkap */}
                 <div className="flex items-start gap-3">
                   <User className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
                   <div>
@@ -249,6 +268,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                   </div>
                 </div>
 
+                {/* No. Telepon / WhatsApp */}
                 <div className="flex items-start gap-3">
                   <Phone className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
                   <div>
@@ -269,19 +289,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                   </div>
                 </div>
 
-                <div className="flex items-start gap-3 sm:col-span-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Alamat Lengkap</p>
-                    <p className="text-xs text-foreground/80 font-medium leading-relaxed">
-                      {consultation.address || '-'}
-                      {consultation.district && `, Kec. ${consultation.district}`}
-                      {consultation.city && `, ${consultation.city}`}
-                      {consultation.province && `, ${consultation.province}`}
-                    </p>
-                  </div>
-                </div>
-
+                {/* Tanggal Konsultasi */}
                 <div className="flex items-start gap-3">
                   <Calendar className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
                   <div>
@@ -299,6 +307,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                   </div>
                 </div>
 
+                {/* Kategori Kebutuhan */}
                 <div className="flex items-start gap-3">
                   <Tag className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
                   <div>
@@ -308,6 +317,68 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                     </p>
                   </div>
                 </div>
+
+                {/* Alamat Lengkap */}
+                {consultation.address && (
+                  <div className="flex items-start gap-3 sm:col-span-2 border-t border-border/40 pt-4 dark:border-zinc-800/40">
+                    <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Alamat Lengkap</p>
+                      <p className="text-xs text-foreground/80 font-medium leading-relaxed">
+                        {consultation.address}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Region Sub-grid (Kecamatan, Kota / Kabupaten, Provinsi) */}
+                {(consultation.district || consultation.city || consultation.province) && (
+                  <div className={cn(
+                    "grid gap-4 sm:grid-cols-3 sm:col-span-2 pt-4",
+                    consultation.address ? "border-t border-border/20 dark:border-zinc-800/20" : "border-t border-border/40 dark:border-zinc-800/40"
+                  )}>
+                    {consultation.district && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Kecamatan</p>
+                          <p className="text-xs text-foreground/80 font-medium">{consultation.district}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {consultation.city && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Kota / Kabupaten</p>
+                          <p className="text-xs text-foreground/80 font-medium">{consultation.city}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {consultation.province && (
+                      <div className="flex items-start gap-3">
+                        <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Provinsi</p>
+                          <p className="text-xs text-foreground/80 font-medium">{consultation.province}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Fallback if everything is empty */}
+                {!consultation.address && !consultation.district && !consultation.city && !consultation.province && (
+                  <div className="flex items-start gap-3 sm:col-span-2 border-t border-border/40 pt-4 dark:border-zinc-800/40">
+                    <MapPin className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Alamat Lengkap</p>
+                      <p className="text-xs text-foreground/80 font-medium">-</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -418,7 +489,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                 <div className="flex gap-2">
                   <div className="flex-1">
                     <Input
-                      type="date"
+                      type="datetime-local"
                       value={reminderDate}
                       onChange={(e) => setReminderDate(e.target.value)}
                       className="h-8 text-xs border-border bg-background focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
@@ -458,11 +529,18 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                             {new Date(rem.remind_at).toLocaleDateString('id-ID', {
                               day: 'numeric',
                               month: 'short',
-                              year: 'numeric'
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
                             })}
                           </span>
+                          {rem.creator && (
+                            <span className="text-[9px] text-muted-foreground/60 italic ml-1">
+                              (oleh {rem.creator.name})
+                            </span>
+                          )}
                           {rem.is_read && (
-                            <span className="text-green-600 dark:text-green-400 font-semibold">(Selesai)</span>
+                            <span className="text-green-600 dark:text-green-400 font-semibold ml-1">(Selesai)</span>
                           )}
                         </p>
                       </div>

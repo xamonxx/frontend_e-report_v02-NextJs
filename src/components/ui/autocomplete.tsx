@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import { createPortal } from 'react-dom'
 import { ChevronDown, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -19,6 +20,7 @@ interface AutocompleteProps {
   className?: string
   id?: string
   isLoading?: boolean
+  onlyChangeOnSelect?: boolean
 }
 
 export function Autocomplete({
@@ -30,12 +32,14 @@ export function Autocomplete({
   className,
   id,
   isLoading = false,
+  onlyChangeOnSelect = false,
 }: AutocompleteProps) {
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState('')
   const [highlightedIndex, setHighlightedIndex] = React.useState(-1)
   const containerRef = React.useRef<HTMLDivElement>(null)
   const listRef = React.useRef<HTMLUListElement>(null)
+  const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties>({})
 
   const normalizedOptions = React.useMemo(() => {
     return options.map((opt) => {
@@ -47,8 +51,9 @@ export function Autocomplete({
   }, [options])
 
   React.useEffect(() => {
-    setSearchTerm(value || '')
-  }, [value])
+    const matched = normalizedOptions.find(opt => opt.value === value)
+    setSearchTerm(matched ? matched.label : (value || ''))
+  }, [value, normalizedOptions])
 
   const filteredOptions = React.useMemo(() => {
     const term = searchTerm.toLowerCase().trim()
@@ -80,11 +85,15 @@ export function Autocomplete({
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setOpen(false)
+        if (onlyChangeOnSelect) {
+          const matched = normalizedOptions.find(opt => opt.value === value)
+          setSearchTerm(matched ? matched.label : '')
+        }
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  }, [onlyChangeOnSelect, normalizedOptions, value])
 
   React.useEffect(() => {
     if (open && highlightedIndex >= 0 && listRef.current) {
@@ -93,15 +102,45 @@ export function Autocomplete({
     }
   }, [highlightedIndex, open])
 
+  React.useEffect(() => {
+    if (!open || !containerRef.current) return
+
+    const update = () => {
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      if (rect.bottom < 0 || rect.top > window.innerHeight) {
+        setOpen(false)
+        return
+      }
+      setDropdownStyle({
+        position: 'fixed',
+        top: rect.bottom + 6,
+        left: rect.left,
+        width: rect.width,
+        zIndex: 9999,
+      })
+    }
+
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [open])
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
     setSearchTerm(val)
-    onChange(val)
+    if (!onlyChangeOnSelect) {
+      onChange(val)
+    }
     setOpen(true)
   }
 
   const handleSelectOption = (option: AutocompleteOption) => {
-    setSearchTerm(option.value)
+    setSearchTerm(option.label)
     onChange(option.value)
     setOpen(false)
   }
@@ -171,31 +210,35 @@ export function Autocomplete({
           disabled={disabled}
           autoComplete="off"
           className={cn(
-            "w-full h-8 rounded-lg border border-border bg-background pl-3 pr-8 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-40 transition-all font-sans dark:border-zinc-800 dark:bg-zinc-950",
+            "w-full h-8 rounded-lg border border-border bg-background pl-3 pr-11 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/50 disabled:opacity-40 transition-all font-sans dark:border-zinc-800 dark:bg-zinc-950",
             className
           )}
         />
-        <div className="absolute right-2.5 flex items-center gap-1.5 text-muted-foreground/60">
+        <div className="absolute right-2.5 flex items-center gap-1 text-muted-foreground/50">
           {isLoading ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : searchTerm && !disabled ? (
-            <button
-              type="button"
-              onClick={handleClear}
-              className="hover:text-foreground p-0.5 rounded-full hover:bg-muted transition-colors dark:hover:bg-zinc-800"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : (
-            <ChevronDown className="h-3.5 w-3.5 pointer-events-none" />
+            <>
+              {searchTerm && !disabled && (
+                <button
+                  type="button"
+                  onClick={handleClear}
+                  className="hover:text-foreground p-0.5 rounded-full hover:bg-muted transition-colors dark:hover:bg-zinc-800"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+              <ChevronDown className="h-3.5 w-3.5 pointer-events-none" />
+            </>
           )}
         </div>
       </div>
 
-      {open && !disabled && (
+      {open && !disabled && typeof document !== 'undefined' && createPortal(
         <ul
           ref={listRef}
-          className="absolute z-50 w-full mt-1.5 max-h-56 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl py-1 focus:outline-none scrollbar-thin dark:border-zinc-800 dark:bg-zinc-950"
+          style={dropdownStyle}
+          className="max-h-56 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl py-1 focus:outline-none scrollbar-thin dark:border-zinc-800 dark:bg-zinc-950"
         >
           {filteredOptions.length === 0 ? (
             <li className="px-3 py-2.5 text-xs text-muted-foreground italic font-sans">
@@ -231,7 +274,8 @@ export function Autocomplete({
               )
             })
           )}
-        </ul>
+        </ul>,
+        document.body
       )}
     </div>
   )

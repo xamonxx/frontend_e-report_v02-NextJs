@@ -46,6 +46,9 @@ export const queryKeys = {
   auditLogs: {
     all: ['audit-logs'] as const,
   },
+  onlineUsers: {
+    all: ['online-users'] as const,
+  },
   debug: {
     all: ['debug'] as const,
     stats: () => [...queryKeys.debug.all, 'stats'] as const,

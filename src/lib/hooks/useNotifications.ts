@@ -9,7 +9,7 @@ export function useNotificationCount() {
   return useQuery({
     queryKey: queryKeys.notifications.count(),
     queryFn: () => api.get<NotificationCount>('/notifications'),
-    refetchInterval: 30000, // Poll every 30s
+    refetchInterval: 10000, // Poll every 10s
   })
 }
 
@@ -17,7 +17,7 @@ export function useNotificationSummary() {
   return useQuery({
     queryKey: queryKeys.notifications.summary(),
     queryFn: () => api.get<NotificationSummary>('/notifications/summary'),
-    refetchInterval: 30000, // Poll every 30s
+    refetchInterval: 10000, // Poll every 10s
   })
 }
 

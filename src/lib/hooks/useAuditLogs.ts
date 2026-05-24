@@ -16,6 +16,8 @@ export type AuditLogItem = {
   old_values: Record<string, any> | null
   new_values: Record<string, any> | null
   created_at: string
+  ip_address: string | null
+  user_agent: string | null
   user?: { id: number; name: string } | null
 }
 

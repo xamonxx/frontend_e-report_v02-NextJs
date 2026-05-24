@@ -32,8 +32,10 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 
 export default function DebugPage() {
+  const confirm = useConfirm()
   const { data: stats, isLoading: isStatsLoading, refetch: refetchStats, isRefetching: isStatsRefetching } = useDebugStats()
   const generateMutation = useGenerateDummy()
   const clearMutation = useClearDummy()
@@ -73,8 +75,16 @@ export default function DebugPage() {
     )
   }
 
-  const handleClear = () => {
-    if (!confirm('Apakah Anda yakin ingin menghapus semua data dummy? Tindakan ini permanen.')) {
+  const handleClear = async () => {
+    const isConfirmed = await confirm({
+      title: 'Hapus Semua Data Dummy?',
+      description: 'Apakah Anda yakin ingin menghapus semua data dummy? Tindakan ini permanen.',
+      actionLabel: 'Hapus Semua',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (!isConfirmed) {
       return
     }
 
@@ -97,8 +107,16 @@ export default function DebugPage() {
     )
   }
 
-  const handleClearLogs = () => {
-    if (!confirm('Apakah Anda yakin ingin membersihkan seluruh log sistem (log file Laravel & audit log database)? Tindakan ini permanen.')) {
+  const handleClearLogs = async () => {
+    const isConfirmed = await confirm({
+      title: 'Bersihkan Log Sistem?',
+      description: 'Apakah Anda yakin ingin membersihkan seluruh log sistem (log file Laravel & audit log database)? Tindakan ini permanen.',
+      actionLabel: 'Bersihkan',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (!isConfirmed) {
       return
     }
 

@@ -1,12 +1,17 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAnalytics } from '@/lib/hooks/useAnalytics'
 import { useAccounts } from '@/lib/hooks/useMasterData'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Autocomplete, AutocompleteOption } from '@/components/ui/autocomplete'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { format } from 'date-fns'
 import {
   AreaChart,
   Area,
@@ -14,13 +19,15 @@ import {
   Bar,
   PieChart,
   Pie,
+  Sector,
   Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
+  LabelList
 } from 'recharts'
 import {
   TrendingUp,
@@ -36,6 +43,7 @@ import {
   Target,
   Percent,
   Clock,
+  CalendarIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { cn } from '@/lib/utils'
@@ -55,8 +63,19 @@ export default function AnalyticsPage() {
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [weekDate, setWeekDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [datePickerOpen, setDatePickerOpen] = useState(false)
 
   const { data: accounts } = useAccounts()
+
+  const accountOptions = useMemo(() => {
+    const opts: AutocompleteOption[] = [{ label: 'Semua Cabang', value: 'all' }]
+    if (accounts) {
+      accounts.forEach((acc) => {
+        opts.push({ label: acc.name, value: String(acc.id) })
+      })
+    }
+    return opts
+  }, [accounts])
 
   const { data: response, isLoading, isRefetching, refetch } = useAnalytics({
     period_type: periodType,
@@ -89,6 +108,58 @@ export default function AnalyticsPage() {
     backdropFilter: 'blur(8px)',
     fontSize: '11px',
     color: 'var(--foreground)',
+  }
+
+  const renderBarTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    const color = payload[0]?.fill || payload[0]?.color || '#f59e0b'
+    return (
+      <div style={{ ...chartTooltipStyle, padding: '8px 12px' }}>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>{label}</p>
+        <p style={{ fontSize: '11px', color }}>Jumlah : {payload[0]?.value}</p>
+      </div>
+    )
+  }
+
+  const renderAreaTooltip = ({ active, payload, label }: any) => {
+    if (!active || !payload?.length) return null
+    return (
+      <div style={{ ...chartTooltipStyle, padding: '8px 12px' }}>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>{label}</p>
+        {payload.map((p: any, i: number) => (
+          <p key={i} style={{ fontSize: '11px', color: p.stroke || p.color || p.fill }}>
+            {p.name} : {p.value}
+          </p>
+        ))}
+      </div>
+    )
+  }
+
+  const renderPieTooltip = ({ active, payload }: any) => {
+    if (!active || !payload?.length) return null
+    const color = payload[0]?.payload?.fill || payload[0]?.fill || payload[0]?.color || '#f59e0b'
+    return (
+      <div style={{ ...chartTooltipStyle, padding: '8px 12px' }}>
+        <p style={{ fontSize: '11px', fontWeight: 700, color: 'var(--foreground)', marginBottom: 4 }}>{payload[0]?.name}</p>
+        <p style={{ fontSize: '11px', color }}>Jumlah : {payload[0]?.value}</p>
+      </div>
+    )
+  }
+
+  const renderActiveShape = (props: any) => {
+    const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props
+    return (
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 4}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+        stroke="transparent"
+      />
+    )
   }
 
   return (
@@ -148,35 +219,41 @@ export default function AnalyticsPage() {
 
       {/* Filter panel */}
       <div className="glass-panel p-5 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:shadow-black/25">
-        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-5">
+        <div className={cn(
+          "grid gap-4 grid-cols-1 sm:grid-cols-2",
+          isSuperAdmin 
+            ? (periodType === 'yearly' ? "md:grid-cols-3" : "md:grid-cols-4") 
+            : (periodType === 'yearly' ? "md:grid-cols-2" : "md:grid-cols-3")
+        )}>
           {/* Period Type */}
           <div className="space-y-1.5">
             <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Rentang Periode</Label>
-            <select
-              value={periodType}
-              onChange={(e) => setPeriodType(e.target.value as any)}
-              className="w-full h-10 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500/50 hover:bg-muted/50 transition-all duration-300 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200"
-            >
-              <option value="weekly">Mingguan</option>
-              <option value="monthly">Bulanan</option>
-              <option value="yearly">Tahunan</option>
-            </select>
+            <Select value={periodType} onValueChange={(v) => v && setPeriodType(v as any)}>
+              <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50">
+                <SelectValue>
+                  {periodType === 'weekly' ? 'Mingguan' : periodType === 'monthly' ? 'Bulanan' : 'Tahunan'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weekly">Mingguan</SelectItem>
+                <SelectItem value="monthly">Bulanan</SelectItem>
+                <SelectItem value="yearly">Tahunan</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Account Selector (Super Admin Only) */}
           {isSuperAdmin && (
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Cabang</Label>
-              <select
-                value={selectedAccount || ''}
-                onChange={(e) => setSelectedAccount(e.target.value ? parseInt(e.target.value, 10) : undefined)}
-                className="w-full h-10 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500/50 hover:bg-muted/50 transition-all duration-300 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200"
-              >
-                <option value="">Semua Cabang</option>
-                {accounts?.map((acc) => (
-                  <option key={acc.id} value={acc.id}>{acc.name}</option>
-                ))}
-              </select>
+              <Autocomplete
+                value={selectedAccount ? String(selectedAccount) : 'all'}
+                onChange={(v) => setSelectedAccount(v && v !== 'all' ? parseInt(v, 10) : undefined)}
+                options={accountOptions}
+                placeholder="Cari Cabang..."
+                onlyChangeOnSelect={true}
+                className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50"
+              />
             </div>
           )}
 
@@ -184,17 +261,20 @@ export default function AnalyticsPage() {
           {periodType === 'monthly' && (
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Bulan</Label>
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(parseInt(e.target.value, 10))}
-                className="w-full h-10 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500/50 hover:bg-muted/50 transition-all duration-300 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200"
-              >
-                {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
-                  <option key={m} value={m}>
-                    {new Date(2000, m - 1).toLocaleString('id-ID', { month: 'long' })}
-                  </option>
-                ))}
-              </select>
+              <Select value={String(selectedMonth)} onValueChange={(v) => v && setSelectedMonth(parseInt(v, 10))}>
+                <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50">
+                  <SelectValue>
+                    {new Date(2000, selectedMonth - 1).toLocaleString('id-ID', { month: 'long' })}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                    <SelectItem key={m} value={String(m)}>
+                      {new Date(2000, m - 1).toLocaleString('id-ID', { month: 'long' })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -202,12 +282,24 @@ export default function AnalyticsPage() {
           {periodType === 'weekly' && (
             <div className="space-y-1.5">
               <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Tanggal Acuan</Label>
-              <Input
-                type="date"
-                value={weekDate}
-                onChange={(e) => setWeekDate(e.target.value)}
-                className="h-10 border-border bg-background/60 text-xs text-foreground rounded-xl focus-visible:ring-amber-500/20 focus-visible:border-amber-500/50 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300"
-              />
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger className="inline-flex w-full h-10 items-center justify-start gap-2 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground transition-all hover:bg-muted/50 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 cursor-pointer">
+                  <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  {weekDate ? format(new Date(weekDate + 'T12:00:00'), 'd MMM yyyy') : 'Pilih tanggal'}
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={weekDate ? new Date(weekDate + 'T12:00:00') : undefined}
+                    onSelect={(date) => {
+                      if (date) {
+                        setWeekDate(format(date, 'yyyy-MM-dd'))
+                        setDatePickerOpen(false)
+                      }
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           )}
 
@@ -350,11 +442,11 @@ export default function AnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" opacity={0.5} vertical={false} />
                       <XAxis dataKey="label" stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                       <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={chartTooltipStyle} />
+                      <Tooltip content={renderAreaTooltip} />
                       <Legend verticalAlign="top" height={36} iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', color: '#94a3b8' }} />
-                      <Area name="Total Leads" type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={2} fill="url(#totalG)" />
-                      <Area name="Surveys" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" />
-                      <Area name="Deals" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" />
+                      <Area name="Total Lead" type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={2} fill="url(#totalG)" />
+                      <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" />
+                      <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 ) : (
@@ -368,53 +460,44 @@ export default function AnalyticsPage() {
               <CardHeader>
                 <CardTitle className="text-sm font-bold text-foreground">Kategori Kebutuhan</CardTitle>
                 <CardDescription className="text-[11px] text-muted-foreground">
-                  Distribusi minat produk yang paling banyak diajukan klien
+                  Minat produk interior terbanyak
                 </CardDescription>
               </CardHeader>
-              <CardContent className="h-72 flex items-center justify-center">
+              <CardContent className="h-72">
                 {!isMounted ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
                   </div>
                 ) : needsData.length > 0 ? (
-                  <div className="flex w-full h-full items-center justify-around">
-                    <div className="w-[55%] h-full">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                        <PieChart>
-                          <Pie
-                            data={needsData}
-                            dataKey="count"
-                            nameKey="name"
-                            cx="50%"
-                            cy="50%"
-                            innerRadius={65}
-                            outerRadius={85}
-                            paddingAngle={3}
-                          >
-                            {needsData.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(148,163,184,0.15)" strokeWidth={1} />
-                            ))}
-                          </Pie>
-                          <Tooltip contentStyle={chartTooltipStyle} itemStyle={{ fontSize: '11px', color: 'var(--foreground)' }} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="flex flex-col gap-2 max-h-[90%] overflow-y-auto pr-2 scrollbar-thin">
-                      {needsData.slice(0, 6).map((item: any, idx: number) => (
-                        <div key={`${item.name}-${idx}`} className="flex items-center gap-2">
-                          <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }} />
-                          <span className="text-[10px] text-muted-foreground font-semibold truncate max-w-[100px]" title={item.name}>
-                            {item.name}
-                          </span>
-                          <span className="text-[10px] text-muted-foreground/70 font-bold ml-auto">
-                            {item.count}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <BarChart
+                      layout="vertical"
+                      data={[...needsData].sort((a: any, b: any) => b.count - a.count).slice(0, 10)}
+                      margin={{ top: 0, right: 36, left: 0, bottom: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.1)" opacity={0.5} horizontal={false} />
+                      <XAxis type="number" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        stroke="#94a3b8"
+                        fontSize={9}
+                        tickLine={false}
+                        axisLine={false}
+                        width={90}
+                        tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 14) + '…' : v}
+                      />
+                      <Tooltip content={renderBarTooltip} />
+                      <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                        {[...needsData].sort((a: any, b: any) => b.count - a.count).slice(0, 10).map((_: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                        <LabelList dataKey="count" position="right" style={{ fontSize: '9px', fill: '#94a3b8' }} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
                 ) : (
-                  <p className="text-xs text-muted-foreground/50">Belum ada data kategori kebutuhan</p>
+                  <p className="text-xs text-muted-foreground/50 flex h-full items-center justify-center">Belum ada data kategori kebutuhan</p>
                 )}
               </CardContent>
             </Card>
@@ -438,11 +521,7 @@ export default function AnalyticsPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" opacity={0.5} vertical={false} />
                       <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
                       <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
-                      <Tooltip
-                        contentStyle={chartTooltipStyle}
-                        labelStyle={{ color: 'var(--foreground)', fontSize: '11px', fontWeight: 'bold' }}
-                        itemStyle={{ color: '#f59e0b', fontSize: '11px' }}
-                      />
+                      <Tooltip content={renderBarTooltip} />
                       <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                         {statusData.map((entry: any, index: number) => (
                           <Cell key={`cell-${index}`} fill={entry.color || '#94a3b8'} />
@@ -483,12 +562,13 @@ export default function AnalyticsPage() {
                             innerRadius={65}
                             outerRadius={85}
                             paddingAngle={3}
+                            activeShape={renderActiveShape}
                           >
                             {westJavaSegmentData.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} stroke="rgba(148,163,184,0.15)" strokeWidth={1} />
+                              <Cell key={`cell-${index}`} fill={entry.color || COLORS[index % COLORS.length]} stroke="transparent" strokeWidth={0} />
                             ))}
                           </Pie>
-                          <Tooltip contentStyle={chartTooltipStyle} itemStyle={{ fontSize: '11px', color: 'var(--foreground)' }} />
+                          <Tooltip content={renderPieTooltip} />
                         </PieChart>
                       </ResponsiveContainer>
                     </div>

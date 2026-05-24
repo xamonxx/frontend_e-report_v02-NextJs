@@ -3,36 +3,27 @@
 import { useState, useEffect } from 'react'
 import { useAuditLogs } from '@/lib/hooks/useAuditLogs'
 import { useUsersList } from '@/lib/hooks/useMasterData'
-import { Card, CardContent } from '@/components/ui/card'
+import { useOnlineUsers } from '@/lib/hooks/useOnlineUsers'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import {
-  Search,
-  Calendar,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  ShieldCheck,
-  RefreshCw,
-  Trash2
+  Search, Calendar, Loader2, ChevronLeft, ChevronRight,
+  ShieldCheck, RefreshCw, Trash2, Clock, Users, Globe,
 } from 'lucide-react'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { useClearLogs } from '@/lib/hooks/useDebug'
 import { toast } from 'sonner'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 
 export default function AuditLogsPage() {
+  const confirm = useConfirm()
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
   const [actionFilter, setActionFilter] = useState('')
@@ -40,38 +31,42 @@ export default function AuditLogsPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
-
-  // Reset to first page when search filters change
-  useEffect(() => {
-    setPage(1)
-  }, [debouncedSearch, actionFilter, userIdFilter, startDate, endDate])
-
   const [selectedLog, setSelectedLog] = useState<any | null>(null)
 
   const user = useAuthStore((s) => s.user)
   const isSuperAdmin = user?.role === 'super_admin'
   const clearLogsMutation = useClearLogs()
 
-  const handleClearLogs = () => {
-    if (!confirm('Apakah Anda yakin ingin membersihkan seluruh log sistem (log file Laravel & audit log database)? Tindakan ini permanen.')) {
-      return
-    }
+  useEffect(() => {
+    setPage(1)
+  }, [debouncedSearch, actionFilter, userIdFilter, startDate, endDate])
 
+  const { data: onlineData, dataUpdatedAt } = useOnlineUsers()
+  const onlineUsers = onlineData?.data ?? []
+  const onlineCount = onlineData?.count ?? 0
+  const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null
+
+  const handleClearLogs = async () => {
+    const isConfirmed = await confirm({
+      title: 'Bersihkan Log Sistem?',
+      description: 'Apakah Anda yakin ingin membersihkan seluruh log sistem (log file Laravel & audit log database)? Tindakan ini permanen.',
+      actionLabel: 'Bersihkan',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+    if (!isConfirmed) return
     toast.promise(
       new Promise((resolve, reject) => {
         clearLogsMutation.mutate(undefined, {
-          onSuccess: (data) => {
-            refetch()
-            resolve(data)
-          },
-          onError: (err) => reject(err)
+          onSuccess: (data) => { refetch(); resolve(data) },
+          onError: (err) => reject(err),
         })
       }),
       {
         loading: 'Membersihkan log sistem...',
         success: (data: any) => data.message || 'Log sistem berhasil dibersihkan!',
-        error: (err: any) => err?.response?.data?.message || 'Gagal membersihkan log sistem.'
-      }
+        error: (err: any) => err?.response?.data?.message || 'Gagal membersihkan log sistem.',
+      },
     )
   }
 
@@ -92,20 +87,18 @@ export default function AuditLogsPage() {
 
   const getActionBadgeColor = (action: string) => {
     switch (action) {
-      case 'created':
-        return 'border-green-500/20 text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/20'
-      case 'updated':
-        return 'border-amber-500/20 text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20'
-      case 'deleted':
-        return 'border-red-500/20 text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/20'
+      case 'created':   return 'border-green-500/20 text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/20'
+      case 'updated':   return 'border-amber-500/20 text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20'
+      case 'deleted':   return 'border-red-500/20 text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-950/20'
       case 'retrieved':
-      default:
-        return 'border-blue-500/20 text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/20'
+      default:          return 'border-blue-500/20 text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/20'
     }
   }
 
   return (
     <div className="space-y-6">
+
+      {/* ── Header ─────────────────────────────────────────── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground dark:bg-gradient-to-r dark:from-amber-200 dark:via-amber-400 dark:to-amber-100 dark:bg-clip-text dark:text-transparent flex items-center gap-2.5">
@@ -122,27 +115,113 @@ export default function AuditLogsPage() {
             size="sm"
             onClick={handleClearLogs}
             disabled={clearLogsMutation.isPending}
-            className="font-bold rounded-xl h-9 shadow-sm border border-red-500/20 bg-red-500 hover:bg-red-650 transition-all duration-300 self-start sm:self-auto"
+            className="font-bold rounded-xl h-9 shadow-sm border border-red-500/20 bg-red-500 hover:bg-red-600 transition-all duration-300 self-start sm:self-auto"
           >
             {clearLogsMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Membersihkan...
-              </>
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Membersihkan...</>
             ) : (
-              <>
-                <Trash2 className="h-4 w-4 mr-2" />
-                Bersihkan Log Sistem
-              </>
+              <><Trash2 className="h-4 w-4 mr-2" />Bersihkan Log Sistem</>
             )}
           </Button>
         )}
       </div>
 
-      {/* Filters Card */}
+      {/* ── Online Users Panel ──────────────────────────────── */}
+      <div className="glass-panel border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:shadow-black/25 overflow-hidden">
+        {/* Header strip */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-border/50 dark:border-zinc-800/50 bg-muted/30 dark:bg-zinc-950/40">
+          <div className="flex items-center gap-2.5">
+            {/* Pulsing indicator */}
+            <div className="relative flex items-center justify-center h-4 w-4 shrink-0">
+              <span className={cn(
+                'absolute inline-flex h-full w-full rounded-full opacity-60',
+                onlineCount > 0 ? 'bg-green-500 animate-ping' : 'bg-zinc-500',
+              )} />
+              <span className={cn(
+                'relative inline-flex rounded-full h-2 w-2',
+                onlineCount > 0 ? 'bg-green-500' : 'bg-zinc-500',
+              )} />
+            </div>
+            <span className="text-xs font-bold text-foreground/80">User Online Sekarang</span>
+            <Badge
+              variant="outline"
+              className={cn(
+                'text-[10px] font-bold px-2 py-0 h-5 rounded-full',
+                onlineCount > 0
+                  ? 'bg-green-500/10 border-green-500/30 text-green-600 dark:text-green-400'
+                  : 'bg-muted border-border text-muted-foreground',
+              )}
+            >
+              {onlineCount} online
+            </Badge>
+          </div>
+          {lastUpdated && (
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/50">
+              <Clock className="h-3 w-3" />
+              <span>{lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
+              <span className="opacity-60">· auto 30s</span>
+            </div>
+          )}
+        </div>
+
+        {/* User cards */}
+        <div className="px-5 py-3.5">
+          {onlineUsers.length === 0 ? (
+            <div className="flex items-center gap-2 text-xs text-muted-foreground/45 py-0.5">
+              <Users className="h-3.5 w-3.5" />
+              <span>Tidak ada user yang aktif dalam 5 menit terakhir.</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {onlineUsers.map((u) => {
+                const secondsAgo = Math.floor((Date.now() - new Date(u.last_seen_at).getTime()) / 1000)
+                const timeLabel = secondsAgo < 60
+                  ? `${secondsAgo}d lalu`
+                  : `${Math.floor(secondsAgo / 60)}m lalu`
+                const isSA = u.role === 'super_admin'
+
+                return (
+                  <div
+                    key={u.id}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border/60 bg-background/60 dark:border-zinc-800/60 dark:bg-zinc-950/40 hover:border-green-500/30 hover:bg-green-500/5 transition-all duration-200"
+                  >
+                    {/* Avatar */}
+                    <div className="relative shrink-0">
+                      <div className={cn(
+                        'h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold',
+                        isSA
+                          ? 'bg-amber-500/15 border border-amber-500/30 text-amber-500'
+                          : 'bg-blue-500/15 border border-blue-500/30 text-blue-500',
+                      )}>
+                        {u.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-green-500 border border-background ring-1 ring-green-500/30" />
+                    </div>
+                    {/* Info */}
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-foreground/90 truncate leading-none">{u.name}</p>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        <span className={cn(
+                          'text-[9px] font-bold uppercase tracking-wide',
+                          isSA ? 'text-amber-500' : 'text-blue-500',
+                        )}>
+                          {u.role_label}
+                        </span>
+                        <span className="text-[9px] text-muted-foreground/45">· {timeLabel}</span>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Filters Card ────────────────────────────────────── */}
       <div className="glass-panel p-5 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:shadow-black/25">
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-5">
-          {/* Search Input */}
+          {/* Search */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground/60" />
             <Input
@@ -153,57 +232,57 @@ export default function AuditLogsPage() {
             />
           </div>
 
-          {/* Action Select */}
-          <div>
-            <select
-              value={actionFilter}
-              onChange={(e) => setActionFilter(e.target.value)}
-              className="w-full h-8 rounded-lg border border-border/80 bg-background/60 px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all cursor-pointer dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-200"
-            >
-              <option value="">Semua Aksi</option>
-              <option value="created">Created (Penambahan)</option>
-              <option value="updated">Updated (Perubahan)</option>
-              <option value="deleted">Deleted (Penghapusan)</option>
-              <option value="retrieved">Retrieved (Pencarian)</option>
-            </select>
-          </div>
+          {/* Action */}
+          <select
+            value={actionFilter}
+            onChange={(e) => setActionFilter(e.target.value)}
+            className="w-full h-8 rounded-lg border border-border/80 bg-background/60 px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all cursor-pointer dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-200"
+          >
+            <option value="">Semua Aksi</option>
+            <option value="created">Created (Penambahan)</option>
+            <option value="updated">Updated (Perubahan)</option>
+            <option value="deleted">Deleted (Penghapusan)</option>
+            <option value="retrieved">Retrieved (Pencarian)</option>
+          </select>
 
-          {/* Operator/User select */}
-          <div>
-            <select
-              value={userIdFilter}
-              onChange={(e) => setUserIdFilter(e.target.value)}
-              className="w-full h-8 rounded-lg border border-border/80 bg-background/60 px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all cursor-pointer dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-200"
-            >
-              <option value="">Semua User</option>
-              {usersList.map((usr) => (
-                <option key={usr.id} value={usr.id}>
-                  {usr.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* User */}
+          <select
+            value={userIdFilter}
+            onChange={(e) => setUserIdFilter(e.target.value)}
+            className="w-full h-8 rounded-lg border border-border/80 bg-background/60 px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/30 transition-all cursor-pointer dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-200"
+          >
+            <option value="">Semua User</option>
+            {usersList.map((usr) => (
+              <option key={usr.id} value={usr.id}>{usr.name}</option>
+            ))}
+          </select>
 
           {/* Start Date */}
-          <div className="relative">
-            <Calendar className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
-            <Input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="pl-9 h-8 border-border/80 bg-background/60 text-xs text-foreground focus-visible:ring-amber-500/30 rounded-lg dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-300"
-            />
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold text-muted-foreground/60 pl-1">Tanggal Awal</p>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="pl-9 h-8 border-border/80 bg-background/60 text-xs text-foreground focus-visible:ring-amber-500/30 rounded-lg dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-300"
+              />
+            </div>
           </div>
 
           {/* End Date */}
-          <div className="relative">
-            <Calendar className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
-            <Input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="pl-9 h-8 border-border/80 bg-background/60 text-xs text-foreground focus-visible:ring-amber-500/30 rounded-lg dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-300"
-            />
+          <div className="space-y-1">
+            <p className="text-[10px] font-semibold text-muted-foreground/60 pl-1">Tanggal Akhir</p>
+            <div className="relative">
+              <Calendar className="absolute left-3 top-2.5 h-3.5 w-3.5 text-muted-foreground/60 pointer-events-none" />
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="pl-9 h-8 border-border/80 bg-background/60 text-xs text-foreground focus-visible:ring-amber-500/30 rounded-lg dark:border-zinc-800/80 dark:bg-zinc-950/60 dark:text-zinc-300"
+              />
+            </div>
           </div>
         </div>
 
@@ -229,27 +308,28 @@ export default function AuditLogsPage() {
             onClick={() => refetch()}
             className="border border-border hover:bg-muted/60 rounded-lg dark:border-zinc-800 dark:hover:bg-zinc-800/40"
           >
-            <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground", isRefetching && "animate-spin")} />
+            <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isRefetching && 'animate-spin')} />
           </Button>
         </div>
       </div>
 
-      {/* Audit Log Table */}
+      {/* ── Audit Log Table ─────────────────────────────────── */}
       <div className="glass-panel border border-border/60 shadow-xl rounded-2xl overflow-hidden dark:border-zinc-800/60 dark:shadow-black/30">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-muted/40 border-b border-border/60 dark:bg-zinc-950/40 dark:border-zinc-800/60">
               <TableRow className="border-border hover:bg-transparent dark:border-zinc-800">
                 <TableHead className="w-[120px] text-muted-foreground text-xs font-bold py-3.5 pl-5">Aksi</TableHead>
-                <TableHead className="w-[180px] text-muted-foreground text-xs font-bold py-3.5">Operator (User)</TableHead>
+                <TableHead className="w-[200px] text-muted-foreground text-xs font-bold py-3.5">Operator (User)</TableHead>
                 <TableHead className="text-muted-foreground text-xs font-bold py-3.5">Keterangan Aktivitas</TableHead>
-                <TableHead className="w-[180px] text-muted-foreground text-xs font-bold py-3.5 pr-5">Tanggal & Waktu</TableHead>
+                <TableHead className="w-[140px] text-muted-foreground text-xs font-bold py-3.5">IP Address</TableHead>
+                <TableHead className="w-[180px] text-muted-foreground text-xs font-bold py-3.5 pr-5">Tanggal &amp; Waktu</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={4} className="h-36 text-center">
+                  <TableCell colSpan={5} className="h-36 text-center">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
                       <span className="text-xs font-semibold">Memuat log aktivitas...</span>
@@ -258,19 +338,23 @@ export default function AuditLogsPage() {
                 </TableRow>
               ) : auditLogs.length === 0 ? (
                 <TableRow className="hover:bg-transparent">
-                  <TableCell colSpan={4} className="h-36 text-center text-muted-foreground text-xs font-semibold">
+                  <TableCell colSpan={5} className="h-36 text-center text-muted-foreground text-xs font-semibold">
                     Tidak ditemukan audit log yang cocok dengan filter pencarian.
                   </TableCell>
                 </TableRow>
               ) : (
                 auditLogs.map((log) => (
-                  <TableRow key={log.id} onClick={() => setSelectedLog(log)} className="border-border/50 hover:bg-muted/30 cursor-pointer transition-all duration-150 dark:border-zinc-800/50 dark:hover:bg-zinc-800/20">
+                  <TableRow
+                    key={log.id}
+                    onClick={() => setSelectedLog(log)}
+                    className="border-border/50 hover:bg-muted/30 cursor-pointer transition-all duration-150 dark:border-zinc-800/50 dark:hover:bg-zinc-800/20"
+                  >
                     <TableCell className="pl-5 py-3">
                       <Badge
                         variant="outline"
                         className={cn(
-                          "text-[10px] rounded-lg font-bold uppercase tracking-wider px-2 py-0.5 border",
-                          getActionBadgeColor(log.action)
+                          'text-[10px] rounded-lg font-bold uppercase tracking-wider px-2 py-0.5 border',
+                          getActionBadgeColor(log.action),
                         )}
                       >
                         {log.action}
@@ -282,14 +366,20 @@ export default function AuditLogsPage() {
                     <TableCell className="text-xs text-foreground/70 leading-relaxed max-w-md pr-4 py-3">
                       {log.description}
                     </TableCell>
+                    <TableCell className="py-3">
+                      {log.ip_address ? (
+                        <div className="flex items-center gap-1.5">
+                          <Globe className="h-3 w-3 text-muted-foreground/50 shrink-0" />
+                          <span className="text-[11px] font-mono text-muted-foreground/70">{log.ip_address}</span>
+                        </div>
+                      ) : (
+                        <span className="text-[11px] text-muted-foreground/30">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-xs text-muted-foreground/70 pr-5 py-3">
                       {new Date(log.created_at).toLocaleString('id-ID', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        second: '2-digit',
+                        day: 'numeric', month: 'long', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
                       })}
                     </TableCell>
                   </TableRow>
@@ -300,7 +390,7 @@ export default function AuditLogsPage() {
         </div>
       </div>
 
-      {/* Pagination controls */}
+      {/* ── Pagination ──────────────────────────────────────── */}
       {meta && meta.last_page > 1 && (
         <div className="flex items-center justify-between pt-2">
           <p className="text-[10px] text-muted-foreground/70">
@@ -334,14 +424,15 @@ export default function AuditLogsPage() {
         </div>
       )}
 
+      {/* ── Detail Dialog ────────────────────────────────────── */}
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="border-border bg-card text-foreground max-w-2xl max-h-[85vh] overflow-y-auto rounded-2xl shadow-2xl dark:border-zinc-800/85 dark:bg-zinc-950/95 dark:backdrop-blur-xl">
+        <DialogContent className="border-border bg-card text-foreground sm:max-w-2xl rounded-2xl shadow-2xl p-0 overflow-hidden dark:border-zinc-800/85 dark:bg-zinc-950/95 dark:backdrop-blur-xl">
           {selectedLog && (
-            <div className="space-y-4">
+            <div className="max-h-[85vh] overflow-y-auto p-5 space-y-4">
               <DialogHeader>
                 <DialogTitle className="text-foreground flex items-center gap-2">
                   <span>Detail Audit Log</span>
-                  <Badge variant="outline" className={cn("text-[10px] rounded-lg font-bold uppercase tracking-wider px-2 py-0.5", getActionBadgeColor(selectedLog.action))}>
+                  <Badge variant="outline" className={cn('text-[10px] rounded-lg font-bold uppercase tracking-wider px-2 py-0.5', getActionBadgeColor(selectedLog.action))}>
                     {selectedLog.action}
                   </Badge>
                 </DialogTitle>
@@ -360,15 +451,11 @@ export default function AuditLogsPage() {
                   <p className="text-foreground/90 font-bold mt-1">{selectedLog.ip_address || '-'}</p>
                 </div>
                 <div className="border border-border/60 bg-muted/20 p-3 rounded-xl sm:col-span-2 dark:border-zinc-800/60 dark:bg-zinc-950/20">
-                  <p className="font-semibold text-muted-foreground/70 uppercase text-[9px]">Tanggal & Waktu</p>
+                  <p className="font-semibold text-muted-foreground/70 uppercase text-[9px]">Tanggal &amp; Waktu</p>
                   <p className="text-foreground/90 font-medium mt-1">
                     {new Date(selectedLog.created_at).toLocaleString('id-ID', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                      second: '2-digit',
+                      day: 'numeric', month: 'long', year: 'numeric',
+                      hour: '2-digit', minute: '2-digit', second: '2-digit',
                     })}
                   </p>
                 </div>
@@ -412,11 +499,10 @@ export default function AuditLogsPage() {
                       <div className="bg-muted/40 p-3 rounded-xl text-[10px] text-foreground/80 overflow-x-auto max-h-40 font-mono space-y-1 border border-amber-500/10 dark:bg-zinc-950 dark:text-zinc-300">
                         {Object.entries(selectedLog.new_values).map(([key, newValue]) => {
                           const oldValue = selectedLog.old_values?.[key]
-                          const hasChanged = oldValue !== newValue && JSON.stringify(oldValue) !== JSON.stringify(newValue)
-                          if (!hasChanged) return null
+                          if (JSON.stringify(oldValue) === JSON.stringify(newValue)) return null
                           return (
                             <div key={key} className="break-words py-0.5 border-b border-border/40 last:border-0 dark:border-zinc-900/60">
-                              <span className="font-bold text-amber-600 dark:text-amber-500">{key}</span>:{" "}
+                              <span className="font-bold text-amber-600 dark:text-amber-500">{key}</span>:{' '}
                               <span className="text-red-500 dark:text-red-400 line-through">{oldValue === null ? 'null' : String(oldValue)}</span>
                               <span className="mx-1.5 text-muted-foreground">→</span>
                               <span className="text-green-600 dark:text-green-400 font-semibold">{newValue === null ? 'null' : String(newValue)}</span>

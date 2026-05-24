@@ -28,15 +28,19 @@ export function CustomSelect({
 }: CustomSelectProps) {
   // Ensure the component is always controlled by using a string fallback
   const currentValue = value || ""
+  const selectedOption = options.find(opt => opt.value === currentValue)
 
   return (
     <Select 
       value={currentValue} 
       onValueChange={(val) => onChange(val || "")} 
       disabled={disabled}
+      items={options}
     >
       <SelectTrigger className={className}>
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder}>
+          {selectedOption ? selectedOption.label : undefined}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {options.map((opt) => (

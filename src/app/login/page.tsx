@@ -19,12 +19,11 @@ const loginSchema = zod.object({
 type LoginFormValues = zod.infer<typeof loginSchema>
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 40, scale: 0.96, filter: 'blur(8px)' },
+  hidden: { opacity: 0, y: 40, scale: 0.96 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    filter: 'blur(0px)',
     transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
   },
 }
@@ -84,8 +83,8 @@ export default function LoginPage() {
           <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-amber-400/20 via-transparent to-indigo-500/15 blur-[3px] dark:from-amber-500/25 dark:to-violet-500/15" />
         </div>
 
-        {/* Card surface — glassmorphism */}
-        <div className="relative rounded-[26px] border border-zinc-200/80 bg-white/80 backdrop-blur-2xl shadow-2xl shadow-black/[0.06] overflow-hidden dark:border-white/[0.06] dark:bg-white/[0.04] dark:shadow-black/60">
+        {/* Card surface — Solid sleek design for performance */}
+        <div className="relative rounded-[26px] border border-zinc-200 bg-white shadow-2xl shadow-black/[0.06] overflow-hidden dark:border-zinc-800 dark:bg-[#12121a] dark:shadow-black/60">
 
           {/* Top amber hairline */}
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent dark:via-amber-500/50" />

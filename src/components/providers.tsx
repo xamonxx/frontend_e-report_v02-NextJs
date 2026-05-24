@@ -6,6 +6,7 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ThemeProvider } from 'next-themes'
+import { ConfirmProvider } from '@/components/ui/confirm-dialog'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -25,7 +26,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true}>
         <TooltipProvider>
-          {children}
+          <ConfirmProvider>
+            {children}
+          </ConfirmProvider>
           <Toaster position="top-right" richColors />
         </TooltipProvider>
       </ThemeProvider>

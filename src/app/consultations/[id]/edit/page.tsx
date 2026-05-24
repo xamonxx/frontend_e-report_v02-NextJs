@@ -413,18 +413,15 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                   <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Pilih Cabang *</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <CustomSelect
+                  <Autocomplete
                     value={selectedAccount ? selectedAccount.toString() : ''}
                     onChange={(val) => setSelectedAccount(val ? parseInt(val, 10) : undefined)}
-                    placeholder="Pilih Cabang"
-                    options={[
-                      { value: "", label: "Pilih Cabang" },
-                      ...(accounts || []).map((acc) => ({
-                        value: acc.id.toString(),
-                        label: acc.name
-                      }))
-                    ]}
-                    className="w-full h-8 rounded-lg border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                    placeholder="Cari/Pilih Cabang"
+                    options={(accounts || []).map((acc) => ({
+                      value: acc.id.toString(),
+                      label: acc.name
+                    }))}
+                    onlyChangeOnSelect
                   />
                 </CardContent>
               </Card>
