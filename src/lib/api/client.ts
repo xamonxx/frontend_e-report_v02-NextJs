@@ -19,10 +19,19 @@ class ApiClient {
    * CORS/cookie mismatch issues (localhost vs IP on same network).
    */
   get baseUrl(): string {
+    let resolvedUrl = this.rawBaseUrl
     if (typeof window !== 'undefined') {
-      return `http://${window.location.hostname}:8000`
+      try {
+        const url = new URL(this.rawBaseUrl)
+        if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+          resolvedUrl = `${url.protocol}//${window.location.hostname}:${url.port || '8000'}`
+        }
+      } catch (e) {
+        // Fallback if URL is not a valid absolute URL
+      }
     }
-    return this.rawBaseUrl
+    // Remove trailing slash if present to avoid double slashes
+    return resolvedUrl.replace(/\/$/, '')
   }
 
   /**
@@ -195,9 +204,7 @@ export const api = new ApiClient(API_BASE)
  * Suitable for Laravel web routes that return streamed file responses.
  */
 export function buildExportUrl(path: string, params?: Record<string, string | number | undefined>): string {
-  const base = typeof window !== 'undefined'
-    ? `http://${window.location.hostname}:8000`
-    : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+  const base = api.baseUrl
   let url = `${base}${path}`
 
   if (params) {
