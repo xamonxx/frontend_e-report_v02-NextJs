@@ -1,4 +1,3 @@
-import type { NextConfig } from "next";
 import path from "node:path";
 import withPWAInit from "@ducanh2912/next-pwa";
 
@@ -10,9 +9,10 @@ const withPWA = withPWAInit({
   reloadOnOnline: true,
 });
 
-const nextConfig: NextConfig = {
+/** @type {import('next').NextConfig} */
+const nextConfig = {
   turbopack: {
-    root: path.resolve(__dirname),
+    root: path.resolve("."),
   },
   allowedDevOrigins: ['192.168.1.22:3000', '192.168.1.22', '192.168.18.12:3000', '192.168.18.12'],
 };
