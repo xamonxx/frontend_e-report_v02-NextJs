@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
 import { api, setAuthToken, removeAuthToken, getAuthToken } from '@/lib/api/client'
@@ -10,33 +10,34 @@ import type { AuthUser } from '@/types'
 
 /**
  * Fetch current authenticated user. Called on app mount.
- * Optimized with localStorage hint to prevent 401 console logs when logged out.
+ * Only calls /auth/me if a Bearer token exists in localStorage.
  */
 export function useCurrentUser() {
   const setUser = useAuthStore((s) => s.setUser)
   const clearUser = useAuthStore((s) => s.clearUser)
+  const storeIsAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const [shouldFetch, setShouldFetch] = useState(false)
-  const [isChecking, setIsChecking] = useState(true)
+  // Skip loading spinner when zustand already has an authenticated session (e.g. post-login navigation)
+  const [isChecking, setIsChecking] = useState(!storeIsAuthenticated)
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Strictly gate on token existence — no token = no /auth/me request
       const hasToken = !!getAuthToken()
       if (!hasToken) {
-        // Clear stale flags when no token exists
-        localStorage.setItem('e_report_logged_in', 'false')
-        clearUser()
+        if (!storeIsAuthenticated) {
+          localStorage.setItem('e_report_logged_in', 'false')
+          clearUser()
+        }
         setIsChecking(false)
         return
       }
       setShouldFetch(true)
     }
-  }, [clearUser])
+  }, [storeIsAuthenticated, clearUser])
 
   const query = useQuery({
     queryKey: queryKeys.auth.me,
     queryFn: async () => {
-      // Double-check token before fetching
       if (!getAuthToken()) {
         throw new Error('No auth token')
       }
@@ -44,7 +45,7 @@ export function useCurrentUser() {
       return res.user
     },
     retry: false,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     enabled: shouldFetch,
   })
 
@@ -87,11 +88,14 @@ export function useLogin() {
       return res
     },
     onSuccess: (data) => {
-      // Store the Bearer token
+      // Store the Bearer token FIRST
       setAuthToken(data.token)
+      // Set user in zustand store
       setUser(data.user)
       localStorage.setItem('e_report_logged_in', 'true')
-      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
+      // Set query data directly instead of invalidating (avoids unnecessary re-fetch)
+      queryClient.setQueryData(queryKeys.auth.me, data.user)
+      // Navigate to dashboard
       router.push('/dashboard')
     },
   })
@@ -105,22 +109,17 @@ export function useLogout() {
   const router = useRouter()
   const clearUser = useAuthStore((s) => s.clearUser)
 
+  const cleanup = useCallback(() => {
+    removeAuthToken()
+    clearUser()
+    localStorage.setItem('e_report_logged_in', 'false')
+    queryClient.clear()
+    router.push('/login')
+  }, [clearUser, queryClient, router])
+
   return useMutation({
     mutationFn: () => api.post<{ message: string }>('/auth/logout'),
-    onSuccess: () => {
-      removeAuthToken()
-      clearUser()
-      localStorage.setItem('e_report_logged_in', 'false')
-      queryClient.clear()
-      router.push('/login')
-    },
-    onError: () => {
-      // Even if logout API fails, clear local state
-      removeAuthToken()
-      clearUser()
-      localStorage.setItem('e_report_logged_in', 'false')
-      queryClient.clear()
-      router.push('/login')
-    },
+    onSuccess: cleanup,
+    onError: cleanup,
   })
 }
