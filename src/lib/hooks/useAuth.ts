@@ -20,20 +20,26 @@ export function useCurrentUser() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      // Only fetch if we have a stored token
+      // Strictly gate on token existence — no token = no /auth/me request
       const hasToken = !!getAuthToken()
-      const hint = localStorage.getItem('e_report_logged_in')
-      const willFetch = hasToken && hint !== 'false'
-      setShouldFetch(willFetch)
-      if (!willFetch) {
+      if (!hasToken) {
+        // Clear stale flags when no token exists
+        localStorage.setItem('e_report_logged_in', 'false')
+        clearUser()
         setIsChecking(false)
+        return
       }
+      setShouldFetch(true)
     }
-  }, [])
+  }, [clearUser])
 
   const query = useQuery({
     queryKey: queryKeys.auth.me,
     queryFn: async () => {
+      // Double-check token before fetching
+      if (!getAuthToken()) {
+        throw new Error('No auth token')
+      }
       const res = await api.get<{ user: AuthUser }>('/auth/me')
       return res.user
     },
@@ -42,7 +48,7 @@ export function useCurrentUser() {
     enabled: shouldFetch,
   })
 
-  const { data, isSuccess, isError, isLoading, isFetched } = query
+  const { data, isSuccess, isError, isFetched } = query
 
   useEffect(() => {
     if (shouldFetch && isFetched) {
