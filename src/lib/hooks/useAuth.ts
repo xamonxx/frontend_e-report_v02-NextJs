@@ -62,11 +62,15 @@ export function useCurrentUser() {
       setUser(data)
       localStorage.setItem('e_report_logged_in', 'true')
     } else if (isError) {
-      clearUser()
-      removeAuthToken()
-      localStorage.setItem('e_report_logged_in', 'false')
+      // Only clear auth on genuine API errors (4xx/5xx), not network/CORS failures
+      const isNetworkError = query.error instanceof TypeError
+      if (!isNetworkError) {
+        clearUser()
+        removeAuthToken()
+        localStorage.setItem('e_report_logged_in', 'false')
+      }
     }
-  }, [data, isSuccess, isError, setUser, clearUser])
+  }, [data, isSuccess, isError, setUser, clearUser, query.error])
 
   return {
     ...query,

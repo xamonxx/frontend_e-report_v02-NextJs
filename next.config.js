@@ -11,6 +11,18 @@ const withPWA = withPWAInit({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  async rewrites() {
+    return [
+      {
+        source: '/api/v1/:path*',
+        destination: 'https://api-ereport.interiorcustom.id/api/v1/:path*',
+      },
+      {
+        source: '/sanctum/:path*',
+        destination: 'https://api-ereport.interiorcustom.id/sanctum/:path*',
+      },
+    ]
+  },
 };
 
 export default withPWA(nextConfig);
