@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api/client'
+import { api, setAuthToken, removeAuthToken, getAuthToken } from '@/lib/api/client'
 import { queryKeys } from '@/lib/api/queryKeys'
 import { useAuthStore } from '@/lib/stores/authStore'
 import type { AuthUser } from '@/types'
@@ -20,8 +20,10 @@ export function useCurrentUser() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      // Only fetch if we have a stored token
+      const hasToken = !!getAuthToken()
       const hint = localStorage.getItem('e_report_logged_in')
-      const willFetch = hint !== 'false'
+      const willFetch = hasToken && hint !== 'false'
       setShouldFetch(willFetch)
       if (!willFetch) {
         setIsChecking(false)
@@ -54,6 +56,7 @@ export function useCurrentUser() {
       localStorage.setItem('e_report_logged_in', 'true')
     } else if (isError) {
       clearUser()
+      removeAuthToken()
       localStorage.setItem('e_report_logged_in', 'false')
     }
   }, [data, isSuccess, isError, setUser, clearUser])
@@ -65,7 +68,7 @@ export function useCurrentUser() {
 }
 
 /**
- * Login mutation. Gets CSRF cookie first, then authenticates.
+ * Login mutation. Authenticates and stores Bearer token.
  */
 export function useLogin() {
   const queryClient = useQueryClient()
@@ -74,11 +77,12 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (credentials: { email: string; password: string; remember?: boolean }) => {
-      await api.getCsrfCookie()
-      const res = await api.post<{ user: AuthUser; message: string }>('/auth/login', credentials)
+      const res = await api.post<{ user: AuthUser; token: string; message: string }>('/auth/login', credentials)
       return res
     },
     onSuccess: (data) => {
+      // Store the Bearer token
+      setAuthToken(data.token)
       setUser(data.user)
       localStorage.setItem('e_report_logged_in', 'true')
       queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
@@ -88,7 +92,7 @@ export function useLogin() {
 }
 
 /**
- * Logout mutation. Clears session and redirects to login.
+ * Logout mutation. Revokes token and redirects to login.
  */
 export function useLogout() {
   const queryClient = useQueryClient()
@@ -98,6 +102,15 @@ export function useLogout() {
   return useMutation({
     mutationFn: () => api.post<{ message: string }>('/auth/logout'),
     onSuccess: () => {
+      removeAuthToken()
+      clearUser()
+      localStorage.setItem('e_report_logged_in', 'false')
+      queryClient.clear()
+      router.push('/login')
+    },
+    onError: () => {
+      // Even if logout API fails, clear local state
+      removeAuthToken()
       clearUser()
       localStorage.setItem('e_report_logged_in', 'false')
       queryClient.clear()

@@ -2,9 +2,37 @@ import type { ApiError } from '@/types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
+const TOKEN_KEY = 'e_report_auth_token'
+
 /**
- * Base API client with Sanctum SPA cookie auth.
- * All requests include credentials (cookies) for session-based auth.
+ * Get stored auth token from localStorage.
+ */
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(TOKEN_KEY)
+}
+
+/**
+ * Set auth token in localStorage.
+ */
+export function setAuthToken(token: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(TOKEN_KEY, token)
+  }
+}
+
+/**
+ * Remove auth token from localStorage.
+ */
+export function removeAuthToken(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(TOKEN_KEY)
+  }
+}
+
+/**
+ * Base API client with Sanctum token-based auth.
+ * Uses Bearer token stored in localStorage for cross-domain compatibility.
  */
 class ApiClient {
   private rawBaseUrl: string
@@ -35,21 +63,12 @@ class ApiClient {
   }
 
   /**
-   * Initialize Sanctum CSRF cookie. Must be called before login.
+   * Initialize Sanctum CSRF cookie. Kept for backward compatibility.
    */
   async getCsrfCookie(): Promise<void> {
     await fetch(`${this.baseUrl}/sanctum/csrf-cookie`, {
       credentials: 'include',
     })
-  }
-
-  /**
-   * Get XSRF-TOKEN from cookies for X-XSRF-TOKEN header.
-   */
-  private getXsrfToken(): string | null {
-    if (typeof document === 'undefined') return null
-    const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/)
-    return match ? decodeURIComponent(match[1]) : null
   }
 
   private async request<T>(
@@ -78,9 +97,10 @@ class ApiClient {
       Accept: 'application/json',
     }
 
-    const xsrf = this.getXsrfToken()
-    if (xsrf) {
-      headers['X-XSRF-TOKEN'] = xsrf
+    // Add Bearer token if available
+    const token = getAuthToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
     }
 
     let fetchBody: BodyInit | undefined
@@ -141,7 +161,7 @@ class ApiClient {
   }
 
   /**
-   * Download a file from the API. Handles auth cookies and triggers browser download.
+   * Download a file from the API. Handles auth token and triggers browser download.
    * Used for Excel/PDF/CSV export endpoints.
    */
   async downloadFile(path: string, params?: Record<string, string | number | undefined>, filename?: string): Promise<void> {
@@ -162,9 +182,10 @@ class ApiClient {
       Accept: 'application/octet-stream',
     }
 
-    const xsrf = this.getXsrfToken()
-    if (xsrf) {
-      headers['X-XSRF-TOKEN'] = xsrf
+    // Add Bearer token
+    const token = getAuthToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
     }
 
     const response = await fetch(url, {
@@ -200,8 +221,8 @@ class ApiClient {
 export const api = new ApiClient(API_BASE)
 
 /**
- * Build export URL for direct window.open downloads (uses session cookie auth).
- * Suitable for Laravel web routes that return streamed file responses.
+ * Build export URL for direct window.open downloads.
+ * Appends auth token as query parameter for cross-domain compatibility.
  */
 export function buildExportUrl(path: string, params?: Record<string, string | number | undefined>): string {
   const base = api.baseUrl
