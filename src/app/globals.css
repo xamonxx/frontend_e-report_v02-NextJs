@@ -336,6 +336,72 @@ select option:checked {
   background-size: 128px 128px;
 }
 
+/* ── App background: sphere grid ──────────────────────────────────────────
+ * Subtle 32px grid + a soft radial glow, used as the page backdrop on every
+ * authenticated screen. Colours adapt to the active theme (light vs .dark). */
+.app-grid-bg {
+  /* Light theme: faint slate grid on an off-white base. */
+  background-color: #f8fafc;
+  background-image:
+    linear-gradient(to right, rgba(100, 116, 139, 0.10) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(100, 116, 139, 0.10) 1px, transparent 1px),
+    radial-gradient(circle at 50% 40%, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+}
+
+.dark .app-grid-bg {
+  /* Dark theme: deep navy base with brighter grid + violet glow. */
+  background-color: #020617;
+  background-image:
+    linear-gradient(to right, rgba(71, 85, 105, 0.30) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(71, 85, 105, 0.30) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+}
+
+/* ── Opaque card surface ──────────────────────────────────────────────────
+ * Every <Card> sits on top of the .app-grid-bg backdrop. We give them a fully
+ * opaque surface so the grid behind doesn't show through. Deliberately NO
+ * `backdrop-filter: blur()` here: backdrop-blur forces the GPU to recomposite
+ * everything behind each card on every paint/scroll, and with ~10 cards over a
+ * multi-layer gradient backdrop that was the single biggest cause of sluggish
+ * navigation/scroll. A solid background already hides the grid — no blur needed. */
+[data-slot="card"] {
+  background-color: #ffffff !important;
+}
+
+.dark [data-slot="card"] {
+  /* --card token (#131b2e), fully opaque. */
+  background-color: #131b2e !important;
+}
+
+/* ── Single-card PDF export ───────────────────────────────────────────────
+ * When a "Save PDF" button marks one card as `.pdf-export-target` and adds
+ * `.printing-pdf` to <body>, the print dialog renders ONLY that card. Charts
+ * stay crisp because they print as vector SVG (no rasterization). */
+@media print {
+  body.printing-pdf * {
+    visibility: hidden !important;
+  }
+
+  body.printing-pdf .pdf-export-target,
+  body.printing-pdf .pdf-export-target * {
+    visibility: visible !important;
+  }
+
+  body.printing-pdf .pdf-export-target {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff !important;
+  }
+}
+
 /* Shimmer sweep for login CTA */
 @keyframes login-shimmer {
   0% { transform: translateX(-100%); }

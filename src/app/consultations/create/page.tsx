@@ -23,7 +23,7 @@ import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { CustomSelect } from '@/components/ui/custom-select'
-import { formatPhoneInput } from '@/lib/utils'
+import { formatPhoneInput, isPhoneValid } from '@/lib/utils'
 
 export default function CreateConsultationPage() {
   const router = useRouter()
@@ -118,6 +118,9 @@ export default function CreateConsultationPage() {
     if (selectedNeeds.length === 0) { toast.error('Pilih minimal satu kategori kebutuhan'); return }
     if (requiresProductDetails && productDetails.trim().length < 3) {
       toast.error('Detail kebutuhan wajib diisi ketika memilih kategori Lain-lain'); return
+    }
+    if (phone.trim() && !isPhoneValid(phone)) {
+      toast.error('Nomor telepon / WhatsApp tidak valid'); return
     }
 
     createMutation.mutate({
@@ -253,8 +256,19 @@ export default function CreateConsultationPage() {
                       value={phone}
                       onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
                       inputMode="tel"
-                      className="border-border bg-background/60 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950/60"
+                      aria-invalid={phone.trim() !== '' && !isPhoneValid(phone)}
+                      className={cn(
+                        "bg-background/60 dark:bg-zinc-950/60",
+                        phone.trim() !== '' && !isPhoneValid(phone)
+                          ? "border-red-500/60 focus-visible:ring-red-500/40 dark:border-red-500/50"
+                          : "border-border focus-visible:ring-amber-500/50 dark:border-zinc-800"
+                      )}
                     />
+                    {phone.trim() !== '' && !isPhoneValid(phone) && (
+                      <p className="text-[11px] font-medium text-red-500 dark:text-red-400">
+                        Nomor tidak valid. Gunakan format lokal (08xx) atau internasional (+62 / +1 …).
+                      </p>
+                    )}
                   </div>
                 </div>
 

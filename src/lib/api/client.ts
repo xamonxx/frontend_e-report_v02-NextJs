@@ -228,16 +228,25 @@ export function buildExportUrl(path: string, params?: Record<string, string | nu
   const base = api.baseUrl
   let url = `${base}${path}`
 
+  const searchParams = new URLSearchParams()
   if (params) {
-    const searchParams = new URLSearchParams()
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== '') {
         searchParams.set(key, String(value))
       }
     })
-    const qs = searchParams.toString()
-    if (qs) url += `?${qs}`
   }
+
+  // Automatically append the auth token if present and calling an API path
+  if (path.startsWith('/api/')) {
+    const token = getAuthToken()
+    if (token) {
+      searchParams.set('token', token)
+    }
+  }
+
+  const qs = searchParams.toString()
+  if (qs) url += `?${qs}`
 
   return url
 }

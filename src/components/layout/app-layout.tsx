@@ -36,6 +36,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
       <div className="flex h-screen w-screen bg-background overflow-hidden text-foreground relative">
+        {/* Sphere grid backdrop (theme-aware: light vs dark) */}
+        <div className="app-grid-bg absolute inset-0 z-0 pointer-events-none" />
+
         {/* Decorative subtle glows */}
         <div className="absolute top-0 right-0 h-[400px] w-[400px] rounded-full bg-amber-500/[0.02] blur-[120px] pointer-events-none z-0" />
         <div className="absolute bottom-0 left-[200px] h-[300px] w-[300px] rounded-full bg-amber-700/[0.015] blur-[100px] pointer-events-none z-0" />

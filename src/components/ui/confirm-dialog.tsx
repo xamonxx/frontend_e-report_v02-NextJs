@@ -28,33 +28,34 @@ export function ConfirmProvider({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = React.useState(false)
   const [options, setOptions] = React.useState<ConfirmOptions | null>(null)
   const resolveRef = React.useRef<((value: boolean) => void) | null>(null)
-  const confirmedRef = React.useRef<boolean>(false)
 
   const confirm = React.useCallback((opts: ConfirmOptions) => {
     setOptions(opts)
-    confirmedRef.current = false
     setOpen(true)
     return new Promise<boolean>((resolve) => {
       resolveRef.current = resolve
     })
   }, [])
 
+  // Resolve the pending promise exactly once, then close.
+  const settle = (value: boolean) => {
+    resolveRef.current?.(value)
+    resolveRef.current = null
+    setOpen(false)
+  }
+
+  // Fires when the dialog is dismissed via ESC / backdrop (no explicit choice).
+  // Programmatic closes from settle() leave resolveRef null, so this is a no-op then.
   const handleOpenChange = (isOpen: boolean) => {
     setOpen(isOpen)
     if (!isOpen) {
-      resolveRef.current?.(confirmedRef.current)
+      resolveRef.current?.(false)
+      resolveRef.current = null
     }
   }
 
-  const handleConfirm = () => {
-    confirmedRef.current = true
-    setOpen(false)
-  }
-
-  const handleCancel = () => {
-    confirmedRef.current = false
-    setOpen(false)
-  }
+  const handleConfirm = () => settle(true)
+  const handleCancel = () => settle(false)
 
   return (
     <ConfirmContext.Provider value={confirm}>

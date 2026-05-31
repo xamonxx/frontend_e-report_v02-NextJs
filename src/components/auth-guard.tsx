@@ -6,7 +6,7 @@ import { useCurrentUser } from '@/lib/hooks/useAuth'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { Loader2 } from 'lucide-react'
 
-const SUPER_ADMIN_ONLY_PATHS = ['/accounts', '/master-data', '/audit-logs']
+const SUPER_ADMIN_ONLY_PATHS = ['/accounts', '/master-data', '/audit-logs', '/debug']
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()

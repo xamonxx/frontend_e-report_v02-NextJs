@@ -1,6 +1,8 @@
 'use client'
 
-import { useNotificationSummary, useMarkNoteRead, useMarkReminderRead } from '@/lib/hooks/useNotifications'
+import { useState } from 'react'
+import Link from 'next/link'
+import { useNotificationCount, useNotificationSummary, useMarkNoteRead, useMarkReminderRead } from '@/lib/hooks/useNotifications'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,18 +10,27 @@ import { Bell, MessageSquare, Clock, Check, Loader2 } from 'lucide-react'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { cn } from '@/lib/utils'
+import PushToggle from './push-toggle'
 
 import { buttonVariants } from '@/components/ui/button'
 
 export default function NotificationCenter() {
-  const { data: summary, isLoading } = useNotificationSummary()
+  const [open, setOpen] = useState(false)
+  // Always-on lightweight poll drives the badge.
+  const { data: count } = useNotificationCount()
+  // Heavy detail payload only fetched/polled while the panel is open.
+  const { data: summary, isLoading } = useNotificationSummary(open)
   const markNoteRead = useMarkNoteRead()
   const markReminderRead = useMarkReminderRead()
 
-  const totalUnread = summary ? summary.unread_notes + summary.upcoming_reminders : 0
+  const totalUnread = count
+    ? count.unread_notes + count.upcoming_reminders
+    : summary
+      ? summary.unread_notes + summary.upcoming_reminders
+      : 0
 
   return (
-    <Popover>
+    <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), "relative text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800")}>
         <Bell className="h-5 w-5" />
         {totalUnread > 0 && (
@@ -31,11 +42,14 @@ export default function NotificationCenter() {
       <PopoverContent className="w-80 border-zinc-800 bg-zinc-900 text-zinc-100 p-0 shadow-2xl" align="end">
         <div className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
           <h3 className="font-semibold text-sm">Notifikasi</h3>
-          {totalUnread > 0 && (
-            <Badge variant="outline" className="border-amber-500/30 text-amber-400 text-xs">
-              {totalUnread} Unread
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            <PushToggle />
+            {totalUnread > 0 && (
+              <Badge variant="outline" className="border-amber-500/30 text-amber-400 text-xs">
+                {totalUnread} Unread
+              </Badge>
+            )}
+          </div>
         </div>
 
         <Tabs defaultValue="notes" className="w-full">
@@ -67,33 +81,51 @@ export default function NotificationCenter() {
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-800">
-                  {summary.notes.map((note) => (
-                    <div key={note.id} className="p-3 hover:bg-zinc-800/40 group relative transition-colors">
-                      <div className="flex items-start gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-800 text-xs font-bold text-amber-500 uppercase">
+                  {summary.notes.map((note) => {
+                    const inner = (
+                      <>
+                        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-zinc-800 text-xs font-bold text-amber-500 uppercase shrink-0">
                           {note.author_initial}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-semibold text-zinc-300">{note.author_name}</p>
                           <p className="text-xs text-zinc-400 truncate mt-0.5">{note.body}</p>
                           <p className="text-[10px] text-zinc-500 mt-1 flex items-center gap-1">
-                            <span>{note.consultation_name}</span>
+                            <span className="truncate">{note.consultation_name}</span>
                             <span>•</span>
-                            <span>{note.created_human}</span>
+                            <span className="shrink-0">{note.created_human}</span>
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => markNoteRead.mutate(note.id)}
-                          className="opacity-0 group-hover:opacity-100 h-6 w-6 text-zinc-400 hover:text-green-400 hover:bg-zinc-800 transition-opacity shrink-0"
-                          title="Tandai telah dibaca"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
+                      </>
+                    )
+                    return (
+                      <div key={note.id} className="p-3 hover:bg-zinc-800/40 group relative transition-colors">
+                        <div className="flex items-start gap-2">
+                          {note.consultation_url ? (
+                            <Link
+                              href={note.consultation_url}
+                              onClick={() => setOpen(false)}
+                              className="flex items-start gap-2 flex-1 min-w-0 cursor-pointer"
+                              title={`Buka konsultasi ${note.consultation_name}`}
+                            >
+                              {inner}
+                            </Link>
+                          ) : (
+                            <div className="flex items-start gap-2 flex-1 min-w-0">{inner}</div>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); markNoteRead.mutate(note.id) }}
+                            className="opacity-0 group-hover:opacity-100 h-6 w-6 text-zinc-400 hover:text-green-400 hover:bg-zinc-800 transition-opacity shrink-0"
+                            title="Tandai telah dibaca"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </ScrollArea>
@@ -112,9 +144,9 @@ export default function NotificationCenter() {
                 </div>
               ) : (
                 <div className="divide-y divide-zinc-800">
-                  {summary.reminders.map((reminder) => (
-                    <div key={reminder.id} className="p-3 hover:bg-zinc-800/40 group relative transition-colors">
-                      <div className="flex items-start gap-2">
+                  {summary.reminders.map((reminder) => {
+                    const inner = (
+                      <>
                         <div className={cn(
                           "flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold shrink-0",
                           reminder.overdue ? "bg-red-500/10 text-red-400" : "bg-blue-500/10 text-blue-400"
@@ -126,23 +158,41 @@ export default function NotificationCenter() {
                           <p className="text-[10px] text-zinc-500 mt-1 flex items-center gap-1">
                             <span className="truncate">{reminder.consultation_name}</span>
                             <span>•</span>
-                            <span className={cn(reminder.overdue && "text-red-400")}>
+                            <span className={cn("shrink-0", reminder.overdue && "text-red-400")}>
                               {reminder.remind_human}
                             </span>
                           </p>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => markReminderRead.mutate(reminder.id)}
-                          className="opacity-0 group-hover:opacity-100 h-6 w-6 text-zinc-400 hover:text-green-400 hover:bg-zinc-800 transition-opacity shrink-0"
-                          title="Tandai selesai"
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                        </Button>
+                      </>
+                    )
+                    return (
+                      <div key={reminder.id} className="p-3 hover:bg-zinc-800/40 group relative transition-colors">
+                        <div className="flex items-start gap-2">
+                          {reminder.consultation_url ? (
+                            <Link
+                              href={reminder.consultation_url}
+                              onClick={() => setOpen(false)}
+                              className="flex items-start gap-2 flex-1 min-w-0 cursor-pointer"
+                              title={`Buka konsultasi ${reminder.consultation_name}`}
+                            >
+                              {inner}
+                            </Link>
+                          ) : (
+                            <div className="flex items-start gap-2 flex-1 min-w-0">{inner}</div>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => { e.stopPropagation(); markReminderRead.mutate(reminder.id) }}
+                            className="opacity-0 group-hover:opacity-100 h-6 w-6 text-zinc-400 hover:text-green-400 hover:bg-zinc-800 transition-opacity shrink-0"
+                            title="Tandai selesai"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </ScrollArea>

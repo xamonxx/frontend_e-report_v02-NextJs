@@ -206,7 +206,7 @@ export type UserItem = {
   id: number
   name: string
   email: string
-  role: 'admin' | 'super_admin'
+  role: 'admin' | 'super_admin' | 'surveyor' | 'manager_surveyor'
   account_id: number | null
   created_at: string
   updated_at: string

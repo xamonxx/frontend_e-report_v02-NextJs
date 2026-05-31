@@ -23,6 +23,8 @@ export type PaginatedResponse<T> = {
 export const UserRole = {
   Admin: 'admin',
   SuperAdmin: 'super_admin',
+  Surveyor: 'surveyor',
+  ManagerSurveyor: 'manager_surveyor',
 } as const
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 

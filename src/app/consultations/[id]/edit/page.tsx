@@ -18,12 +18,12 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Tag } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { CustomSelect } from '@/components/ui/custom-select'
-import { formatPhoneInput } from '@/lib/utils'
+import { formatPhoneInput, isPhoneValid } from '@/lib/utils'
 
 type PageParams = {
   id: string
@@ -199,6 +199,10 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
       toast.error('Detail kebutuhan wajib diisi ketika memilih kategori Lain-lain')
       return
     }
+    if (phone.trim() && !isPhoneValid(phone)) {
+      toast.error('Nomor telepon / WhatsApp tidak valid')
+      return
+    }
 
     const payload = {
       client_name: clientName,
@@ -300,8 +304,19 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                       value={phone}
                       onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
                       inputMode="tel"
-                      className="border-border bg-background/60 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950/60"
+                      aria-invalid={phone.trim() !== '' && !isPhoneValid(phone)}
+                      className={cn(
+                        "bg-background/60 dark:bg-zinc-950/60",
+                        phone.trim() !== '' && !isPhoneValid(phone)
+                          ? "border-red-500/60 focus-visible:ring-red-500/40 dark:border-red-500/50"
+                          : "border-border focus-visible:ring-amber-500/50 dark:border-zinc-800"
+                      )}
                     />
+                    {phone.trim() !== '' && !isPhoneValid(phone) && (
+                      <p className="text-[11px] font-medium text-red-500 dark:text-red-400">
+                        Nomor tidak valid. Gunakan format lokal (08xx) atau internasional (+62 / +1 …).
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
@@ -448,57 +463,71 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
               </CardContent>
             </Card>
 
+            {/* Kategori Kebutuhan — scrollable list (matches the create form) */}
             <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-              <CardHeader>
-                <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Kategori Kebutuhan *</CardTitle>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
+                  <Tag className="h-3.5 w-3.5 text-amber-500" />
+                  Kategori Kebutuhan *
+                </CardTitle>
+                {selectedNeeds.length > 0 && (
+                  <p className="text-[10px] text-amber-500 font-semibold">{selectedNeeds.length} dipilih</p>
+                )}
               </CardHeader>
-              <CardContent className="space-y-2">
-                {needs?.map((nd) => (
-                  <div key={nd.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`nd-${nd.id}`}
-                      checked={selectedNeeds.includes(nd.id)}
-                      onChange={() => handleNeedsToggle(nd.id)}
-                      className="h-4 w-4 rounded border-border bg-background text-amber-500 focus:ring-amber-500/50 accent-amber-500 dark:border-zinc-800 dark:bg-zinc-950"
-                    />
-                    <Label htmlFor={`nd-${nd.id}`} className="text-xs text-foreground/80 font-medium cursor-pointer">
-                      {nd.name}
-                    </Label>
-                  </div>
-                ))}
+              <CardContent className="p-0">
+                <div className="max-h-[460px] overflow-y-auto px-5 pb-4 space-y-1 scrollbar-thin">
+                  {needs?.map((nd) => (
+                    <label
+                      key={nd.id}
+                      htmlFor={`nd-${nd.id}`}
+                      className={cn(
+                        'flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors',
+                        selectedNeeds.includes(nd.id)
+                          ? 'bg-amber-500/10 dark:bg-amber-500/10'
+                          : 'hover:bg-muted/60 dark:hover:bg-zinc-800/50',
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        id={`nd-${nd.id}`}
+                        checked={selectedNeeds.includes(nd.id)}
+                        onChange={() => handleNeedsToggle(nd.id)}
+                        className="h-3.5 w-3.5 rounded border-border bg-background text-amber-500 focus:ring-amber-500/50 accent-amber-500 dark:border-zinc-700 dark:bg-zinc-950 shrink-0"
+                      />
+                      <span className={cn(
+                        'text-xs font-medium',
+                        selectedNeeds.includes(nd.id) ? 'text-amber-600 dark:text-amber-400' : 'text-foreground/80',
+                      )}>
+                        {nd.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </CardContent>
             </Card>
 
-            <div className="space-y-3">
-              <Button
-                type="submit"
-                disabled={updateMutation.isPending}
-                className="w-full bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold h-9"
-              >
-                {updateMutation.isPending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Menyimpan Perubahan...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-1.5" />
-                    Simpan Perubahan
-                  </>
-                )}
-              </Button>
+            {/* Submit + Cancel */}
+            <Button
+              type="submit"
+              disabled={updateMutation.isPending}
+              className="w-full bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold h-10 shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all duration-300 rounded-xl"
+            >
+              {updateMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Menyimpan Perubahan...</>
+              ) : (
+                <><Save className="h-4 w-4 mr-1.5" />Simpan Perubahan</>
+              )}
+            </Button>
 
-              <Link
-                href={`/consultations/${consultationId}`}
-                className={cn(
-                  buttonVariants({ variant: 'outline' }),
-                  'w-full border-border text-muted-foreground hover:text-foreground h-9 font-semibold dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-300'
-                )}
-              >
-                Batal
-              </Link>
-            </div>
+            <Link
+              href={`/consultations/${consultationId}`}
+              className={cn(
+                buttonVariants({ variant: 'outline' }),
+                'w-full border-border text-muted-foreground hover:text-foreground h-10 font-semibold dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-300'
+              )}
+            >
+              Batal
+            </Link>
           </div>
         </div>
       </form>

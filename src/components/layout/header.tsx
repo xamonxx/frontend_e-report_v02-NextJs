@@ -54,7 +54,7 @@ export default function Header() {
 
   return (
     <TooltipProvider delay={400}>
-      <header className="flex h-16 items-center justify-between border-b border-border bg-card/30 px-4 sm:px-6 backdrop-blur-xl z-20">
+      <header className="flex h-16 items-center justify-between border-b border-border bg-card/80 px-4 sm:px-6 backdrop-blur-sm z-20">
 
         {/* Left: menu toggle + account context + breadcrumb */}
         <div className="flex items-center gap-3 min-w-0">

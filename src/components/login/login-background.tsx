@@ -21,7 +21,7 @@ export default function LoginBackground() {
       <div
         className="absolute top-[40%] right-[10%] w-[50%] h-[50%] rounded-full opacity-50 dark:opacity-20"
         style={{
-          background: 'radial-gradient(circle, rgba(252, 211, 77, 0.3) 0%, transparent 70%)',
+          background: 'radial-gradient(circle, color-mix(in srgb, var(--primary-theme) 30%, transparent) 0%, transparent 70%)',
         }}
       />
 

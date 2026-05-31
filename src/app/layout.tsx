@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers";
 import AppLayout from "@/components/layout/app-layout";
+import PwaInstallButton from "@/components/layout/pwa-install-button";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -57,6 +58,7 @@ export default function RootLayout({
           <AppLayout>
             {children}
           </AppLayout>
+          <PwaInstallButton />
         </Providers>
       </body>
     </html>

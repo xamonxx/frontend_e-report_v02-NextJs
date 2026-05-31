@@ -5,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import { useLogin } from '@/lib/hooks/useAuth'
 import { Loader2, Eye, EyeOff, AlertCircle, Home } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import LoginBackground from '@/components/login/login-background'
@@ -47,11 +47,42 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '', remember: false },
   })
+
+  const emailValue = watch('email')
+
+  useEffect(() => {
+    if (!emailValue) {
+      const root = document.documentElement
+      root.style.setProperty('--primary-theme', '#f59e0b')
+      return
+    }
+
+    const delay = setTimeout(async () => {
+      if (emailValue.includes('@') && emailValue.includes('.')) {
+        try {
+          const res = await fetch(`/api/v1/auth/color-lookup?email=${encodeURIComponent(emailValue)}`)
+          const data = await res.json()
+          if (data && data.primary_color) {
+            const root = document.documentElement
+            root.style.setProperty('--primary-theme', data.primary_color)
+          }
+        } catch (e) {
+          // Ignore lookup errors
+        }
+      } else {
+        const root = document.documentElement
+        root.style.setProperty('--primary-theme', '#f59e0b')
+      }
+    }, 200)
+
+    return () => clearTimeout(delay)
+  }, [emailValue])
 
   const onSubmit = (data: LoginFormValues) => {
     setAuthError(null)

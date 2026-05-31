@@ -2,9 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useQueryClient } from '@tanstack/react-query'
 import { useSidebarStore } from '@/lib/stores/sidebarStore'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { cn } from '@/lib/utils'
+import { prefetchRoute } from '@/lib/prefetch'
 import {
   LayoutDashboard,
   CalendarDays,
@@ -36,25 +38,31 @@ const NAV_LINKS = [
   { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & data referensi', adminOnly: true },
   { href: '/report-attendances', label: 'Absensi', icon: FileSpreadsheet, hint: 'Laporan absensi harian' },
   { href: '/audit-logs', label: 'Audit Logs', icon: History, hint: 'Log aktivitas sistem', adminOnly: true },
-  { href: '/debug', label: 'Debug & Test', icon: Wrench, hint: 'Data dummy & pengujian sistem' },
+  { href: '/debug', label: 'Debug & Test', icon: Wrench, hint: 'Data dummy & pengujian sistem', adminOnly: true },
   { href: '/settings', label: 'Settings', icon: Settings, hint: 'Pengaturan akun & preferensi' },
 ]
 
 export default function Sidebar() {
   const pathname = usePathname()
+  const queryClient = useQueryClient()
   const { isOpen, toggle, close } = useSidebarStore()
   const user = useAuthStore((s) => s.user)
   const logoutMutation = useLogout()
 
   const handleLogout = () => logoutMutation.mutate()
+
+  // Warm the route's data cache on hover/focus (skip the page we're already on).
+  const handlePrefetch = (href: string) => {
+    if (href !== pathname) prefetchRoute(queryClient, href)
+  }
   const userThemeColor = user?.primary_color || '#f59e0b'
 
   return (
     <TooltipProvider delay={isOpen ? 9999 : 350}>
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 flex flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-2xl transition-all duration-300 ease-in-out z-50',
-          'lg:relative lg:translate-x-0 lg:bg-sidebar/75 lg:backdrop-blur-xl',
+          'fixed inset-y-0 left-0 flex flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-sm transition-all duration-300 ease-in-out z-50',
+          'lg:relative lg:translate-x-0 lg:bg-sidebar/90 lg:backdrop-blur-sm',
           isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'
         )}
       >
@@ -103,6 +111,8 @@ export default function Sidebar() {
                 <TooltipTrigger className="w-full text-left">
                   <Link
                     href={link.href}
+                    onMouseEnter={() => handlePrefetch(link.href)}
+                    onFocus={() => handlePrefetch(link.href)}
                     onClick={() => {
                       if (typeof window !== 'undefined' && window.innerWidth < 1024) close()
                     }}
