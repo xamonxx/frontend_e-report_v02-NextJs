@@ -407,3 +407,44 @@ select option:checked {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(250%); }
 }
+
+/* ═══════════════════════════════════════════════════════
+   THEME SWITCH — smooth & light crossfade
+   ═══════════════════════════════════════════════════════
+ * `.theme-fade` is added to <html> only for the ~220ms a theme swap takes
+ * (see theme-toggle.tsx), then removed. It does two things:
+ *
+ * 1. Crossfades ONLY background-color, border-color and color — the cheap
+ *    paint-only properties. box-shadow, fill and stroke are deliberately NOT
+ *    transitioned: animating shadows on every card and fill/stroke on every
+ *    SVG chart node was the original cause of the freeze. `svg` and its
+ *    descendants are excluded entirely so charts never repaint during a swap.
+ *    Transitioning border-COLOR (never border-width) also removes the instant
+ *    "border flash" without ever touching layout.
+ *
+ * 2. Suspends backdrop-blur for the duration. While colours animate behind a
+ *    glass panel the GPU would otherwise recomposite its blur every frame —
+ *    the main remaining source of lag on blur-heavy pages. Dropping the blur
+ *    for ~220ms is imperceptible but keeps the crossfade smooth. */
+.theme-fade,
+.theme-fade *:not(svg):not(svg *) {
+  transition-property: background-color, border-color, color;
+  transition-duration: 220ms;
+  transition-timing-function: ease;
+}
+
+.theme-fade [class*="backdrop-blur"],
+.theme-fade .glass-panel,
+.theme-fade .glass-card {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Reduced-motion users never get the animation (the toggle also short-circuits
+ * in JS, but keep CSS in sync for any other theme entry points). */
+@media (prefers-reduced-motion: reduce) {
+  .theme-fade,
+  .theme-fade * {
+    transition: none !important;
+  }
+}

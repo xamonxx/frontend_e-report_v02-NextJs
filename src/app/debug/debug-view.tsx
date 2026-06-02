@@ -169,9 +169,9 @@ export default function DebugPage() {
   return (
     <div className="space-y-6">
       {/* Page Title & Actions */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground dark:bg-gradient-to-r dark:from-amber-200 dark:via-amber-400 dark:to-amber-100 dark:bg-clip-text dark:text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
             Debug & Diagnostic Panel
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
@@ -487,7 +487,7 @@ export default function DebugPage() {
                   <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3 px-4">Domisili</TableHead>
                   <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3 px-4">Kategori Kebutuhan</TableHead>
                   <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3 px-4">Tgl Konsul</TableHead>
-                  <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3 px-4">Cabang</TableHead>
+                  <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3 px-4">Akun</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

@@ -23,6 +23,7 @@ export function useAccountsList(filters: {
   search?: string
   category?: string
   page?: number
+  per_page?: number
 }) {
   return useQuery({
     queryKey: [...queryKeys.accounts.all, 'list', filters],

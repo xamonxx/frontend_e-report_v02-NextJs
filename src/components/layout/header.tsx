@@ -26,7 +26,7 @@ const PAGE_NAMES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/consultations': 'Konsultasi',
   '/analytics': 'Analitik',
-  '/accounts': 'Cabang & Akun',
+  '/accounts': 'Akun',
   '/master-data': 'Master Data',
   '/report-attendances': 'Absensi',
   '/audit-logs': 'Audit Logs',
@@ -169,7 +169,7 @@ export default function Header() {
                 {user?.account && (
                   <div className="flex items-center gap-2.5 text-[11px]">
                     <Building className="h-3.5 w-3.5 text-muted-foreground/60 shrink-0" />
-                    <span className="text-muted-foreground">Cabang:</span>
+                    <span className="text-muted-foreground">Akun:</span>
                     <span className="font-semibold text-foreground/80 truncate">{user.account.name}</span>
                   </div>
                 )}

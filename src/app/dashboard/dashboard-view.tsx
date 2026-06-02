@@ -142,8 +142,8 @@ function StatCard({ title, value, description, icon: Icon, tooltip, badge, accen
             {title}
           </CardTitle>
           <Tooltip>
-            <TooltipTrigger className="cursor-help leading-none">
-              <Info className="h-3 w-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+            <TooltipTrigger className="cursor-help leading-none shrink-0 flex items-center">
+              <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors shrink-0" />
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[200px] text-center text-[11px] leading-relaxed">
               {tooltip}
@@ -203,7 +203,7 @@ export default function DashboardPage() {
   const { data: accounts } = useAccounts()
 
   const accountOptions = useMemo(() => {
-    const opts: AutocompleteOption[] = [{ label: 'Semua Cabang', value: 'all' }]
+    const opts: AutocompleteOption[] = [{ label: 'Semua Akun', value: 'all' }]
     if (accounts) {
       accounts.forEach((acc) => {
         opts.push({ label: acc.name, value: String(acc.id) })
@@ -222,6 +222,47 @@ export default function DashboardPage() {
 
   const trendData = analyticsResponse?.data?.trendSeries || []
 
+  const needsDistribution = useMemo(() => {
+    return analyticsResponse?.data?.needsDistribution || dashboard?.needs_distribution || []
+  }, [dashboard, analyticsResponse])
+
+  const accountsData = useMemo(() => {
+    if (!analyticsResponse?.data?.accountRanking) {
+      return dashboard?.accounts || []
+    }
+    return analyticsResponse.data.accountRanking.map((acct: any) => {
+      const matched = dashboard?.accounts?.find((a: any) => a.name === acct.name)
+      return {
+        id: matched?.id || acct.name,
+        name: acct.name,
+        admins: matched?.admins || [],
+        total_leads: acct.total,
+        deals: acct.deals,
+        conversion_rate: acct.deal_rate,
+      }
+    })
+  }, [dashboard, analyticsResponse])
+
+  // NOTE: keep every hook above the early returns below. Calling a hook after
+  // a conditional `return` makes the hook order vary between renders (loading
+  // vs. loaded), which trips React's Rules of Hooks.
+  const stats = useMemo(() => {
+    if (!analyticsResponse?.data) {
+      return dashboard?.stats
+    }
+    const d = analyticsResponse.data
+    return {
+      total_leads: d.totalLeads,
+      avg_conversion: d.conversionRate,
+      conversion_rate: d.conversionRate,
+      active_accounts: dashboard?.stats?.active_accounts,
+      total_accounts: dashboard?.stats?.total_accounts,
+      pending_surveys: dashboard?.stats?.pending_surveys,
+      completed_this_month: d.totalDeals,
+      growth_percent: d.growthPercent,
+    }
+  }, [dashboard, analyticsResponse])
+
   if (isLoading) return <DashboardSkeleton />
 
   if (error) {
@@ -233,7 +274,6 @@ export default function DashboardPage() {
     )
   }
 
-  const stats = dashboard?.stats
   const growthPercent = stats?.growth_percent || 0
   const growthPositive = growthPercent >= 0
 
@@ -249,7 +289,7 @@ export default function DashboardPage() {
             </p>
             <h1 className="text-2xl font-black tracking-tight text-foreground">
               Selamat Datang,{' '}
-              <span className="text-gradient-amber">{user?.name}</span>
+              <span className="text-amber-500">{user?.name}</span>
             </h1>
             <p className="text-xs font-medium text-muted-foreground mt-1">
               Ikhtisar performa leads dan konsultasi interior Anda hari ini.
@@ -266,7 +306,7 @@ export default function DashboardPage() {
           <StatCard
             title="Total Leads"
             value={stats?.total_leads || 0}
-            description="Seluruh waktu terdaftar"
+            description={analyticsResponse?.data ? "Dalam periode terpilih" : "Seluruh waktu terdaftar"}
             icon={Users}
             tooltip="Jumlah total leads konsultasi interior yang pernah terdaftar di sistem, termasuk semua status."
             accent
@@ -274,9 +314,10 @@ export default function DashboardPage() {
           <StatCard
             title="Rata-rata Deal"
             value={`${stats?.avg_conversion !== undefined ? stats.avg_conversion : (stats?.conversion_rate || 0)}%`}
-            description="Rasio konversi leads menjadi deal"
+            description={analyticsResponse?.data ? "Rasio konversi periode terpilih" : "Rasio konversi leads menjadi deal"}
             icon={Target}
             tooltip="Persentase rata-rata leads yang berhasil dikonversi menjadi proyek interior aktif (deal)."
+            accent
           />
           {isSuperAdmin ? (
             <StatCard
@@ -284,7 +325,8 @@ export default function DashboardPage() {
               value={stats?.active_accounts || 0}
               description={`Dari ${stats?.total_accounts || 0} akun terdaftar`}
               icon={Layers}
-              tooltip="Jumlah cabang/akun yang aktif beroperasi dari total seluruh akun yang terdaftar di sistem."
+              tooltip="Jumlah akun yang aktif beroperasi dari total seluruh akun yang terdaftar di sistem."
+              accent
             />
           ) : (
             <StatCard
@@ -293,18 +335,20 @@ export default function DashboardPage() {
               description="Leads berstatus request survey"
               icon={Clock}
               tooltip="Jumlah leads yang sudah meminta jadwal survey lapangan namun belum dijadwalkan."
+              accent
             />
           )}
           <StatCard
-            title="Bulan Ini"
+            title={analyticsResponse?.data?.periodLabel ? `Periode: ${analyticsResponse.data.periodLabel}` : "Bulan Ini"}
             value={stats?.completed_this_month || 0}
-            description="Leads closing bulan ini"
+            description={analyticsResponse?.data ? "Leads closing periode terpilih" : "Leads closing bulan ini"}
             icon={TrendingUp}
-            tooltip="Jumlah leads yang berhasil closing (deal) dalam bulan kalender saat ini."
+            tooltip="Jumlah leads yang berhasil closing (deal) dalam periode terpilih."
             badge={{
               label: `${growthPositive ? '+' : ''}${growthPercent}% vs bln lalu`,
               positive: growthPositive,
             }}
+            accent
           />
         </div>
 
@@ -343,12 +387,12 @@ export default function DashboardPage() {
             {/* Account Selector (Super Admin Only) */}
             {isSuperAdmin && (
               <div className="space-y-1">
-                <Label className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Cabang</Label>
+                <Label className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Akun</Label>
                 <Autocomplete
                   value={selectedAccount ? String(selectedAccount) : 'all'}
                   onChange={(v) => setSelectedAccount(v && v !== 'all' ? parseInt(v, 10) : undefined)}
                   options={accountOptions}
-                  placeholder="Cari Cabang..."
+                  placeholder="Cari Akun..."
                   onlyChangeOnSelect={true}
                   className="h-8 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50"
                 />
@@ -529,12 +573,12 @@ export default function DashboardPage() {
                 <div className="flex h-full items-center justify-center">
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
                 </div>
-              ) : dashboard?.needs_distribution && dashboard.needs_distribution.length > 0 ? (
+              ) : needsDistribution && needsDistribution.length > 0 ? (
                 (() => {
-                  const totalNeeds = dashboard.needs_distribution.reduce((acc, curr) => acc + curr.count, 0)
+                  const totalNeeds = needsDistribution.reduce((acc: number, curr: any) => acc + curr.count, 0)
                   // Compute the sorted top-10 once and reuse for both the chart
                   // data and the per-bar <Cell> colours (was sorted twice).
-                  const topNeeds = [...dashboard.needs_distribution].sort((a: any, b: any) => b.count - a.count).slice(0, 10)
+                  const topNeeds = [...needsDistribution].sort((a: any, b: any) => b.count - a.count).slice(0, 10)
                   return (
                     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <BarChart
@@ -601,7 +645,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Account Performance Table — Super Admin only */}
-        {isSuperAdmin && dashboard?.accounts && dashboard.accounts.length > 0 && (
+        {isSuperAdmin && accountsData && accountsData.length > 0 && (
           <Card className="border-border/60 bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:shadow-none">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -613,16 +657,16 @@ export default function DashboardPage() {
                         <Info className="h-3.5 w-3.5 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
                       </TooltipTrigger>
                       <TooltipContent side="top" className="max-w-[240px] text-[11px]">
-                        Peringkat performa setiap cabang berdasarkan jumlah leads, total deal, dan rasio konversi.
+                        Peringkat performa setiap akun berdasarkan jumlah leads, total deal, dan rasio konversi.
                       </TooltipContent>
                     </Tooltip>
                   </CardTitle>
                   <CardDescription className="text-[11px] text-muted-foreground">
-                    Peringkat closing deal per cabang
+                    Peringkat closing deal per akun
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="border-amber-500/30 bg-amber-500/5 text-amber-600 text-[10px] dark:text-amber-400">
-                  {dashboard.accounts.length} Cabang
+                  {accountsData.length} Akun
                 </Badge>
               </div>
             </CardHeader>
@@ -635,19 +679,19 @@ export default function DashboardPage() {
                       <th className="pb-3 px-1">
                         <Tooltip>
                           <TooltipTrigger className="cursor-help">Nama Akun</TooltipTrigger>
-                          <TooltipContent className="text-[11px]">Nama cabang atau akun wilayah</TooltipContent>
+                          <TooltipContent className="text-[11px]">Nama akun</TooltipContent>
                         </Tooltip>
                       </th>
                       <th className="pb-3 px-1">
                         <Tooltip>
                           <TooltipTrigger className="cursor-help">Admin</TooltipTrigger>
-                          <TooltipContent className="text-[11px]">Admin yang mengelola cabang ini</TooltipContent>
+                          <TooltipContent className="text-[11px]">Admin yang mengelola akun ini</TooltipContent>
                         </Tooltip>
                       </th>
                       <th className="pb-3 px-1 text-center">
                         <Tooltip>
                           <TooltipTrigger className="cursor-help">Leads</TooltipTrigger>
-                          <TooltipContent className="text-[11px]">Total leads yang terdaftar di cabang ini</TooltipContent>
+                          <TooltipContent className="text-[11px]">Total leads yang terdaftar di akun ini</TooltipContent>
                         </Tooltip>
                       </th>
                       <th className="pb-3 px-1 text-center">
@@ -665,7 +709,7 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {dashboard.accounts.map((acct, idx) => (
+                    {accountsData.map((acct: any, idx: number) => (
                       <tr key={acct.id} className="hover:bg-muted/40 transition-colors group dark:hover:bg-zinc-800/20">
                         <td className="py-3.5 px-1">
                           <span
@@ -687,7 +731,7 @@ export default function DashboardPage() {
                           {acct.name}
                         </td>
                         <td className="py-3.5 px-1 text-muted-foreground text-[11px]">
-                          {acct.admins.map((a) => a.name).join(', ') || '-'}
+                          {acct.admins.map((a: any) => a.name).join(', ') || '-'}
                         </td>
                         <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.total_leads}</td>
                         <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.deals}</td>

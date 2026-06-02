@@ -18,10 +18,10 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
-  Palette,
   Building,
   Wrench,
 } from 'lucide-react'
+import Logo from '@/components/brand/logo'
 import { useLogout } from '@/lib/hooks/useAuth'
 import {
   Tooltip,
@@ -34,7 +34,7 @@ const NAV_LINKS = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Ringkasan performa & statistik' },
   { href: '/consultations', label: 'Consultations', icon: CalendarDays, hint: 'Kelola data leads konsultasi' },
   { href: '/analytics', label: 'Analytics', icon: BarChart3, hint: 'Laporan & analitik mendalam' },
-  { href: '/accounts', label: 'Cabang / Accounts', icon: Building, hint: 'Manajemen cabang dan akun', adminOnly: true },
+  { href: '/accounts', label: 'Akun', icon: Building, hint: 'Manajemen akun', adminOnly: true },
   { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & data referensi', adminOnly: true },
   { href: '/report-attendances', label: 'Absensi', icon: FileSpreadsheet, hint: 'Laporan absensi harian' },
   { href: '/audit-logs', label: 'Audit Logs', icon: History, hint: 'Log aktivitas sistem', adminOnly: true },
@@ -74,14 +74,14 @@ export default function Sidebar() {
               !isOpen && 'opacity-0 w-0'
             )}
           >
-            <Palette
+            <Logo
               className="h-6 w-6 shrink-0"
               style={{
                 color: userThemeColor,
                 filter: `drop-shadow(0 0 8px ${userThemeColor}60)`,
               }}
             />
-            <span className="font-bold text-base tracking-wider whitespace-nowrap uppercase bg-gradient-to-r from-amber-400 to-amber-600 bg-clip-text text-transparent">
+            <span className="font-bold text-base tracking-wider whitespace-nowrap uppercase text-amber-500">
               Putra Corp
             </span>
           </div>

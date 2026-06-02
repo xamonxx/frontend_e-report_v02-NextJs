@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { FileImage, FileDown } from 'lucide-react'
 import { saveCardAsPng, saveCardAsPdf } from '@/lib/export-card'
+import { cn } from '@/lib/utils'
 
 const BTN_CLASS =
   'shrink-0 h-8 gap-1.5 rounded-xl border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 text-[11px] font-semibold transition-all duration-300 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60'
@@ -28,23 +29,23 @@ export function CardExportButtons({ filename, compact = false }: { filename: str
         variant="outline"
         size="sm"
         onClick={() => saveCardAsPng(getCard(), filename)}
-        className={BTN_CLASS}
+        className={cn(BTN_CLASS, 'px-2 sm:px-3')}
         title="Simpan kartu ini sebagai gambar PNG"
         aria-label="Save PNG"
       >
         <FileImage className="h-3.5 w-3.5" />
-        {!compact && 'Save PNG'}
+        {!compact && <span className="hidden sm:inline">Save PNG</span>}
       </Button>
       <Button
         variant="outline"
         size="sm"
         onClick={() => saveCardAsPdf(getCard(), filename)}
-        className={BTN_CLASS}
+        className={cn(BTN_CLASS, 'px-2 sm:px-3')}
         title="Simpan kartu ini sebagai PDF"
         aria-label="Save PDF"
       >
         <FileDown className="h-3.5 w-3.5" />
-        {!compact && 'Save PDF'}
+        {!compact && <span className="hidden sm:inline">Save PDF</span>}
       </Button>
     </div>
   )

@@ -23,6 +23,9 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { format, parseISO } from 'date-fns'
 import {
   Loader2,
   Calendar,
@@ -147,7 +150,7 @@ export default function ReportAttendancesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
             <Clock className="h-6 w-6 text-amber-500" />
@@ -159,13 +162,36 @@ export default function ReportAttendancesPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground/70" />
-          <Input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-36 h-8 border-border bg-card text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300"
-          />
+          <Popover>
+            <PopoverTrigger
+              type="button"
+              className={cn(
+                "w-36 h-8 justify-between text-left font-normal border border-border bg-card hover:bg-muted/40 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/40 text-foreground/80 rounded-lg px-2.5 text-xs focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center",
+                !selectedDate && "text-muted-foreground/50"
+              )}
+            >
+              {selectedDate ? (
+                format(parseISO(selectedDate), 'dd/MM/yyyy')
+              ) : (
+                <span>Pilih Tanggal</span>
+              )}
+              <Calendar className="h-3.5 w-3.5 text-muted-foreground/70" />
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="end">
+              <CalendarComponent
+                mode="single"
+                selected={selectedDate ? parseISO(selectedDate) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const yyyy = date.getFullYear()
+                    const mm = String(date.getMonth() + 1).padStart(2, '0')
+                    const dd = String(date.getDate()).padStart(2, '0')
+                    setSelectedDate(`${yyyy}-${mm}-${dd}`)
+                  }
+                }}
+              />
+            </PopoverContent>
+          </Popover>
           <Button
             variant="ghost"
             size="xs"
@@ -334,7 +360,7 @@ export default function ReportAttendancesPage() {
                   <TableHeader className="bg-muted/20 border-b border-border dark:bg-zinc-950/20 dark:border-zinc-800">
                     <TableRow className="border-border dark:border-zinc-800">
                       <TableHead className="text-muted-foreground text-xs font-semibold">Nama Admin</TableHead>
-                      <TableHead className="text-muted-foreground text-xs font-semibold">Cabang</TableHead>
+                      <TableHead className="text-muted-foreground text-xs font-semibold">Akun</TableHead>
                       <TableHead className="text-muted-foreground text-xs font-semibold">Status Absen</TableHead>
                       <TableHead className="text-muted-foreground text-xs font-semibold">Jam Laporan</TableHead>
                       <TableHead className="text-muted-foreground text-xs font-semibold text-right">Moderasi</TableHead>

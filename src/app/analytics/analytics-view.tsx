@@ -76,7 +76,7 @@ export default function AnalyticsPage() {
   const { data: accounts } = useAccounts()
 
   const accountOptions = useMemo(() => {
-    const opts: AutocompleteOption[] = [{ label: 'Semua Cabang', value: 'all' }]
+    const opts: AutocompleteOption[] = [{ label: 'Semua Akun', value: 'all' }]
     if (accounts) {
       accounts.forEach((acc) => {
         opts.push({ label: acc.name, value: String(acc.id) })
@@ -223,9 +223,9 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6 py-4 sm:py-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground dark:text-gradient-amber">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
             Analitik Laporan
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
@@ -303,12 +303,12 @@ export default function AnalyticsPage() {
           {/* Account Selector (Super Admin Only) */}
           {isSuperAdmin && (
             <div className="space-y-1.5">
-              <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Cabang</Label>
+              <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Akun</Label>
               <Autocomplete
                 value={selectedAccount ? String(selectedAccount) : 'all'}
                 onChange={(v) => setSelectedAccount(v && v !== 'all' ? parseInt(v, 10) : undefined)}
                 options={accountOptions}
-                placeholder="Cari Cabang..."
+                placeholder="Cari Akun..."
                 onlyChangeOnSelect={true}
                 className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50"
               />
@@ -393,7 +393,7 @@ export default function AnalyticsPage() {
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Leads Card */}
-            <Card className="h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Total Lead Terkumpul
@@ -418,7 +418,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Survey Card */}
-            <Card className="h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Survey Terjadwal
@@ -440,7 +440,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Deal Card */}
-            <Card className="h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Closing Deal
@@ -462,7 +462,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Quality/Active Days Card */}
-            <Card className="h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Aktivitas Pengisian
@@ -481,9 +481,9 @@ export default function AnalyticsPage() {
           {/* Charts Grid */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Trend Chart */}
-            <Card ref={trendCardRef} className="border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card ref={trendCardRef} className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader>
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-sm font-bold text-foreground">Tren Pendaftaran & Konversi</CardTitle>
                     <CardDescription className="text-[11px] text-muted-foreground">
@@ -495,21 +495,21 @@ export default function AnalyticsPage() {
                       variant="outline"
                       size="sm"
                       onClick={() => saveCardAsPng(trendCardRef.current, 'Tren Pendaftaran & Konversi')}
-                      className="shrink-0 h-8 gap-1.5 rounded-xl border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 text-[11px] font-semibold transition-all duration-300 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+                      className="shrink-0 h-8 gap-1.5 rounded-xl border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 text-[11px] font-semibold transition-all duration-300 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 px-2 sm:px-3"
                       title="Simpan kartu ini sebagai gambar PNG"
                     >
                       <FileImage className="h-3.5 w-3.5" />
-                      Save PNG
+                      <span className="hidden sm:inline">Save PNG</span>
                     </Button>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => saveCardAsPdf(trendCardRef.current, 'Tren Pendaftaran & Konversi')}
-                      className="shrink-0 h-8 gap-1.5 rounded-xl border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 text-[11px] font-semibold transition-all duration-300 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+                      className="shrink-0 h-8 gap-1.5 rounded-xl border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 text-[11px] font-semibold transition-all duration-300 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 px-2 sm:px-3"
                       title="Simpan kartu ini sebagai PDF"
                     >
                       <FileDown className="h-3.5 w-3.5" />
-                      Save PDF
+                      <span className="hidden sm:inline">Save PDF</span>
                     </Button>
                   </div>
                 </div>
@@ -553,9 +553,9 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Needs Distribution */}
-            <Card className="border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader>
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-sm font-bold text-foreground">Kategori Kebutuhan</CardTitle>
                     <CardDescription className="text-[11px] text-muted-foreground">
@@ -638,9 +638,9 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Status Distribution */}
-            <Card className="border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader>
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-sm font-bold text-foreground">Distribusi Status Leads</CardTitle>
                     <CardDescription className="text-[11px] text-muted-foreground">
@@ -660,9 +660,19 @@ export default function AnalyticsPage() {
                     const totalStatus = statusData.reduce((acc: number, curr: any) => acc + curr.count, 0)
                     return (
                       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                        <BarChart data={statusData} margin={{ top: 15, right: 10, left: -20, bottom: 0 }}>
+                        <BarChart data={statusData} margin={{ top: 15, right: 10, left: -20, bottom: 20 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" opacity={0.5} vertical={false} />
-                          <XAxis dataKey="name" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                          <XAxis
+                            dataKey="name"
+                            stroke="#94a3b8"
+                            fontSize={8}
+                            tickLine={false}
+                            axisLine={false}
+                            interval={0}
+                            angle={-15}
+                            textAnchor="end"
+                            height={30}
+                          />
                           <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip content={renderBarTooltip} />
                           <Bar dataKey="count" radius={[4, 4, 0, 0]}>
@@ -702,9 +712,9 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Geographical Segments */}
-            <Card className="border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
               <CardHeader>
-                <div className="flex items-start justify-between gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
                     <CardTitle className="text-sm font-bold text-foreground">Segmentasi Geografis (Jawa Barat)</CardTitle>
                     <CardDescription className="text-[11px] text-muted-foreground">
@@ -720,8 +730,8 @@ export default function AnalyticsPage() {
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
                   </div>
                 ) : westJavaSegmentData.length > 0 && westJavaSegmentData.some((s: any) => s.count > 0) ? (
-                  <div className="flex w-full h-full items-center justify-around">
-                    <div className="w-[55%] h-full">
+                  <div className="flex flex-col sm:flex-row w-full h-full items-center justify-center sm:justify-around gap-4">
+                    <div className="w-[170px] h-[170px] sm:w-[55%] sm:h-full flex items-center justify-center shrink-0">
                       <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                         <PieChart>
                           <Pie
@@ -730,8 +740,8 @@ export default function AnalyticsPage() {
                             nameKey="name"
                             cx="50%"
                             cy="50%"
-                            innerRadius={65}
-                            outerRadius={85}
+                            innerRadius={50}
+                            outerRadius={70}
                             paddingAngle={3}
                             activeShape={renderActiveShape}
                           >
@@ -743,18 +753,18 @@ export default function AnalyticsPage() {
                         </PieChart>
                       </ResponsiveContainer>
                     </div>
-                    <div className="flex flex-col gap-2 max-h-[90%] overflow-y-auto pr-2 scrollbar-thin">
+                    <div className="flex flex-wrap sm:flex-col justify-center gap-x-4 gap-y-2.5 max-h-[100px] sm:max-h-[90%] overflow-y-auto pr-2 scrollbar-thin w-full sm:w-auto px-4 sm:px-0">
                       {(() => {
                         const totalSegments = westJavaSegmentData.reduce((acc: number, curr: any) => acc + curr.count, 0)
                         return westJavaSegmentData.map((item: any, idx: number) => {
                           const pct = totalSegments > 0 ? ((item.count / totalSegments) * 100).toFixed(1) : '0.0'
                           return (
-                            <div key={`${item.name}-${idx}`} className="flex items-center gap-2">
+                            <div key={`${item.name}-${idx}`} className="flex items-center gap-2 min-w-[120px] sm:min-w-0">
                               <span className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color || COLORS[idx % COLORS.length] }} />
-                              <span className="text-[10px] text-muted-foreground font-semibold truncate max-w-[100px]" title={item.name}>
+                              <span className="text-[10px] text-muted-foreground font-semibold truncate max-w-[80px] sm:max-w-[100px]" title={item.name}>
                                 {item.name}
                               </span>
-                              <span className="text-[10px] text-muted-foreground/70 font-bold ml-auto">
+                              <span className="text-[10px] text-muted-foreground/70 font-bold ml-auto sm:ml-2">
                                 {item.count} ({pct}%)
                               </span>
                             </div>
@@ -793,9 +803,9 @@ export default function AnalyticsPage() {
             {/* Funnel & System Insights */}
             <div className="space-y-6">
               {/* Funnel Analysis */}
-              <Card className="border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
                 <CardHeader>
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
                       <CardTitle className="text-sm font-bold text-foreground">Analisis Konversi Pipeline (Funnel)</CardTitle>
                       <CardDescription className="text-[11px] text-muted-foreground">
@@ -864,7 +874,7 @@ export default function AnalyticsPage() {
               </Card>
 
               {/* Insights Card */}
-              <Card className="border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <div>
                     <CardTitle className="text-sm font-bold text-foreground">Saran & Insights Laporan</CardTitle>
@@ -900,18 +910,18 @@ export default function AnalyticsPage() {
             <div className="space-y-6">
               {/* Account Ranking (Super Admin Only) */}
               {isSuperAdmin && (
-                <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
                   <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-3">
                     <div>
-                      <CardTitle className="text-sm font-bold text-foreground">Peringkat Cabang Wilayah</CardTitle>
+                      <CardTitle className="text-sm font-bold text-foreground">Peringkat Akun Wilayah</CardTitle>
                       <CardDescription className="text-[11px] text-muted-foreground">
-                        Efektivitas closing deal dihitung dari kontribusi per cabang
+                        Efektivitas closing deal dihitung dari kontribusi per akun
                       </CardDescription>
                     </div>
                     <div className="relative w-full sm:w-48">
                       <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground/60" />
                       <Input
-                        placeholder="Cari cabang..."
+                        placeholder="Cari akun..."
                         value={branchSearch}
                         onChange={(e) => setBranchSearch(e.target.value)}
                         className="pl-8 h-8 text-[11px] border-border bg-muted/40 placeholder:text-muted-foreground/40 focus-visible:ring-amber-500/50 rounded-xl dark:border-zinc-800 dark:bg-zinc-900/60"
@@ -923,7 +933,7 @@ export default function AnalyticsPage() {
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 dark:border-zinc-900 dark:bg-zinc-950/20">
-                            <th className="py-3 px-5">Cabang</th>
+                            <th className="py-3 px-5">Akun</th>
                             <th className="py-3 px-2 text-center">Total Lead</th>
                             <th className="py-3 px-2 text-center">Closing Deal</th>
                             <th className="py-3 px-5 text-right">Skor Performa</th>
@@ -960,11 +970,11 @@ export default function AnalyticsPage() {
                       </table>
                     </div>
                     {totalBranchPages > 1 && (
-                      <div className="flex items-center justify-between px-5 py-3 border-t border-border/40 bg-muted/10 dark:border-zinc-900/30 dark:bg-zinc-950/10">
-                        <span className="text-[10px] text-muted-foreground font-semibold">
-                          Menampilkan {Math.min(filteredBranchRanking.length, (branchPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredBranchRanking.length, branchPage * ITEMS_PER_PAGE)} dari {filteredBranchRanking.length} cabang
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-3 border-t border-border/40 bg-muted/10 dark:border-zinc-900/30 dark:bg-zinc-950/10">
+                        <span className="text-[10px] text-muted-foreground font-semibold text-center sm:text-left">
+                          Menampilkan {Math.min(filteredBranchRanking.length, (branchPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredBranchRanking.length, branchPage * ITEMS_PER_PAGE)} dari {filteredBranchRanking.length} akun
                         </span>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
                           <Button
                             variant="outline"
                             size="xs"
@@ -1008,7 +1018,7 @@ export default function AnalyticsPage() {
 
               {/* Admin performance ranking */}
               {isSuperAdmin && (
-                <Card className="border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
                   <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-3">
                     <div>
                       <CardTitle className="text-sm font-bold text-foreground">Kontribusi Admin Teraktif</CardTitle>
@@ -1032,7 +1042,7 @@ export default function AnalyticsPage() {
                         <thead>
                           <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 dark:border-zinc-900 dark:bg-zinc-950/20">
                             <th className="py-3 px-5">Nama Admin</th>
-                            <th className="py-3 px-2">Cabang</th>
+                            <th className="py-3 px-2">Akun</th>
                             <th className="py-3 px-5 text-right">Lead Diinput</th>
                           </tr>
                         </thead>
@@ -1058,11 +1068,11 @@ export default function AnalyticsPage() {
                       </table>
                     </div>
                     {totalAdminPages > 1 && (
-                      <div className="flex items-center justify-between px-5 py-3 border-t border-border/40 bg-muted/10 dark:border-zinc-900/30 dark:bg-zinc-950/10">
-                        <span className="text-[10px] text-muted-foreground font-semibold">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-5 py-3 border-t border-border/40 bg-muted/10 dark:border-zinc-900/30 dark:bg-zinc-950/10">
+                        <span className="text-[10px] text-muted-foreground font-semibold text-center sm:text-left">
                           Menampilkan {Math.min(filteredAdminRanking.length, (adminPage - 1) * ITEMS_PER_PAGE + 1)} - {Math.min(filteredAdminRanking.length, adminPage * ITEMS_PER_PAGE)} dari {filteredAdminRanking.length} admin
                         </span>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center justify-center gap-1.5">
                           <Button
                             variant="outline"
                             size="xs"

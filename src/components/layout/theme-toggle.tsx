@@ -19,10 +19,29 @@ export default function ThemeToggle() {
 
   const isDark = resolvedTheme === 'dark'
 
+  const handleToggle = () => {
+    const next = isDark ? 'light' : 'dark'
+
+    // Users who prefer reduced motion get an instant switch — no animation.
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setTheme(next)
+      return
+    }
+
+    // Add a short-lived class that (a) crossfades only cheap colour properties
+    // and (b) suspends backdrop-blur for the duration (see globals.css). This
+    // avoids both the instant "border flash" and the per-frame blur recompositing
+    // that made heavy pages lag during the swap.
+    const root = document.documentElement
+    root.classList.add('theme-fade')
+    setTheme(next)
+    window.setTimeout(() => root.classList.remove('theme-fade'), 220)
+  }
+
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
+      onClick={handleToggle}
       className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-300 shadow-sm shrink-0 cursor-pointer"
       title={isDark ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
     >

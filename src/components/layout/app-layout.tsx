@@ -17,10 +17,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const root = document.documentElement
-      const themeColor = user?.primary_color || '#f59e0b'
+      const themeColor = (!isLoginPage && user?.primary_color) ? user.primary_color : '#f59e0b'
       root.style.setProperty('--primary-theme', themeColor)
     }
-  }, [user?.primary_color])
+  }, [user?.primary_color, isLoginPage])
 
   useEffect(() => {
     // Automatically close sidebar on initial load on mobile/tablet screens

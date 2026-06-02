@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { Reorder, useDragControls } from 'framer-motion'
+import type { StatusCategory } from '@/types'
 import {
   useCategoriesList,
   useCreateCategory,
@@ -10,6 +12,7 @@ import {
   useCreateStatus,
   useUpdateStatus,
   useDeleteStatus,
+  useReorderStatuses,
   useUsersList,
   useCreateUser,
   useUpdateUser,
@@ -23,6 +26,13 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
   Table,
@@ -44,7 +54,15 @@ import {
   Kanban,
   Users,
   Settings,
-  Lock
+  Lock,
+  GripVertical,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
@@ -57,6 +75,8 @@ export default function MasterDataPage() {
 
   const [userSearch, setUserSearch] = useState('')
   const [debouncedUserSearch] = useDebounce(userSearch, 400)
+  const [catSearch, setCatSearch] = useState('')
+  const [debouncedCatSearch] = useDebounce(catSearch, 400)
   const [categoriesPage, setCategoriesPage] = useState(1)
   const [statusesPage, setStatusesPage] = useState(1)
   const [usersPage, setUsersPage] = useState(1)
@@ -65,9 +85,19 @@ export default function MasterDataPage() {
   useEffect(() => {
     setUsersPage(1)
   }, [debouncedUserSearch])
+  useEffect(() => {
+    setCategoriesPage(1)
+  }, [debouncedCatSearch])
 
-  const { data: catResponse, isLoading: catLoading } = useCategoriesList({ page: categoriesPage })
-  const { data: statResponse, isLoading: statLoading } = useStatusesList({ page: statusesPage })
+  // Categories: paginated 10/page with server-side search.
+  const { data: catResponse, isLoading: catLoading } = useCategoriesList({
+    page: categoriesPage,
+    per_page: 10,
+    search: debouncedCatSearch,
+  })
+  const catMeta = catResponse?.meta
+  // Statuses: load all in one page so drag-reorder covers every row.
+  const { data: statResponse, isLoading: statLoading } = useStatusesList({ page: statusesPage, per_page: 500 })
   const { data: userResponse, isLoading: userLoading, refetch: refetchUsers } = useUsersList({
     search: debouncedUserSearch,
     page: usersPage,
@@ -82,6 +112,35 @@ export default function MasterDataPage() {
 
   const createStat = useCreateStatus()
   const deleteStat = useDeleteStatus()
+  const reorderStat = useReorderStatuses()
+
+  // Local drag order for pipeline stages (mouse + touch via framer-motion).
+  // Synced from the server list; updated live while dragging and persisted on drop.
+  const [orderedStatuses, setOrderedStatuses] = useState<StatusCategory[]>([])
+  const orderRef = useRef<StatusCategory[]>([])
+  // Constrains each row's drag to the list bounds (no flying off the container).
+  const statusListRef = useRef<HTMLUListElement>(null)
+  useEffect(() => {
+    if (statResponse?.data) {
+      setOrderedStatuses(statResponse.data)
+      orderRef.current = statResponse.data
+    }
+  }, [statResponse?.data])
+
+  const handleStatusReorder = (next: StatusCategory[]) => {
+    setOrderedStatuses(next)
+    orderRef.current = next
+  }
+
+  const commitStatusOrder = () => {
+    const ids = orderRef.current.map((s) => s.id)
+    const original = statResponse?.data?.map((s) => s.id) ?? []
+    if (ids.length === original.length && ids.every((id, i) => id === original[i])) return
+    reorderStat.mutate(ids, {
+      onSuccess: () => toast.success('Urutan tahap pipeline diperbarui.'),
+      onError: () => toast.error('Gagal menyimpan urutan. Coba lagi.'),
+    })
+  }
 
   const createUser = useCreateUser()
   const deleteUser = useDeleteUser()
@@ -96,6 +155,8 @@ export default function MasterDataPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [role, setRole] = useState<'admin' | 'super_admin' | 'surveyor' | 'manager_surveyor'>('admin')
   const [accountId, setAccountId] = useState('')
 
@@ -140,6 +201,8 @@ export default function MasterDataPage() {
     setEmail('')
     setPassword('')
     setPasswordConfirm('')
+    setShowPassword(false)
+    setShowPasswordConfirm(false)
     setRole('admin')
     setAccountId('')
     setOpenModal(true)
@@ -161,6 +224,7 @@ export default function MasterDataPage() {
     setModalType('reset-pass')
     setEditingId(id)
     setPassword('')
+    setShowPassword(false)
     setOpenModal(true)
   }
 
@@ -328,32 +392,32 @@ export default function MasterDataPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-            <Settings className="h-6 w-6 text-amber-500" />
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2.5">
+            <Settings className="h-7 w-7 text-amber-500 shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)] hover:rotate-45 transition-transform duration-500" />
             Konfigurasi Master Data
           </h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
             Halaman pengaturan sistem untuk kebutuhan produk interior, pipeline status deal, dan pendaftaran user operator.
           </p>
         </div>
 
         <div className="flex gap-2">
           {activeTab === 'categories' && (
-            <Button onClick={handleOpenCatCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold">
+            <Button onClick={handleOpenCatCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
               <Plus className="h-4 w-4 mr-1.5" />
               Kategori Baru
             </Button>
           )}
           {activeTab === 'statuses' && (
-            <Button onClick={handleOpenStatCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold">
+            <Button onClick={handleOpenStatCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
               <Plus className="h-4 w-4 mr-1.5" />
               Status Baru
             </Button>
           )}
           {activeTab === 'users' && (
-            <Button onClick={handleOpenUserCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold">
+            <Button onClick={handleOpenUserCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
               <Plus className="h-4 w-4 mr-1.5" />
               User Baru
             </Button>
@@ -362,55 +426,78 @@ export default function MasterDataPage() {
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex gap-1.5 border-b border-border pb-px overflow-x-auto dark:border-zinc-800">
+      <div className="inline-flex p-1.5 gap-1.5 rounded-2xl glass-panel border border-border/40 shadow-sm overflow-x-auto max-w-full dark:border-zinc-800/60 dark:shadow-none scrollbar-none">
         <button
           onClick={() => setActiveTab('categories')}
           className={cn(
-            "px-4 py-2 text-xs font-semibold focus:outline-none border-b-2 transition-all flex items-center gap-2 shrink-0",
+            "px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 flex items-center gap-2 shrink-0 cursor-pointer select-none",
             activeTab === 'categories'
-              ? "border-amber-500 text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground/80"
+              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
           )}
         >
-          <Tag className="h-3.5 w-3.5" />
-          Kategori Kebutuhan
+          <Tag className={cn("h-4 w-4 transition-transform duration-300", activeTab === 'categories' && "scale-110")} />
+          <span>Kategori Kebutuhan</span>
         </button>
         <button
           onClick={() => setActiveTab('statuses')}
           className={cn(
-            "px-4 py-2 text-xs font-semibold focus:outline-none border-b-2 transition-all flex items-center gap-2 shrink-0",
+            "px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 flex items-center gap-2 shrink-0 cursor-pointer select-none",
             activeTab === 'statuses'
-              ? "border-amber-500 text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground/80"
+              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
           )}
         >
-          <Kanban className="h-3.5 w-3.5" />
-          Status Pipeline
+          <Kanban className={cn("h-4 w-4 transition-transform duration-300", activeTab === 'statuses' && "scale-110")} />
+          <span>Status Pipeline</span>
         </button>
         <button
           onClick={() => setActiveTab('users')}
           className={cn(
-            "px-4 py-2 text-xs font-semibold focus:outline-none border-b-2 transition-all flex items-center gap-2 shrink-0",
+            "px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 flex items-center gap-2 shrink-0 cursor-pointer select-none",
             activeTab === 'users'
-              ? "border-amber-500 text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground/80"
+              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
           )}
         >
-          <Users className="h-3.5 w-3.5" />
-          Akun Pengguna Admin
+          <Users className={cn("h-4 w-4 transition-transform duration-300", activeTab === 'users' && "scale-110")} />
+          <span>Akun Pengguna Admin</span>
         </button>
       </div>
 
       {/* ── Categories Tab ───────────────────────────────────────── */}
       {activeTab === 'categories' && (
-        <Card className="border-border bg-card shadow-sm overflow-hidden dark:border-zinc-800 dark:bg-zinc-900/40">
+        <div className="space-y-4">
+        <div className="relative w-full max-w-md">
+          <Search className={cn(
+            "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50 transition-colors",
+            catSearch && "text-amber-500"
+          )} />
+          <Input
+            placeholder="Cari nama kategori..."
+            value={catSearch}
+            onChange={(e) => setCatSearch(e.target.value)}
+            className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-amber-500/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60 dark:focus-visible:bg-zinc-900"
+          />
+          {catSearch && (
+            <button
+              type="button"
+              onClick={() => setCatSearch('')}
+              className="absolute right-2.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800 cursor-pointer"
+              title="Bersihkan pencarian"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+        <Card className="glass-panel border border-border/50 shadow-md rounded-2xl dark:border-zinc-900/60 dark:shadow-none overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto scrollbar-thin">
               <Table>
-              <TableHeader className="bg-muted/20 border-b border-border dark:bg-zinc-950/20 dark:border-zinc-800">
-                <TableRow className="border-border dark:border-zinc-800">
-                  <TableHead className="text-muted-foreground text-xs font-semibold">Nama Kategori</TableHead>
-                  <TableHead className="text-muted-foreground text-xs font-semibold w-[150px] text-right">Aksi</TableHead>
+              <TableHeader className="bg-muted/20 border-b border-border/40 dark:bg-zinc-950/40 dark:border-zinc-900/50">
+                <TableRow className="border-border hover:bg-transparent dark:border-zinc-900">
+                  <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pl-5">Nama Kategori</TableHead>
+                  <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pr-5 w-[150px] text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -422,17 +509,17 @@ export default function MasterDataPage() {
                   </TableRow>
                 ) : catResponse?.data?.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground text-xs">
-                      Tidak ada kategori terdaftar.
+                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground text-xs font-semibold">
+                      {catSearch ? `Kategori "${catSearch}" tidak ditemukan.` : 'Tidak ada kategori terdaftar.'}
                     </TableCell>
                   </TableRow>
                 ) : (
                   catResponse?.data?.map((cat) => (
-                    <TableRow key={cat.id} className="border-border/60 hover:bg-muted/10 dark:border-zinc-800/60 dark:hover:bg-zinc-800/10">
-                      <TableCell className="text-xs font-semibold text-foreground/80">
+                    <TableRow key={cat.id} className="border-border/40 hover:bg-muted/30 hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] dark:hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] transition-all duration-200 dark:border-zinc-900/40 dark:hover:bg-zinc-800/10">
+                      <TableCell className="text-xs font-bold text-foreground/80 py-3.5 pl-5">
                         {cat.name}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right pr-5 py-3.5">
                         <div className="flex justify-end gap-1.5">
                           <Button
                             size="icon-xs"
@@ -460,80 +547,84 @@ export default function MasterDataPage() {
             </div>
           </CardContent>
         </Card>
+
+        {catMeta && catMeta.last_page > 1 && (
+          <div className="flex items-center justify-between pt-1">
+            <p className="text-[10px] text-muted-foreground/70">
+              Menampilkan <span className="font-semibold text-muted-foreground">{catResponse?.data?.length ?? 0}</span> dari <span className="font-semibold text-muted-foreground">{catMeta.total}</span> kategori.
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={categoriesPage <= 1}
+                onClick={() => setCategoriesPage((p) => Math.max(1, p - 1))}
+                className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              >
+                <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
+                Sebelumnya
+              </Button>
+              <span className="text-xs font-semibold text-muted-foreground px-2">
+                Halaman {catMeta.current_page} dari {catMeta.last_page}
+              </span>
+              <Button
+                variant="outline"
+                size="xs"
+                disabled={categoriesPage >= catMeta.last_page}
+                onClick={() => setCategoriesPage((p) => Math.min(catMeta.last_page, p + 1))}
+                className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              >
+                Selanjutnya
+                <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+              </Button>
+            </div>
+          </div>
+        )}
+        </div>
       )}
 
       {/* ── Statuses Tab ─────────────────────────────────────────── */}
       {activeTab === 'statuses' && (
-        <Card className="border-border bg-card shadow-sm overflow-hidden dark:border-zinc-800 dark:bg-zinc-900/40">
+        <Card className="glass-panel border border-border/50 shadow-md rounded-2xl dark:border-zinc-900/60 dark:shadow-none overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto scrollbar-thin">
-              <Table>
-              <TableHeader className="bg-muted/20 border-b border-border dark:bg-zinc-950/20 dark:border-zinc-800">
-                <TableRow className="border-border dark:border-zinc-800">
-                  <TableHead className="text-muted-foreground text-xs font-semibold w-[80px]">Urutan</TableHead>
-                  <TableHead className="text-muted-foreground text-xs font-semibold">Nama Tahap Pipeline</TableHead>
-                  <TableHead className="text-muted-foreground text-xs font-semibold">Warna Aksen</TableHead>
-                  <TableHead className="text-muted-foreground text-xs font-semibold w-[150px] text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {statLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center">
-                      <Loader2 className="h-5 w-5 animate-spin text-amber-500 mx-auto" />
-                    </TableCell>
-                  </TableRow>
-                ) : statResponse?.data?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground text-xs">
-                      Tidak ada status terdaftar.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  statResponse?.data?.map((st) => (
-                    <TableRow key={st.id} className="border-border/60 hover:bg-muted/10 dark:border-zinc-800/60 dark:hover:bg-zinc-800/10">
-                      <TableCell className="text-xs text-muted-foreground/70 font-bold">
-                        #{st.sort_order}
-                      </TableCell>
-                      <TableCell className="text-xs font-bold text-foreground/80">
-                        {st.name.toUpperCase()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-3 w-3 rounded-full shrink-0"
-                            style={{ backgroundColor: st.color || '#71717a' }}
-                          />
-                          <span className="text-[10px] text-muted-foreground/70 font-mono font-semibold">
-                            {st.color || '#71717a'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1.5">
-                          <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            onClick={() => handleOpenStatEdit(st.id, st.name, st.color)}
-                            className="text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            size="icon-xs"
-                            variant="ghost"
-                            onClick={() => handleDeleteStat(st.id)}
-                            className="text-muted-foreground/70 hover:text-red-500 hover:bg-muted dark:hover:bg-zinc-800"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-              </Table>
+              {/* Column header (mirrors the old table layout) */}
+              <div className="flex items-center bg-muted/20 border-b border-border/40 px-5 py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:bg-zinc-950/40 dark:border-zinc-900/50 min-w-[640px]">
+                <div className="w-[120px]">Urutan</div>
+                <div className="flex-1">Nama Tahap Pipeline</div>
+                <div className="w-[200px]">Warna Aksen</div>
+                <div className="w-[110px] text-right">Aksi</div>
+              </div>
+
+              {statLoading ? (
+                <div className="flex h-24 items-center justify-center">
+                  <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+                </div>
+              ) : orderedStatuses.length === 0 ? (
+                <div className="flex h-24 items-center justify-center text-muted-foreground text-xs font-semibold">
+                  Tidak ada status terdaftar.
+                </div>
+              ) : (
+                <Reorder.Group
+                  ref={statusListRef}
+                  axis="y"
+                  values={orderedStatuses}
+                  onReorder={handleStatusReorder}
+                  className="list-none min-w-[640px]"
+                >
+                  {orderedStatuses.map((st, index) => (
+                    <SortableStatusRow
+                      key={st.id}
+                      status={st}
+                      index={index}
+                      constraintsRef={statusListRef}
+                      onCommit={commitStatusOrder}
+                      onEdit={() => handleOpenStatEdit(st.id, st.name, st.color)}
+                      onDelete={() => handleDeleteStat(st.id)}
+                    />
+                  ))}
+                </Reorder.Group>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -542,27 +633,40 @@ export default function MasterDataPage() {
       {/* ── Users Tab ────────────────────────────────────────────── */}
       {activeTab === 'users' && (
         <div className="space-y-4">
-          <div className="relative max-w-sm">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground/60" />
+          <div className="relative w-full max-w-md">
+            <Search className={cn(
+              "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50 transition-colors",
+              userSearch && "text-amber-500"
+            )} />
             <Input
               placeholder="Cari user admin..."
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
-              className="pl-9 border-border bg-muted/40 placeholder:text-muted-foreground/40 focus-visible:ring-amber-500/50 text-xs dark:border-zinc-800 dark:bg-zinc-900/60 dark:placeholder:text-zinc-600"
+              className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-amber-500/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60 dark:focus-visible:bg-zinc-900"
             />
+            {userSearch && (
+              <button
+                type="button"
+                onClick={() => setUserSearch('')}
+                className="absolute right-2.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800 cursor-pointer"
+                title="Bersihkan pencarian"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
           </div>
 
-          <Card className="border-border bg-card shadow-sm overflow-hidden dark:border-zinc-800 dark:bg-zinc-900/40">
+          <Card className="glass-panel border border-border/50 shadow-md rounded-2xl dark:border-zinc-900/60 dark:shadow-none overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto scrollbar-thin">
                 <Table>
-                <TableHeader className="bg-muted/20 border-b border-border dark:bg-zinc-950/20 dark:border-zinc-800">
-                  <TableRow className="border-border dark:border-zinc-800">
-                    <TableHead className="text-muted-foreground text-xs font-semibold">Nama Lengkap</TableHead>
-                    <TableHead className="text-muted-foreground text-xs font-semibold">Email</TableHead>
-                    <TableHead className="text-muted-foreground text-xs font-semibold">Role</TableHead>
-                    <TableHead className="text-muted-foreground text-xs font-semibold">Tautan Cabang</TableHead>
-                    <TableHead className="text-muted-foreground text-xs font-semibold w-[150px] text-right">Aksi</TableHead>
+                <TableHeader className="bg-muted/20 border-b border-border/40 dark:bg-zinc-950/40 dark:border-zinc-900/50">
+                  <TableRow className="border-border hover:bg-transparent dark:border-zinc-900">
+                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pl-5">Nama Lengkap</TableHead>
+                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Email</TableHead>
+                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Role</TableHead>
+                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Tautan Akun</TableHead>
+                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pr-5 w-[150px] text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -574,20 +678,25 @@ export default function MasterDataPage() {
                     </TableRow>
                   ) : userResponse?.data?.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground text-xs">
+                      <TableCell colSpan={5} className="h-24 text-center text-muted-foreground text-xs font-semibold">
                         Tidak ada user terdaftar.
                       </TableCell>
                     </TableRow>
                   ) : (
                     userResponse?.data?.map((usr) => (
-                      <TableRow key={usr.id} className="border-border/60 hover:bg-muted/10 dark:border-zinc-800/60 dark:hover:bg-zinc-800/10">
-                        <TableCell className="text-xs font-semibold text-foreground/90">
-                          {usr.name}
+                      <TableRow key={usr.id} className="border-border/40 hover:bg-muted/30 hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] dark:hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] transition-all duration-200 dark:border-zinc-900/40 dark:hover:bg-zinc-800/10">
+                        <TableCell className="text-xs font-bold text-foreground/90 py-3.5 pl-5">
+                          <div className="flex items-center gap-2">
+                            <div className="h-5.5 w-5.5 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-[9px] font-black border border-amber-500/25 shrink-0 dark:text-amber-500">
+                              {usr.name.charAt(0).toUpperCase()}
+                            </div>
+                            <span className="truncate max-w-[130px]">{usr.name}</span>
+                          </div>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-xs text-muted-foreground py-3.5 font-semibold">
                           {usr.email}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="py-3.5">
                           <Badge
                             variant="outline"
                             className={cn(
@@ -612,10 +721,10 @@ export default function MasterDataPage() {
                               : usr.role}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-xs text-muted-foreground py-3.5 font-semibold">
                           {usr.account?.name || '-'}
                         </TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right pr-5 py-3.5">
                           <div className="flex justify-end gap-1.5">
                             <Button
                               size="icon-xs"
@@ -746,28 +855,79 @@ export default function MasterDataPage() {
                   </div>
 
                   {!editingId && (
-                    <div className="grid gap-2 grid-cols-2">
+                    <div className="space-y-3">
+                      {/* Password field */}
                       <div className="space-y-1.5">
                         <Label htmlFor="usr-pass" className="text-xs font-semibold text-muted-foreground">Password</Label>
-                        <Input
-                          id="usr-pass"
-                          type="password"
-                          placeholder="Min. 8 karakter"
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          className="border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
-                        />
+                        <div className="relative">
+                          <Input
+                            id="usr-pass"
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Min. 8 karakter"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className={cn(
+                              "pr-10 border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300",
+                              password.length > 0 && password.length < 8 && "border-amber-500/60 focus-visible:ring-amber-500/40"
+                            )}
+                          />
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            onClick={() => setShowPassword((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                          >
+                            {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                        {password.length > 0 && password.length < 8 && (
+                          <p className="text-[10px] text-amber-500 flex items-center gap-1">
+                            <AlertCircle className="h-3 w-3 shrink-0" />
+                            Minimal 8 karakter
+                          </p>
+                        )}
                       </div>
+
+                      {/* Confirm Password field */}
                       <div className="space-y-1.5">
-                        <Label htmlFor="usr-pass-conf" className="text-xs font-semibold text-muted-foreground">Konfirmasi</Label>
-                        <Input
-                          id="usr-pass-conf"
-                          type="password"
-                          placeholder="Ulangi password"
-                          value={passwordConfirm}
-                          onChange={(e) => setPasswordConfirm(e.target.value)}
-                          className="border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
-                        />
+                        <Label htmlFor="usr-pass-conf" className="text-xs font-semibold text-muted-foreground">Konfirmasi Password</Label>
+                        <div className="relative">
+                          <Input
+                            id="usr-pass-conf"
+                            type={showPasswordConfirm ? 'text' : 'password'}
+                            placeholder="Ulangi password"
+                            value={passwordConfirm}
+                            onChange={(e) => setPasswordConfirm(e.target.value)}
+                            className={cn(
+                              "pr-10 border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300",
+                              passwordConfirm.length > 0 && password !== passwordConfirm && "border-red-500/60 focus-visible:ring-red-500/40",
+                              passwordConfirm.length > 0 && password === passwordConfirm && "border-emerald-500/60 focus-visible:ring-emerald-500/40"
+                            )}
+                          />
+                          <button
+                            type="button"
+                            tabIndex={-1}
+                            onClick={() => setShowPasswordConfirm((v) => !v)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            aria-label={showPasswordConfirm ? 'Sembunyikan konfirmasi password' : 'Tampilkan konfirmasi password'}
+                          >
+                            {showPasswordConfirm ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                          </button>
+                        </div>
+                        {/* Real-time mismatch validation */}
+                        {passwordConfirm.length > 0 && password !== passwordConfirm && (
+                          <p className="text-[10px] text-red-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <AlertCircle className="h-3 w-3 shrink-0" />
+                            Password tidak cocok
+                          </p>
+                        )}
+                        {passwordConfirm.length > 0 && password === passwordConfirm && password.length >= 8 && (
+                          <p className="text-[10px] text-emerald-500 flex items-center gap-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                            <CheckCircle2 className="h-3 w-3 shrink-0" />
+                            Password cocok
+                          </p>
+                        )}
                       </div>
                     </div>
                   )}
@@ -775,35 +935,41 @@ export default function MasterDataPage() {
                   <div className="grid gap-2 grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="usr-role" className="text-xs font-semibold text-muted-foreground">Role Pengguna</Label>
-                      <select
-                        id="usr-role"
+                      <Select
                         value={role}
-                        onChange={(e) => setRole(e.target.value as any)}
-                        className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                        onValueChange={(v) => setRole(v as any)}
                       >
-                        <option value="admin">Admin Cabang</option>
-                        <option value="super_admin">Super Admin</option>
-                        <option value="surveyor">Surveyor</option>
-                        <option value="manager_surveyor">Manager Surveyor</option>
-                      </select>
+                        <SelectTrigger id="usr-role" className="h-8 rounded-lg border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950">
+                          <SelectValue placeholder="Pilih Role" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Admin Akun</SelectItem>
+                          <SelectItem value="super_admin">Super Admin</SelectItem>
+                          <SelectItem value="surveyor">Surveyor</SelectItem>
+                          <SelectItem value="manager_surveyor">Manager Surveyor</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {role === 'admin' && (
                       <div className="space-y-1.5">
-                        <Label htmlFor="usr-account" className="text-xs font-semibold text-muted-foreground">Tautan Cabang</Label>
-                        <select
-                          id="usr-account"
-                          value={accountId}
-                          onChange={(e) => setAccountId(e.target.value)}
-                          className="w-full h-8 rounded-lg border border-border bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                        <Label htmlFor="usr-account" className="text-xs font-semibold text-muted-foreground">Tautan Akun</Label>
+                        <Select
+                          value={accountId || 'none'}
+                          onValueChange={(v) => setAccountId(v && v !== 'none' ? v : '')}
                         >
-                          <option value="">-- Pilih Cabang --</option>
-                          {accountsList.map((acc: any) => (
-                            <option key={acc.id} value={acc.id}>
-                              {acc.name}
-                            </option>
-                          ))}
-                        </select>
+                          <SelectTrigger id="usr-account" className="h-8 rounded-lg border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950">
+                            <SelectValue placeholder="Pilih Akun" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">-- Pilih Akun --</SelectItem>
+                            {accountsList.map((acc: any) => (
+                              <SelectItem key={acc.id} value={String(acc.id)}>
+                                {acc.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     )}
                   </div>
@@ -815,15 +981,24 @@ export default function MasterDataPage() {
                 <div className="space-y-1.5">
                   <Label htmlFor="reset-pass-input" className="text-xs font-semibold text-muted-foreground">Password Baru</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-2 h-4 w-4 text-muted-foreground/70" />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/70" />
                     <Input
                       id="reset-pass-input"
-                      type="password"
+                      type={showPassword ? 'text' : 'password'}
                       placeholder="Masukkan password baru..."
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="pl-9 border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                      className="pl-9 pr-10 border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
                     />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    >
+                      {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                    </button>
                   </div>
                 </div>
               )}
@@ -870,5 +1045,87 @@ export default function MasterDataPage() {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+/**
+ * A single draggable pipeline-stage row. Dragging is started only from the grip
+ * handle (dragListener=false + dragControls) so the edit/delete buttons and
+ * horizontal scrolling keep working. `touch-none` on the handle lets touch
+ * devices drag without the page scrolling. The new order is persisted on drop.
+ */
+function SortableStatusRow({
+  status,
+  index,
+  constraintsRef,
+  onCommit,
+  onEdit,
+  onDelete,
+}: {
+  status: StatusCategory
+  index: number
+  constraintsRef: React.RefObject<HTMLUListElement | null>
+  onCommit: () => void
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const controls = useDragControls()
+
+  return (
+    <Reorder.Item
+      value={status}
+      dragListener={false}
+      dragControls={controls}
+      dragConstraints={constraintsRef}
+      dragElastic={0.05}
+      dragMomentum={false}
+      onDragEnd={onCommit}
+      className="flex items-center border-b border-border/40 bg-card px-5 py-3 transition-colors hover:bg-muted/30 dark:border-zinc-900/40 dark:bg-transparent dark:hover:bg-zinc-800/10"
+    >
+      <div className="w-[120px] flex items-center gap-2">
+        <button
+          type="button"
+          onPointerDown={(e) => controls.start(e)}
+          className="touch-none cursor-grab rounded-md p-1 -ml-1 text-muted-foreground/50 transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing dark:hover:bg-zinc-800"
+          title="Seret untuk mengubah urutan"
+          aria-label="Seret untuk mengubah urutan"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <span className="text-xs font-bold text-muted-foreground/70">#{index + 1}</span>
+      </div>
+      <div className="flex-1 pr-3 text-xs font-bold text-foreground/80">
+        {status.name.toUpperCase()}
+      </div>
+      <div className="w-[200px]">
+        <div className="flex items-center gap-2">
+          <span
+            className="h-3 w-3 shrink-0 rounded-full"
+            style={{ backgroundColor: status.color || '#71717a' }}
+          />
+          <span className="font-mono text-[10px] font-semibold text-muted-foreground/70">
+            {status.color || '#71717a'}
+          </span>
+        </div>
+      </div>
+      <div className="flex w-[110px] justify-end gap-1.5">
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          onClick={onEdit}
+          className="text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800"
+        >
+          <Edit2 className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          size="icon-xs"
+          variant="ghost"
+          onClick={onDelete}
+          className="text-muted-foreground/70 hover:bg-muted hover:text-red-500 dark:hover:bg-zinc-800"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </Reorder.Item>
   )
 }

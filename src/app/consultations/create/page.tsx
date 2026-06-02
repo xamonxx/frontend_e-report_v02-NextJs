@@ -18,12 +18,15 @@ import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Loader2, Save, Building2, User, MapPin, ClipboardList, Tag } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Building2, User, MapPin, ClipboardList, Tag, Calendar as CalendarIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { formatPhoneInput, isPhoneValid } from '@/lib/utils'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
+import { format, parseISO } from 'date-fns'
 
 export default function CreateConsultationPage() {
   const router = useRouter()
@@ -113,7 +116,7 @@ export default function CreateConsultationPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!clientName.trim()) { toast.error('Nama klien wajib diisi'); return }
-    if (!selectedAccount) { toast.error('Cabang/Akun wajib dipilih'); return }
+    if (!selectedAccount) { toast.error('Akun wajib dipilih'); return }
     if (!selectedStatus) { toast.error('Status awal lead wajib dipilih'); return }
     if (selectedNeeds.length === 0) { toast.error('Pilih minimal satu kategori kebutuhan'); return }
     if (requiresProductDetails && productDetails.trim().length < 3) {
@@ -155,7 +158,7 @@ export default function CreateConsultationPage() {
         </Link>
         <div>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Tambah Lead Baru</h1>
-          <p className="text-xs text-muted-foreground/70">Mendaftarkan lead baru ke pipeline cabang interior.</p>
+          <p className="text-xs text-muted-foreground/70">Mendaftarkan lead baru ke pipeline akun interior.</p>
         </div>
       </div>
 
@@ -174,14 +177,14 @@ export default function CreateConsultationPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Cabang (Super Admin) — full width so dropdown has room */}
+                {/* Akun (Super Admin) — full width so dropdown has room */}
                 {isSuperAdmin && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-semibold text-muted-foreground">Pilih Cabang *</Label>
+                    <Label className="text-xs font-semibold text-muted-foreground">Pilih Akun *</Label>
                     <Autocomplete
                       value={selectedAccount ? selectedAccount.toString() : ''}
                       onChange={(val) => setSelectedAccount(val ? parseInt(val, 10) : undefined)}
-                      placeholder="Cari/Pilih Cabang..."
+                      placeholder="Cari/Pilih Akun..."
                       options={(accounts || []).map(acc => ({ value: acc.id.toString(), label: acc.name }))}
                       onlyChangeOnSelect
                     />
@@ -205,15 +208,39 @@ export default function CreateConsultationPage() {
                   </div>
 
                   {/* Date */}
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 flex flex-col">
                     <Label htmlFor="cons-date" className="text-xs font-semibold text-muted-foreground">Tanggal Konsultasi</Label>
-                    <Input
-                      id="cons-date"
-                      type="date"
-                      value={consultationDate}
-                      onChange={(e) => setConsultationDate(e.target.value)}
-                      className="h-9 border-border bg-background/60 focus-visible:ring-amber-500/50 text-foreground/80 dark:border-zinc-800 dark:bg-zinc-950/60"
-                    />
+                    <Popover>
+                      <PopoverTrigger
+                        id="cons-date"
+                        type="button"
+                        className={cn(
+                          "w-full h-9 justify-between text-left font-normal border border-border bg-background/60 hover:bg-background/80 dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/60 text-foreground/80 rounded-lg px-3 text-xs focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center",
+                          !consultationDate && "text-muted-foreground"
+                        )}
+                      >
+                        {consultationDate ? (
+                          format(parseISO(consultationDate), 'dd/MM/yyyy')
+                        ) : (
+                          <span>Pilih Tanggal</span>
+                        )}
+                        <CalendarIcon className="h-4 w-4 ml-auto text-muted-foreground/70" />
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={consultationDate ? parseISO(consultationDate) : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              const yyyy = date.getFullYear()
+                              const mm = String(date.getMonth() + 1).padStart(2, '0')
+                              const dd = String(date.getDate()).padStart(2, '0')
+                              setConsultationDate(`${yyyy}-${mm}-${dd}`)
+                            }
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {/* ID Preview */}
@@ -408,7 +435,7 @@ export default function CreateConsultationPage() {
             <Button
               type="submit"
               disabled={createMutation.isPending}
-              className="w-full bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold h-10 shadow-[0_0_15px_rgba(245,158,11,0.2)] hover:shadow-[0_0_20px_rgba(245,158,11,0.35)] transition-all duration-300 rounded-xl"
+              className="w-full bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold h-10 shadow-[0_0_15px_color-mix(in_srgb,var(--primary-theme)_20%,transparent)] hover:shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] transition-all duration-300 rounded-xl"
             >
               {createMutation.isPending ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Menyimpan Lead...</>

@@ -110,7 +110,7 @@ export function useAccounts() {
 
 // ── Super Admin Needs Category CRUD ─────────────────────────────
 
-export function useCategoriesList(filters?: { page?: number }) {
+export function useCategoriesList(filters?: { page?: number; per_page?: number; search?: string }) {
   return useQuery({
     queryKey: ['master-data', 'categories', 'list', filters],
     queryFn: () =>
@@ -156,7 +156,7 @@ export function useDeleteCategory() {
 
 // ── Super Admin Status Category CRUD ─────────────────────────────
 
-export function useStatusesList(filters?: { page?: number }) {
+export function useStatusesList(filters?: { page?: number; per_page?: number }) {
   return useQuery({
     queryKey: ['master-data', 'statuses', 'list', filters],
     queryFn: () =>
@@ -193,6 +193,19 @@ export function useDeleteStatus() {
   return useMutation({
     mutationFn: (id: number) =>
       api.delete<{ message: string }>(`/master-data/statuses/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['master-data', 'statuses'] })
+      queryClient.invalidateQueries({ queryKey: queryKeys.masterData.statusCategories })
+    },
+  })
+}
+
+/** Persist a new pipeline-stage order produced by drag-and-drop. */
+export function useReorderStatuses() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (order: number[]) =>
+      api.patch<{ message: string; data: StatusCategory[] }>('/master-data/statuses/reorder', { order }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['master-data', 'statuses'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.masterData.statusCategories })

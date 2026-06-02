@@ -4,11 +4,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import { useLogin } from '@/lib/hooks/useAuth'
-import { Loader2, Eye, EyeOff, AlertCircle, Home } from 'lucide-react'
+import { Loader2, Eye, EyeOff, AlertCircle, KeyRound, Send, X, User, AtSign, MessageSquare } from 'lucide-react'
+import Logo from '@/components/brand/logo'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import LoginBackground from '@/components/login/login-background'
+import BugReportWidget from '@/components/bug-report/bug-report-widget'
 
 const loginSchema = zod.object({
   email: zod.string().email({ message: 'Alamat email tidak valid.' }),
@@ -17,6 +19,17 @@ const loginSchema = zod.object({
 })
 
 type LoginFormValues = zod.infer<typeof loginSchema>
+
+// Nomor WhatsApp developer untuk permohonan reset password (E.164 tanpa "+")
+const DEV_WHATSAPP = '6285168112098'
+
+const forgotSchema = zod.object({
+  adminName: zod.string().min(2, { message: 'Nama admin minimal 2 karakter.' }),
+  accountName: zod.string().min(2, { message: 'Nama akun minimal 2 karakter.' }),
+  note: zod.string().max(500, { message: 'Catatan maksimal 500 karakter.' }).optional(),
+})
+
+type ForgotFormValues = zod.infer<typeof forgotSchema>
 
 const cardVariants = {
   hidden: { opacity: 0, y: 40, scale: 0.96 },
@@ -43,6 +56,7 @@ export default function LoginPage() {
   const [authError, setAuthError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
+  const [forgotOpen, setForgotOpen] = useState(false)
 
   const {
     register,
@@ -54,35 +68,41 @@ export default function LoginPage() {
     defaultValues: { email: '', password: '', remember: false },
   })
 
-  const emailValue = watch('email')
+  const {
+    register: registerForgot,
+    handleSubmit: handleSubmitForgot,
+    reset: resetForgot,
+    formState: { errors: forgotErrors },
+  } = useForm<ForgotFormValues>({
+    resolver: zodResolver(forgotSchema),
+    defaultValues: { adminName: '', accountName: '', note: '' },
+  })
+
+  const closeForgot = () => {
+    setForgotOpen(false)
+    resetForgot()
+  }
+
+  const onSubmitForgot = (data: ForgotFormValues) => {
+    const lines = [
+      '*Permohonan Reset Password — E-Report*',
+      '',
+      `Nama Admin : ${data.adminName}`,
+      `Nama Akun  : ${data.accountName}`,
+      `Catatan    : ${data.note?.trim() || '-'}`,
+      '',
+      'Mohon dibantu untuk mereset password akun di atas. Terima kasih.',
+    ]
+    const text = encodeURIComponent(lines.join('\n'))
+    window.open(`https://wa.me/${DEV_WHATSAPP}?text=${text}`, '_blank', 'noopener,noreferrer')
+    closeForgot()
+  }
 
   useEffect(() => {
-    if (!emailValue) {
-      const root = document.documentElement
-      root.style.setProperty('--primary-theme', '#f59e0b')
-      return
-    }
-
-    const delay = setTimeout(async () => {
-      if (emailValue.includes('@') && emailValue.includes('.')) {
-        try {
-          const res = await fetch(`/api/v1/auth/color-lookup?email=${encodeURIComponent(emailValue)}`)
-          const data = await res.json()
-          if (data && data.primary_color) {
-            const root = document.documentElement
-            root.style.setProperty('--primary-theme', data.primary_color)
-          }
-        } catch (e) {
-          // Ignore lookup errors
-        }
-      } else {
-        const root = document.documentElement
-        root.style.setProperty('--primary-theme', '#f59e0b')
-      }
-    }, 200)
-
-    return () => clearTimeout(delay)
-  }, [emailValue])
+    // Reset to default primary theme orange on login page mount
+    const root = document.documentElement
+    root.style.setProperty('--primary-theme', '#f59e0b')
+  }, [])
 
   const onSubmit = (data: LoginFormValues) => {
     setAuthError(null)
@@ -101,6 +121,9 @@ export default function LoginPage() {
 
       {/* ─── Animated Background ─── */}
       <LoginBackground />
+
+      {/* ─── Bug Report (floating, bottom-left) ─── */}
+      <BugReportWidget />
 
       {/* ─── Login Card ─── */}
       <motion.div
@@ -143,11 +166,11 @@ export default function LoginPage() {
                     whileHover={{ scale: 1.05, rotate: 2 }}
                     transition={{ type: 'spring', stiffness: 300, damping: 20 }}
                   >
-                    <Home className="h-7 w-7 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.55)]" />
+                    <Logo className="h-14 w-14 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.55)]" />
                   </motion.div>
                 </div>
               </div>
-              <h1 className="text-[22px] font-black uppercase tracking-widest text-gradient-amber leading-tight">
+              <h1 className="text-[22px] font-black uppercase tracking-widest text-amber-500 leading-tight">
                 Putra Corporation
               </h1>
               <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-500">
@@ -253,12 +276,13 @@ export default function LoginPage() {
                   />
                   <span className="text-xs text-zinc-500 dark:text-zinc-500">Ingat perangkat saya</span>
                 </label>
-                <a
-                  href="#"
-                  className="text-xs font-medium text-amber-600 hover:text-amber-500 dark:text-amber-500/70 dark:hover:text-amber-400 transition-colors"
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="text-xs font-medium text-amber-600 hover:text-amber-500 dark:text-amber-500/70 dark:hover:text-amber-400 transition-colors cursor-pointer"
                 >
                   Lupa password?
-                </a>
+                </button>
               </motion.div>
 
               {/* Submit */}
@@ -310,6 +334,201 @@ export default function LoginPage() {
           </motion.div>
         </div>
       </motion.div>
+
+      {/* ─── Forgot Password Modal ─── */}
+      <AnimatePresence>
+        {forgotOpen && (
+          <motion.div
+            key="forgot-overlay"
+            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 bg-zinc-950/55 backdrop-blur-sm"
+              onClick={closeForgot}
+            />
+
+            {/* Dialog */}
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="forgot-title"
+              className="relative w-full max-w-[440px] rounded-[24px] border border-zinc-200 bg-white shadow-2xl shadow-black/20 overflow-hidden dark:border-zinc-800 dark:bg-[#12121a] dark:shadow-black/70"
+              initial={{ opacity: 0, y: 24, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 16, scale: 0.97 }}
+              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+            >
+              {/* Top amber hairline */}
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent dark:via-amber-500/50" />
+
+              {/* Close */}
+              <button
+                type="button"
+                onClick={closeForgot}
+                aria-label="Tutup"
+                className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-white/[0.06] dark:hover:text-zinc-300 transition-colors cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              <div className="px-7 pt-8 pb-7">
+                {/* Header */}
+                <div className="mb-6 text-center">
+                  <div className="mb-4 flex justify-center">
+                    <div className="relative">
+                      <div className="absolute inset-0 rounded-2xl bg-amber-500/25 blur-xl dark:bg-amber-500/30" />
+                      <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/18 to-amber-600/8 dark:border-amber-500/20 dark:from-amber-500/15 dark:to-amber-600/5">
+                        <KeyRound className="h-6 w-6 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.55)]" />
+                      </div>
+                    </div>
+                  </div>
+                  <h2
+                    id="forgot-title"
+                    className="text-[17px] font-bold text-zinc-800 dark:text-zinc-100"
+                  >
+                    Permohonan Reset Password
+                  </h2>
+                  <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-500">
+                    Isi data berikut. Permintaan akan dikirim ke developer
+                    melalui WhatsApp untuk diproses.
+                  </p>
+                </div>
+
+                <form onSubmit={handleSubmitForgot(onSubmitForgot)} className="space-y-4">
+                  {/* Nama Admin */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                      Nama Admin
+                    </label>
+                    <div className="relative">
+                      <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-600" />
+                      <input
+                        type="text"
+                        placeholder="Nama lengkap admin"
+                        {...registerForgot('adminName')}
+                        className={cn(
+                          'w-full rounded-xl border py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200',
+                          'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
+                          'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
+                          forgotErrors.adminName
+                            ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
+                            : [
+                                'border-zinc-200/80 hover:border-zinc-300',
+                                'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
+                                'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
+                                'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
+                              ]
+                        )}
+                      />
+                    </div>
+                    {forgotErrors.adminName && (
+                      <p className="pl-1 text-[11px] text-red-500 dark:text-red-400">
+                        {forgotErrors.adminName.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Nama Akun */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                      Nama Akun
+                    </label>
+                    <div className="relative">
+                      <AtSign className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-600" />
+                      <input
+                        type="text"
+                        placeholder="Email / username akun"
+                        {...registerForgot('accountName')}
+                        className={cn(
+                          'w-full rounded-xl border py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200',
+                          'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
+                          'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
+                          forgotErrors.accountName
+                            ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
+                            : [
+                                'border-zinc-200/80 hover:border-zinc-300',
+                                'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
+                                'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
+                                'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
+                              ]
+                        )}
+                      />
+                    </div>
+                    {forgotErrors.accountName && (
+                      <p className="pl-1 text-[11px] text-red-500 dark:text-red-400">
+                        {forgotErrors.accountName.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Note */}
+                  <div className="space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                      Catatan <span className="font-medium normal-case tracking-normal text-zinc-400/70">(opsional)</span>
+                    </label>
+                    <div className="relative">
+                      <MessageSquare className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-zinc-400 dark:text-zinc-600" />
+                      <textarea
+                        rows={3}
+                        placeholder="Mis. lupa password setelah ganti perangkat…"
+                        {...registerForgot('note')}
+                        className={cn(
+                          'w-full resize-none rounded-xl border py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200',
+                          'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
+                          'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
+                          forgotErrors.note
+                            ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
+                            : [
+                                'border-zinc-200/80 hover:border-zinc-300',
+                                'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
+                                'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
+                                'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
+                              ]
+                        )}
+                      />
+                    </div>
+                    {forgotErrors.note && (
+                      <p className="pl-1 text-[11px] text-red-500 dark:text-red-400">
+                        {forgotErrors.note.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-3 pt-1">
+                    <button
+                      type="button"
+                      onClick={closeForgot}
+                      className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-transparent dark:text-zinc-300 dark:hover:bg-white/[0.05] cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <motion.button
+                      type="submit"
+                      className={cn(
+                        'relative flex flex-[1.4] items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-bold text-zinc-950 cursor-pointer',
+                        'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600',
+                        'shadow-md shadow-amber-500/20 dark:shadow-amber-500/15',
+                        'transition-all duration-250 hover:shadow-lg hover:shadow-amber-500/30'
+                      )}
+                      whileHover={{ scale: 1.015 }}
+                      whileTap={{ scale: 0.985 }}
+                    >
+                      <Send className="h-4 w-4" />
+                      Kirim ke Developer
+                    </motion.button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

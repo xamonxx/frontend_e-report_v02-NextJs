@@ -44,6 +44,8 @@ import { cn } from '@/lib/utils'
 import { buildExportUrl } from '@/lib/api/client'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { format, parseISO } from 'date-fns'
 
 export default function ConsultationsPage() {
   const confirm = useConfirm()
@@ -197,138 +199,140 @@ export default function ConsultationsPage() {
   return (
     <div className="space-y-6">
       {/* Header section */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground dark:bg-gradient-to-r dark:from-amber-200 dark:via-amber-400 dark:to-amber-100 dark:bg-clip-text dark:text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
             Daftar Konsultasi
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
             Kelola dan pantau seluruh data pipeline lead konsultasi klien secara real-time.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {/* CSV Import Dialog */}
-          <Dialog open={importOpen} onOpenChange={setImportOpen}>
-            <DialogTrigger
-              render={
-                <Button variant="ghost" size="sm" className="h-9 px-3.5 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60">
-                  <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5" />
-                  Import CSV
-                </Button>
-              }
-            />
-            <DialogContent className="border-border bg-card text-foreground rounded-2xl shadow-2xl max-w-md dark:border-zinc-800/80 dark:bg-zinc-950/95 dark:backdrop-blur-xl">
-              <form onSubmit={handleImportSubmit}>
-                <DialogHeader>
-                  <DialogTitle className="text-foreground font-bold text-lg">Import Konsultasi via CSV</DialogTitle>
-                  <DialogDescription className="text-muted-foreground text-xs mt-1">
-                    Unggah file CSV dengan kolom sesuai format template. Proses import dilakukan di latar belakang (queue).
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="py-4 space-y-4">
-                  <a
-                    href={isMounted ? buildExportUrl('/api/v1/consultations/import/template') : '#'}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 transition-colors"
-                  >
-                    <Download className="h-3.5 w-3.5" />
-                    Download Template CSV
-                  </a>
-                  <div className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-2xl p-8 cursor-pointer transition-all duration-300 bg-muted/40 hover:bg-muted/60 relative group dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-950/80">
-                    <input
-                      type="file"
-                      accept=".csv"
-                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                    <Upload className="h-8 w-8 text-muted-foreground/50 group-hover:text-amber-500 group-hover:scale-110 transition-all duration-350 mb-2" />
-                    <p className="text-xs font-semibold text-foreground/80">
-                      {importFile ? importFile.name : 'Pilih file atau seret file CSV ke sini'}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground/70 mt-1">Maksimal ukuran file 10MB</p>
-                  </div>
-                </div>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    onClick={() => setImportOpen(false)}
-                    className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl dark:hover:bg-zinc-800/50"
-                  >
-                    Batal
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={importMutation.isPending}
-                    className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold shadow-[0_0_15px_rgba(245,158,11,0.2)] rounded-xl"
-                  >
-                    {importMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Mengunggah...
-                      </>
-                    ) : (
-                      'Mulai Import'
-                    )}
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          {/* Export Buttons */}
-          <a
-            href={isMounted ? buildExportUrl('/api/v1/export/leads/excel', {
-              search: debouncedSearch || undefined,
-              status: statusFilter || undefined,
-              account: accountFilter || undefined,
-              month: monthFilter || undefined,
-              year: yearFilter || undefined,
-              start_date: startDate || undefined,
-              end_date: endDate || undefined,
-            }) : '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center h-9 px-3.5 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1.5"
-          >
-            <FileSpreadsheet className="h-3.5 w-3.5" />
-            Excel
-          </a>
-          <a
-            href={isMounted ? buildExportUrl('/api/v1/export/leads/pdf', {
-              search: debouncedSearch || undefined,
-              status: statusFilter || undefined,
-              account: accountFilter || undefined,
-              month: monthFilter || undefined,
-              year: yearFilter || undefined,
-              start_date: startDate || undefined,
-              end_date: endDate || undefined,
-            }) : '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center h-9 px-3.5 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1.5"
-          >
-            <Download className="h-3.5 w-3.5" />
-            PDF
-          </a>
-
+        <div className="flex flex-col gap-2 w-full lg:w-auto lg:flex-row lg:items-center">
           <Link
             href="/consultations/create"
-            className="inline-flex items-center h-9 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-xs rounded-xl transition-all duration-200 shadow-[0_0_16px_rgba(245,158,11,0.3)] hover:shadow-[0_0_24px_rgba(245,158,11,0.45)] gap-1.5"
+            className="order-first lg:order-last inline-flex items-center justify-center h-10 lg:h-9 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-xs rounded-xl transition-all duration-200 shadow-[0_0_16px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)] hover:shadow-[0_0_24px_color-mix(in_srgb,var(--primary-theme)_45%,transparent)] gap-1.5 w-full lg:w-auto shrink-0"
           >
             <Plus className="h-4 w-4 mr-1.5" />
             Lead Baru
           </Link>
+
+          <div className="grid grid-cols-3 gap-2 w-full lg:flex lg:w-auto lg:items-center">
+            {/* CSV Import Dialog */}
+            <Dialog open={importOpen} onOpenChange={setImportOpen}>
+              <DialogTrigger
+                render={
+                  <Button variant="ghost" size="sm" className="w-full lg:w-auto justify-center h-10 lg:h-9 px-3 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 shrink-0">
+                    <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                    Import CSV
+                  </Button>
+                }
+              />
+              <DialogContent className="border-border bg-card text-foreground rounded-2xl shadow-2xl max-w-md dark:border-zinc-800/80 dark:bg-zinc-950/95 dark:backdrop-blur-xl">
+                <form onSubmit={handleImportSubmit}>
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground font-bold text-lg">Import Konsultasi via CSV</DialogTitle>
+                    <DialogDescription className="text-muted-foreground text-xs mt-1">
+                      Unggah file CSV dengan kolom sesuai format template. Proses import dilakukan di latar belakang (queue).
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 space-y-4">
+                    <a
+                      href={isMounted ? buildExportUrl('/api/v1/consultations/import/template') : '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 transition-colors"
+                    >
+                      <Download className="h-3.5 w-3.5" />
+                      Download Template CSV
+                    </a>
+                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-2xl p-8 cursor-pointer transition-all duration-300 bg-muted/40 hover:bg-muted/60 relative group dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-950/80">
+                      <input
+                        type="file"
+                        accept=".csv"
+                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                      />
+                      <Upload className="h-8 w-8 text-muted-foreground/50 group-hover:text-amber-500 group-hover:scale-110 transition-all duration-350 mb-2" />
+                      <p className="text-xs font-semibold text-foreground/80">
+                        {importFile ? importFile.name : 'Pilih file atau seret file CSV ke sini'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/70 mt-1">Maksimal ukuran file 10MB</p>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setImportOpen(false)}
+                      className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl dark:hover:bg-zinc-800/50"
+                    >
+                      Batal
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={importMutation.isPending}
+                      className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold shadow-[0_0_15px_color-mix(in_srgb,var(--primary-theme)_20%,transparent)] rounded-xl"
+                    >
+                      {importMutation.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Mengunggah...
+                        </>
+                      ) : (
+                        'Mulai Import'
+                      )}
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+
+            {/* Export Buttons */}
+            <a
+              href={isMounted ? buildExportUrl('/api/v1/export/leads/excel', {
+                search: debouncedSearch || undefined,
+                status: statusFilter || undefined,
+                account: accountFilter || undefined,
+                month: monthFilter || undefined,
+                year: yearFilter || undefined,
+                start_date: startDate || undefined,
+                end_date: endDate || undefined,
+              }) : '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center h-10 lg:h-9 px-3 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1.5 shrink-0"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
+              Excel
+            </a>
+            <a
+              href={isMounted ? buildExportUrl('/api/v1/export/leads/pdf', {
+                search: debouncedSearch || undefined,
+                status: statusFilter || undefined,
+                account: accountFilter || undefined,
+                month: monthFilter || undefined,
+                year: yearFilter || undefined,
+                start_date: startDate || undefined,
+                end_date: endDate || undefined,
+              }) : '#'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center h-10 lg:h-9 px-3 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1.5 shrink-0"
+            >
+              <Download className="h-3.5 w-3.5 shrink-0" />
+              PDF
+            </a>
+          </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="bg-muted/30 border border-border rounded-2xl px-4 py-3 dark:bg-zinc-950/40 dark:border-zinc-800/50">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+      <div className="bg-card border border-border rounded-2xl px-4 py-3 shadow-xs dark:bg-zinc-900 dark:border-zinc-800/80">
+        <div className="flex flex-col md:flex-row md:items-center gap-2">
 
           {/* Search — full width on mobile, constrained on desktop */}
-          <div className="relative w-full sm:min-w-[180px] sm:flex-1 sm:max-w-[260px]">
+          <div className="relative w-full md:min-w-[180px] md:flex-1 md:max-w-[260px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600 pointer-events-none" />
             <Input
               placeholder="Cari nama atau telepon..."
@@ -339,9 +343,9 @@ export default function ConsultationsPage() {
           </div>
 
           {/* Icons + Reset row — full width on mobile so ml-auto works */}
-          <div className="flex items-center gap-1.5 w-full sm:w-auto">
+          <div className="flex items-center gap-1.5 w-full md:w-auto">
 
-          <div className="hidden sm:block h-5 w-px bg-border mr-0.5 dark:bg-zinc-800/60" />
+          <div className="hidden md:block h-5 w-px bg-border mr-0.5 dark:bg-zinc-800/60" />
 
           {/* Status filter icon */}
           <Popover open={barStatusOpen} onOpenChange={setBarStatusOpen}>
@@ -520,21 +524,65 @@ export default function ConsultationsPage() {
               <div className="space-y-2">
                 <div>
                   <label className="text-[10px] text-zinc-500 block mb-1">Dari Tanggal</label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => { setStartDate(e.target.value); setMonthFilter(''); setYearFilter(''); setPage(1) }}
-                    className="w-full h-8 rounded-lg bg-background border border-border text-foreground text-[11px] px-2.5 focus:outline-none focus:border-amber-500/50 cursor-pointer dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200"
-                  />
+                  <Popover>
+                    <PopoverTrigger
+                      type="button"
+                      className="w-full h-8 justify-between text-left font-normal border border-border bg-background hover:bg-muted/40 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/40 text-foreground text-[11px] rounded-lg px-2.5 focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center"
+                    >
+                      {startDate ? format(parseISO(startDate), 'dd/MM/yyyy') : <span className="text-muted-foreground/50">Pilih Tanggal</span>}
+                      <CalendarIcon className="h-3 w-3 text-muted-foreground/70" />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={startDate ? parseISO(startDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const yyyy = date.getFullYear()
+                            const mm = String(date.getMonth() + 1).padStart(2, '0')
+                            const dd = String(date.getDate()).padStart(2, '0')
+                            setStartDate(`${yyyy}-${mm}-${dd}`)
+                          } else {
+                            setStartDate('')
+                          }
+                          setMonthFilter('')
+                          setYearFilter('')
+                          setPage(1)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <label className="text-[10px] text-zinc-500 block mb-1">Sampai Tanggal</label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => { setEndDate(e.target.value); setMonthFilter(''); setYearFilter(''); setPage(1) }}
-                    className="w-full h-8 rounded-lg bg-background border border-border text-foreground text-[11px] px-2.5 focus:outline-none focus:border-amber-500/50 cursor-pointer dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200"
-                  />
+                  <Popover>
+                    <PopoverTrigger
+                      type="button"
+                      className="w-full h-8 justify-between text-left font-normal border border-border bg-background hover:bg-muted/40 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/40 text-foreground text-[11px] rounded-lg px-2.5 focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center"
+                    >
+                      {endDate ? format(parseISO(endDate), 'dd/MM/yyyy') : <span className="text-muted-foreground/50">Pilih Tanggal</span>}
+                      <CalendarIcon className="h-3 w-3 text-muted-foreground/70" />
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={endDate ? parseISO(endDate) : undefined}
+                        onSelect={(date) => {
+                          if (date) {
+                            const yyyy = date.getFullYear()
+                            const mm = String(date.getMonth() + 1).padStart(2, '0')
+                            const dd = String(date.getDate()).padStart(2, '0')
+                            setEndDate(`${yyyy}-${mm}-${dd}`)
+                          } else {
+                            setEndDate('')
+                          }
+                          setMonthFilter('')
+                          setYearFilter('')
+                          setPage(1)
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 {(startDate || endDate) && (
                   <button
@@ -573,7 +621,7 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Main Grid table */}
-      <div className="relative border border-border shadow-2xl rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-950/20">
+      <div className="relative border border-border shadow-2xl rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm dark:border-zinc-700/60 dark:bg-zinc-800/40">
         {/* Refetching visual feedback overlay */}
         {isRefetching && (
           <div className="absolute inset-0 bg-background/25 backdrop-blur-[1px] z-30 flex items-center justify-center transition-all duration-300">
@@ -588,27 +636,27 @@ export default function ConsultationsPage() {
             <TableHeader>
               <TableRow className="border-0 hover:bg-transparent">
                 {/* ID Lead */}
-                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-500 dark:bg-zinc-950/70 dark:border-zinc-800/70 w-[130px]">
+                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-300 dark:bg-zinc-800/80 dark:border-zinc-700/60 w-[130px]">
                   ID Lead
                 </TableHead>
 
                 {/* Klien */}
-                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-500 dark:bg-zinc-950/70 dark:border-zinc-800/70">
+                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-300 dark:bg-zinc-800/80 dark:border-zinc-700/60">
                   Klien
                 </TableHead>
 
                 {/* Kota / Wilayah */}
-                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-500 dark:bg-zinc-950/70 dark:border-zinc-800/70">
+                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-300 dark:bg-zinc-800/80 dark:border-zinc-700/60">
                   Kota / Wilayah
                 </TableHead>
 
                 {/* Kebutuhan */}
-                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-500 dark:bg-zinc-950/70 dark:border-zinc-800/70">
+                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-300 dark:bg-zinc-800/80 dark:border-zinc-700/60">
                   Kebutuhan
                 </TableHead>
 
                 {/* Tgl Konsul — date range popover filter */}
-                <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-950/70 dark:border-zinc-800/70">
+                <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-800/80 dark:border-zinc-700/60">
                   <Popover open={konsulDatePopOpen} onOpenChange={setKonsulDatePopOpen}>
                     <PopoverTrigger className={cn(
                       "inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors duration-150 cursor-pointer select-none",
@@ -625,21 +673,63 @@ export default function ConsultationsPage() {
                       <div className="space-y-2">
                         <div>
                           <label className="text-[10px] text-zinc-500 block mb-1">Dari Tanggal</label>
-                          <input
-                            type="date"
-                            value={startDate}
-                            onChange={(e) => { setStartDate(e.target.value); setMonthFilter(''); setPage(1) }}
-                            className="w-full h-8 rounded-lg bg-background border border-border text-foreground text-[11px] px-2.5 focus:outline-none focus:border-amber-500/50 cursor-pointer dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200"
-                          />
+                          <Popover>
+                            <PopoverTrigger
+                              type="button"
+                              className="w-full h-8 justify-between text-left font-normal border border-border bg-background hover:bg-muted/40 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/40 text-foreground text-[11px] rounded-lg px-2.5 focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center"
+                            >
+                              {startDate ? format(parseISO(startDate), 'dd/MM/yyyy') : <span className="text-muted-foreground/50">Pilih Tanggal</span>}
+                              <CalendarIcon className="h-3 w-3 text-muted-foreground/70" />
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="start">
+                              <CalendarComponent
+                                mode="single"
+                                selected={startDate ? parseISO(startDate) : undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    const yyyy = date.getFullYear()
+                                    const mm = String(date.getMonth() + 1).padStart(2, '0')
+                                    const dd = String(date.getDate()).padStart(2, '0')
+                                    setStartDate(`${yyyy}-${mm}-${dd}`)
+                                  } else {
+                                    setStartDate('')
+                                  }
+                                  setMonthFilter('')
+                                  setPage(1)
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         <div>
                           <label className="text-[10px] text-zinc-500 block mb-1">Sampai Tanggal</label>
-                          <input
-                            type="date"
-                            value={endDate}
-                            onChange={(e) => { setEndDate(e.target.value); setMonthFilter(''); setPage(1) }}
-                            className="w-full h-8 rounded-lg bg-background border border-border text-foreground text-[11px] px-2.5 focus:outline-none focus:border-amber-500/50 cursor-pointer dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-200"
-                          />
+                          <Popover>
+                            <PopoverTrigger
+                              type="button"
+                              className="w-full h-8 justify-between text-left font-normal border border-border bg-background hover:bg-muted/40 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800/40 text-foreground text-[11px] rounded-lg px-2.5 focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center"
+                            >
+                              {endDate ? format(parseISO(endDate), 'dd/MM/yyyy') : <span className="text-muted-foreground/50">Pilih Tanggal</span>}
+                              <CalendarIcon className="h-3 w-3 text-muted-foreground/70" />
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="start">
+                              <CalendarComponent
+                                mode="single"
+                                selected={endDate ? parseISO(endDate) : undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    const yyyy = date.getFullYear()
+                                    const mm = String(date.getMonth() + 1).padStart(2, '0')
+                                    const dd = String(date.getDate()).padStart(2, '0')
+                                    setEndDate(`${yyyy}-${mm}-${dd}`)
+                                  } else {
+                                    setEndDate('')
+                                  }
+                                  setMonthFilter('')
+                                  setPage(1)
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </div>
                         {(startDate || endDate) && (
                           <button
@@ -655,7 +745,7 @@ export default function ConsultationsPage() {
                 </TableHead>
 
                 {/* Tgl Update — sortable */}
-                <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-950/70 dark:border-zinc-800/70">
+                <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-800/80 dark:border-zinc-700/60">
                   <button
                     onClick={() => setUpdateSortDir((prev) => prev === null ? 'desc' : prev === 'desc' ? 'asc' : null)}
                     className={cn(
@@ -674,7 +764,7 @@ export default function ConsultationsPage() {
                 </TableHead>
 
                 {/* Status — popover filter */}
-                <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-950/70 dark:border-zinc-800/70 text-center">
+                <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-800/80 dark:border-zinc-700/60 text-center">
                   <Popover open={statusPopOpen} onOpenChange={setStatusPopOpen}>
                     <PopoverTrigger className={cn(
                       "inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors duration-150 cursor-pointer select-none",
@@ -716,7 +806,7 @@ export default function ConsultationsPage() {
 
                 {/* Akun (super admin) — popover filter */}
                 {isSuperAdmin && (
-                  <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-950/70 dark:border-zinc-800/70">
+                  <TableHead className="bg-muted/60 border-b border-border whitespace-nowrap py-3.5 px-5 dark:bg-zinc-800/80 dark:border-zinc-700/60">
                     <Popover open={akunPopOpen} onOpenChange={setAkunPopOpen}>
                       <PopoverTrigger className={cn(
                         "inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] transition-colors duration-150 cursor-pointer select-none",
@@ -756,7 +846,7 @@ export default function ConsultationsPage() {
                 )}
 
                 {/* Aksi */}
-                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-500 dark:bg-zinc-950/70 dark:border-zinc-800/70 text-right w-[88px]">
+                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-300 dark:bg-zinc-800/80 dark:border-zinc-700/60 text-right w-[88px]">
                   Aksi
                 </TableHead>
               </TableRow>
@@ -785,9 +875,9 @@ export default function ConsultationsPage() {
                   <TableRow
                     key={lead.id}
                     className={cn(
-                      'border-b border-border/30 transition-all duration-150 group dark:border-zinc-800/25',
-                      idx % 2 !== 0 ? 'bg-muted/20 dark:bg-zinc-900/20' : 'bg-transparent',
-                      'hover:bg-amber-500/[0.04] dark:hover:bg-amber-500/[0.03]'
+                      'border-b border-border/30 transition-all duration-150 group dark:border-zinc-700/30',
+                      idx % 2 !== 0 ? 'bg-muted/20 dark:bg-zinc-700/20' : 'bg-transparent dark:bg-zinc-800/10',
+                      'hover:bg-amber-500/[0.04] dark:hover:bg-amber-500/[0.06]'
                     )}
                   >
                     {/* ID Lead — left border accent on hover */}
