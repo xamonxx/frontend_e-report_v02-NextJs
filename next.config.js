@@ -10,7 +10,9 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // NOTE: 'output: standalone' sengaja TIDAK dipakai. Hostinger Web Apps
+  // menjalankan `next start` dengan build .next standar, jadi default Next
+  // paling kompatibel. (standalone hanya perlu untuk Docker / `node server.js`.)
   async rewrites() {
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
     return [
