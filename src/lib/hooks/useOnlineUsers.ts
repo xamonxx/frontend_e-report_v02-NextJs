@@ -21,7 +21,9 @@ export function useOnlineUsers() {
   return useQuery({
     queryKey: queryKeys.onlineUsers.all,
     queryFn: () => api.get<OnlineUsersResponse>('/online-users'),
-    refetchInterval: 30_000,
-    staleTime: 25_000,
+    // Shared hosting MySQL: longgar dari 30s -> 2m supaya tidak menjebol
+    // limit max_connections_per_hour (500/jam) yang menyebabkan 500 error.
+    refetchInterval: 120_000,
+    staleTime: 90_000,
   })
 }

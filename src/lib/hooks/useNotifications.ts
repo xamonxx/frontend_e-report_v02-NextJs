@@ -70,20 +70,23 @@ export function useUserActivity(idleTimeout = 60000) {
 export function useNotificationCount() {
   const isActive = useUserActivity()
 
+  // NOTE: shared-hosting MySQL caps koneksi 500/jam. Polling 3s sebelumnya =
+  // ~1200 koneksi/jam per user dan langsung menyebabkan dashboard nyangkut
+  // "Memuat dashboard interior...". Disetel agar masih responsif tapi aman.
   return useQuery({
     queryKey: queryKeys.notifications.count(),
     queryFn: () => api.get<NotificationCount>('/notifications'),
-    refetchInterval: isActive ? 3000 : 30000, // 3s active, 30s idle
+    refetchInterval: isActive ? 30000 : 120000, // 30s active, 2m idle
   })
 }
 
 /**
  * Full notification detail (notes + reminders with joins).
- * Polling is active only when dropdown is open: 3s if active, 30s if idle, disabled if closed.
+ * Hanya polling saat dropdown dibuka — interval dilonggarkan untuk shared hosting.
  */
 export function useNotificationSummary(enabled = true) {
   const isActive = useUserActivity()
-  const interval = enabled && isActive ? 3000 : (enabled ? 30000 : false)
+  const interval = enabled && isActive ? 15000 : (enabled ? 60000 : false)
 
   return useQuery({
     queryKey: queryKeys.notifications.summary(),
