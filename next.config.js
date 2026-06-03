@@ -1,11 +1,27 @@
-import withPWAInit from "@ducanh2912/next-pwa";
+import withPWAInit, { runtimeCaching } from "@ducanh2912/next-pwa";
+
+const unsafeRuntimeCacheNames = new Set([
+  "apis",
+  "next-data",
+  "pages",
+  "pages-rsc",
+  "pages-rsc-prefetch",
+]);
+
+const staticAssetRuntimeCaching = runtimeCaching.filter(
+  (entry) => !unsafeRuntimeCacheNames.has(entry.options?.cacheName)
+);
 
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
+  cacheStartUrl: false,
+  cacheOnFrontEndNav: false,
+  aggressiveFrontEndNavCaching: false,
   reloadOnOnline: true,
+  workboxOptions: {
+    runtimeCaching: staticAssetRuntimeCaching,
+  },
 });
 
 /** @type {import('next').NextConfig} */
@@ -23,6 +39,19 @@ const nextConfig = {
       {
         source: '/sanctum/:path*',
         destination: `${apiUrl}/sanctum/:path*`,
+      },
+    ]
+  },
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'no-cache, no-store, must-revalidate',
+          },
+        ],
       },
     ]
   },

@@ -3,6 +3,29 @@
 // messages and notification clicks. Only active in a production build
 // (next-pwa is disabled in development).
 
+const STALE_RUNTIME_CACHES = new Set([
+  'apis',
+  'next-data',
+  'pages',
+  'pages-rsc',
+  'pages-rsc-prefetch',
+  'start-url',
+])
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches
+      .keys()
+      .then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((cacheName) => STALE_RUNTIME_CACHES.has(cacheName))
+            .map((cacheName) => caches.delete(cacheName))
+        )
+      )
+  )
+})
+
 self.addEventListener('push', (event) => {
   let data = {}
   try {
