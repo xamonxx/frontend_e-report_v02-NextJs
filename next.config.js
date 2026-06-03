@@ -14,6 +14,7 @@ const staticAssetRuntimeCaching = runtimeCaching.filter(
 
 const withPWA = withPWAInit({
   dest: "public",
+  sw: "sw-v2.js",
   disable: process.env.NODE_ENV === "development",
   cacheStartUrl: false,
   cacheOnFrontEndNav: false,
@@ -45,7 +46,7 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/sw.js',
+        source: '/sw-v2.js',
         headers: [
           {
             key: 'Cache-Control',
