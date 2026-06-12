@@ -45,7 +45,10 @@ export default function PwaInstallButton() {
 
     // Handle beforeinstallprompt event for Chromium browsers
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault()
+      // NOTE: intentionally NOT calling e.preventDefault() here. Calling it makes
+      // Chrome log "Banner not shown: beforeinstallpromptevent.preventDefault()
+      // called..." on every page. We still capture the event so the custom FAB
+      // can trigger the install via deferredPrompt.prompt() on click.
       setDeferredPrompt(e as BeforeInstallPromptEvent)
     }
 

@@ -47,12 +47,12 @@ import {
   XAxis,
   YAxis,
   Tooltip as ChartTooltip,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
   CartesianGrid,
 } from 'recharts'
+import { ChartBox } from '@/components/ui/chart-box'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { cn } from '@/lib/utils'
 import { saveCardAsPng, saveCardAsPdf } from '@/lib/export-card'
@@ -512,7 +512,7 @@ export default function DashboardPage() {
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
                 </div>
               ) : trendData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <ChartBox>
                   <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="totalG" x1="0" y1="0" x2="0" y2="1">
@@ -537,7 +537,7 @@ export default function DashboardPage() {
                     <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" />
                     <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" />
                   </AreaChart>
-                </ResponsiveContainer>
+                </ChartBox>
               ) : (
                 <div className="flex h-full items-center justify-center text-muted-foreground/50 text-xs">Belum ada data tren periode ini</div>
               )}
@@ -580,7 +580,7 @@ export default function DashboardPage() {
                   // data and the per-bar <Cell> colours (was sorted twice).
                   const topNeeds = [...needsDistribution].sort((a: any, b: any) => b.count - a.count).slice(0, 10)
                   return (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                    <ChartBox>
                       <BarChart
                         layout="vertical"
                         data={topNeeds}
@@ -632,7 +632,7 @@ export default function DashboardPage() {
                           />
                         </Bar>
                       </BarChart>
-                    </ResponsiveContainer>
+                    </ChartBox>
                   )
                 })()
               ) : (

@@ -26,10 +26,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer,
   Legend,
   LabelList
 } from 'recharts'
+import { ChartBox } from '@/components/ui/chart-box'
 import {
   TrendingUp,
   BarChart3,
@@ -520,7 +520,7 @@ export default function AnalyticsPage() {
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-amber-500 border-t-transparent" />
                   </div>
                 ) : trendData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                  <ChartBox>
                     <AreaChart data={trendData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="totalG" x1="0" y1="0" x2="0" y2="1">
@@ -545,7 +545,7 @@ export default function AnalyticsPage() {
                       <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" />
                       <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" />
                     </AreaChart>
-                  </ResponsiveContainer>
+                  </ChartBox>
                 ) : (
                   <div className="flex h-full items-center justify-center text-muted-foreground/50 text-xs">Belum ada data tren periode ini</div>
                 )}
@@ -576,7 +576,7 @@ export default function AnalyticsPage() {
                     // Sort the top-10 once and reuse for chart data + <Cell> colours.
                     const topNeeds = [...needsData].sort((a: any, b: any) => b.count - a.count).slice(0, 10)
                     return (
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <ChartBox>
                         <BarChart
                           layout="vertical"
                           data={topNeeds}
@@ -628,7 +628,7 @@ export default function AnalyticsPage() {
                             />
                           </Bar>
                         </BarChart>
-                      </ResponsiveContainer>
+                      </ChartBox>
                     )
                   })()
                 ) : (
@@ -659,7 +659,7 @@ export default function AnalyticsPage() {
                   (() => {
                     const totalStatus = statusData.reduce((acc: number, curr: any) => acc + curr.count, 0)
                     return (
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <ChartBox>
                         <BarChart data={statusData} margin={{ top: 15, right: 10, left: -20, bottom: 20 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" opacity={0.5} vertical={false} />
                           <XAxis
@@ -702,7 +702,7 @@ export default function AnalyticsPage() {
                             />
                           </Bar>
                         </BarChart>
-                      </ResponsiveContainer>
+                      </ChartBox>
                     )
                   })()
                 ) : (
@@ -732,7 +732,7 @@ export default function AnalyticsPage() {
                 ) : westJavaSegmentData.length > 0 && westJavaSegmentData.some((s: any) => s.count > 0) ? (
                   <div className="flex flex-col sm:flex-row w-full h-full items-center justify-center sm:justify-around gap-4">
                     <div className="w-[170px] h-[170px] sm:w-[55%] sm:h-full flex items-center justify-center shrink-0">
-                      <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                      <ChartBox>
                         <PieChart>
                           <Pie
                             data={westJavaSegmentData}
@@ -751,7 +751,7 @@ export default function AnalyticsPage() {
                           </Pie>
                           <Tooltip content={renderPieTooltip} />
                         </PieChart>
-                      </ResponsiveContainer>
+                      </ChartBox>
                     </div>
                     <div className="flex flex-wrap sm:flex-col justify-center gap-x-4 gap-y-2.5 max-h-[100px] sm:max-h-[90%] overflow-y-auto pr-2 scrollbar-thin w-full sm:w-auto px-4 sm:px-0">
                       {(() => {
