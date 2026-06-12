@@ -4,6 +4,7 @@ import "./globals.css";
 import Providers from "@/components/providers";
 import AppLayout from "@/components/layout/app-layout";
 import PwaInstallButton from "@/components/layout/pwa-install-button";
+import ChunkErrorReloader from "@/components/layout/chunk-error-reloader";
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
@@ -55,6 +56,7 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="h-full bg-background text-foreground font-sans selection:bg-amber-500/25 selection:text-amber-200">
+        <ChunkErrorReloader />
         <Providers>
           <AppLayout>
             {children}

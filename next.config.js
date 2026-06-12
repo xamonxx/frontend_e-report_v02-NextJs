@@ -54,6 +54,19 @@ const nextConfig = {
           },
         ],
       },
+      {
+        // Everything except /_next/* (hashed, immutable assets keep their own
+        // long cache). HTML document routes must be revalidated so a new deploy
+        // is never served as stale HTML that points at chunk files the new build
+        // already deleted (ChunkLoadError / 404 / "Application error").
+        source: '/((?!_next/).*)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=0, must-revalidate',
+          },
+        ],
+      },
     ]
   },
 };
