@@ -150,69 +150,69 @@ export default function PwaInstallButton() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+              className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl"
             >
               {/* Close Button */}
               <button
                 onClick={() => setShowModal(false)}
-                className="absolute top-4 right-4 rounded-lg p-1 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-zinc-900 dark:hover:text-zinc-300 cursor-pointer"
+                aria-label="Tutup"
+                className="absolute top-3.5 right-3.5 flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground transition-colors cursor-pointer"
               >
-                <X className="h-4.5 w-4.5" />
+                <X className="h-4 w-4" />
               </button>
 
               <div className="text-center">
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500">
+                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/15">
                   <Smartphone className="h-6 w-6" />
                 </div>
-                <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-100">
+                <h3 className="text-base font-bold text-foreground">
                   Instal Aplikasi E-Report
                 </h3>
-                <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  Nikmati pengalaman akses aplikasi E-Report yang lebih cepat, stabil, dan responsif langsung dari Home Screen Anda.
+                <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
+                  Akses lebih cepat, stabil, dan responsif langsung dari Home Screen Anda.
                 </p>
               </div>
 
               {/* iOS Specific Instructions */}
               {isIOS ? (
-                <div className="mt-5 rounded-xl bg-amber-500/5 p-4 border border-amber-500/10">
-                  <p className="text-xs font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mb-2">
-                    <Share className="h-4 w-4" /> Panduan Pengguna iOS (Safari):
+                <div className="mt-5 rounded-xl border border-amber-500/15 bg-amber-500/5 p-4">
+                  <p className="mb-2.5 flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                    <Share className="h-4 w-4" /> Panduan iOS (Safari)
                   </p>
-                  <ol className="list-decimal list-inside text-[11px] text-zinc-600 dark:text-zinc-400 space-y-1.5 leading-normal">
+                  <ol className="list-decimal space-y-2 pl-4 text-[11px] leading-relaxed text-muted-foreground marker:text-amber-500/70 marker:font-bold">
                     <li>
-                      Ketuk tombol **Bagikan (Share)** <Share className="inline h-3.5 w-3.5 mx-0.5" /> di menu navigasi bawah.
+                      Ketuk tombol <strong className="font-semibold text-foreground">Bagikan</strong>
+                      <Share className="mx-0.5 inline h-3.5 w-3.5 align-text-bottom" /> di menu bawah.
                     </li>
                     <li>
-                      Gulir ke bawah dan ketuk opsi **Tambahkan ke Layar Utama (Add to Home Screen)** <Plus className="inline h-3.5 w-3.5 mx-0.5 border border-zinc-400/30 rounded" />.
+                      Pilih <strong className="font-semibold text-foreground">Tambahkan ke Layar Utama</strong>
+                      <Plus className="mx-0.5 inline h-3.5 w-3.5 rounded border border-border align-text-bottom" />.
                     </li>
                     <li>
-                      Ketuk **Tambah (Add)** di sudut kanan atas untuk mengonfirmasi.
+                      Ketuk <strong className="font-semibold text-foreground">Tambah</strong> di kanan atas untuk mengonfirmasi.
                     </li>
                   </ol>
                 </div>
               ) : (
                 <div className="mt-5 space-y-3">
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center leading-normal">
-                    Browser Anda belum mendukung instalasi otomatis satu ketuk. Ikuti petunjuk berikut:
+                  <p className="text-center text-xs leading-relaxed text-muted-foreground">
+                    Browser Anda belum mendukung instalasi satu ketuk. Ikuti langkah berikut:
                   </p>
-                  <div className="rounded-xl bg-zinc-50 dark:bg-zinc-900 p-3.5 text-[11px] text-zinc-600 dark:text-zinc-400 border border-zinc-200/50 dark:border-zinc-800/40">
-                    Buka menu pengaturan browser Anda (titik tiga di kanan atas) dan pilih opsi **&quot;Instal aplikasi&quot;** atau **&quot;Tambahkan ke Layar Utama&quot;**.
+                  <div className="rounded-xl border border-border bg-muted/40 p-3.5 text-[11px] leading-relaxed text-muted-foreground">
+                    Buka menu browser (ikon titik tiga di kanan atas), lalu pilih{' '}
+                    <strong className="font-semibold text-foreground">&quot;Instal aplikasi&quot;</strong> atau{' '}
+                    <strong className="font-semibold text-foreground">&quot;Tambahkan ke Layar Utama&quot;</strong>.
                   </div>
                 </div>
               )}
 
-              <div className="mt-6 flex justify-end">
-                <button
-                  onClick={() => setShowModal(false)}
-                  className="w-full rounded-xl bg-amber-500 px-4 py-2.5 text-xs font-bold text-zinc-950 hover:bg-amber-400 transition-colors cursor-pointer"
-                  style={{
-                    backgroundColor: 'var(--primary-theme)',
-                    color: '#000000'
-                  }}
-                >
-                  Selesai
-                </button>
-              </div>
+              <button
+                onClick={() => setShowModal(false)}
+                className="mt-6 w-full rounded-xl px-4 py-2.5 text-xs font-bold transition-opacity hover:opacity-90 cursor-pointer"
+                style={{ backgroundColor: 'var(--primary-theme)', color: '#0b0f19' }}
+              >
+                Selesai
+              </button>
             </motion.div>
           </div>
         )}
