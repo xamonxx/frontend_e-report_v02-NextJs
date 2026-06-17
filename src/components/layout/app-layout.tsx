@@ -53,7 +53,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Header />
 
           {/* Dynamic Content Frame */}
-          <main className="flex-1 overflow-y-auto bg-muted/10 dark:bg-zinc-950/5 p-4 sm:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
+          <main className="flex-1 overflow-y-auto bg-muted/10 dark:bg-zinc-950/5 p-4 sm:p-6 pb-[calc(6.5rem+env(safe-area-inset-bottom))] lg:pb-6">
             {children}
           </main>
         </div>

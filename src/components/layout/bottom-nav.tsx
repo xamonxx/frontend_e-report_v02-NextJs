@@ -49,6 +49,11 @@ const MORE_ITEMS: NavItem[] = [
   { href: '/report-attendances', label: 'Absensi', icon: FileSpreadsheet, hint: 'Laporan absensi harian' },
 ]
 
+// Carves a semicircle out of the pill's top-centre edge so the FAB nests in it.
+// Positioned at the top-centre (50% 0); transparent inside ~32px, opaque outside.
+const NOTCH_MASK =
+  'radial-gradient(circle 33px at 50% 0%, transparent 0 31px, #000 33px)'
+
 // Items grouped under "Pengaturan" inside the More sheet.
 const SETTINGS_ITEMS: NavItem[] = [
   { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & referensi', superOnly: true },
@@ -204,53 +209,73 @@ export default function BottomNav() {
         )}
       </AnimatePresence>
 
-      {/* ── Bottom bar ─────────────────────────────────────────── */}
+      {/* ── Floating pill bar with centre notch ───────────────────── */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 lg:hidden border-t border-border bg-card/90 backdrop-blur-xl"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed inset-x-0 bottom-0 z-50 lg:hidden px-4"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
       >
-        <div className="relative mx-auto flex h-16 max-w-lg items-stretch">
-          {/* Left tabs */}
-          {PRIMARY_TABS.slice(0, 2).map((tab) => (
-            <Tab
-              key={tab.href}
-              item={tab}
-              active={pathname.startsWith(tab.href)}
-              themeColor={userThemeColor}
-              onPrefetch={handlePrefetch}
-            />
-          ))}
-
-          {/* Centre FAB slot */}
-          <div className="flex flex-1 items-start justify-center">
-            <Link
-              href="/consultations/create"
-              onTouchStart={() => handlePrefetch('/consultations/create')}
-              aria-label="Tambah data konsultasi"
-              className="group relative -translate-y-5 flex h-15 w-15 items-center justify-center rounded-2xl text-zinc-950 transition-transform active:scale-95"
-              style={{
-                background: `linear-gradient(135deg, ${userThemeColor}, color-mix(in srgb, ${userThemeColor} 70%, black))`,
-                boxShadow: `0 8px 24px -4px ${userThemeColor}66, 0 0 0 4px var(--card)`,
-              }}
-            >
-              <Plus className="h-7 w-7" strokeWidth={2.5} />
-            </Link>
-          </div>
-
-          {/* Right: Analytics + More */}
-          <Tab
-            item={PRIMARY_TABS[2]}
-            active={pathname.startsWith(PRIMARY_TABS[2].href)}
-            themeColor={userThemeColor}
-            onPrefetch={handlePrefetch}
-          />
-          <button
-            onClick={() => setMoreOpen(true)}
-            aria-label="Menu lainnya"
-            className="relative flex flex-1 flex-col items-center justify-center gap-1"
+        <div className="relative mx-auto max-w-sm">
+          {/* Centre FAB — cradled in the notch */}
+          <Link
+            href="/consultations/create"
+            onTouchStart={() => handlePrefetch('/consultations/create')}
+            aria-label="Tambah data konsultasi"
+            className="absolute left-1/2 top-0 z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full text-zinc-950 transition-transform active:scale-95"
+            style={{
+              background: `linear-gradient(135deg, ${userThemeColor}, color-mix(in srgb, ${userThemeColor} 65%, black))`,
+              boxShadow: `0 10px 24px -6px ${userThemeColor}80`,
+            }}
           >
-            <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} themeColor={userThemeColor} />
-          </button>
+            <Plus className="h-7 w-7" strokeWidth={2.5} />
+          </Link>
+
+          {/* Pill — a semicircle notch is carved from the top-centre via mask */}
+          <div
+            className="relative flex h-16 items-stretch rounded-[28px]"
+            style={{
+              background: 'var(--card)',
+              WebkitMaskImage: NOTCH_MASK,
+              maskImage: NOTCH_MASK,
+              WebkitMaskRepeat: 'no-repeat',
+              maskRepeat: 'no-repeat',
+              WebkitMaskSize: '100% 100%',
+              maskSize: '100% 100%',
+              filter: 'drop-shadow(0 6px 16px rgba(15,23,42,0.22))',
+            }}
+          >
+            {/* Left group */}
+            <div className="flex flex-1">
+              {PRIMARY_TABS.slice(0, 2).map((tab) => (
+                <Tab
+                  key={tab.href}
+                  item={tab}
+                  active={pathname.startsWith(tab.href)}
+                  themeColor={userThemeColor}
+                  onPrefetch={handlePrefetch}
+                />
+              ))}
+            </div>
+
+            {/* Notch gap (keeps icons clear of the centre cut-out) */}
+            <div className="w-16 shrink-0" aria-hidden="true" />
+
+            {/* Right group */}
+            <div className="flex flex-1">
+              <Tab
+                item={PRIMARY_TABS[2]}
+                active={pathname.startsWith(PRIMARY_TABS[2].href)}
+                themeColor={userThemeColor}
+                onPrefetch={handlePrefetch}
+              />
+              <button
+                onClick={() => setMoreOpen(true)}
+                aria-label="Menu lainnya"
+                className="relative flex flex-1 items-center justify-center"
+              >
+                <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} themeColor={userThemeColor} />
+              </button>
+            </div>
+          </div>
         </div>
       </nav>
     </>
@@ -273,7 +298,8 @@ function Tab({
     <Link
       href={item.href}
       onTouchStart={() => onPrefetch(item.href)}
-      className="relative flex flex-1 flex-col items-center justify-center gap-1"
+      aria-label={item.label}
+      className="relative flex flex-1 items-center justify-center"
     >
       <TabInner icon={item.icon} label={item.label} active={active} themeColor={themeColor} />
     </Link>
@@ -292,32 +318,34 @@ function TabInner({
   themeColor: string
 }) {
   return (
-    <>
-      {/* Active top indicator */}
+    <span className="flex flex-col items-center justify-center gap-1">
+      <span className="relative flex h-7 w-10 items-center justify-center rounded-xl transition-colors">
+        {/* Soft highlight behind the active icon */}
+        <span
+          className={cn(
+            'absolute inset-0 rounded-xl transition-opacity duration-300',
+            active ? 'opacity-100' : 'opacity-0'
+          )}
+          style={{ background: `${themeColor}1f` }}
+        />
+        <Icon
+          className={cn(
+            'relative h-[21px] w-[21px] transition-transform duration-200',
+            active ? 'scale-110' : 'text-muted-foreground'
+          )}
+          style={{ color: active ? themeColor : undefined }}
+        />
+      </span>
       <span
         className={cn(
-          'absolute top-0 h-0.5 w-8 rounded-full transition-opacity duration-300',
-          active ? 'opacity-100' : 'opacity-0'
-        )}
-        style={{ backgroundColor: themeColor }}
-      />
-      <Icon
-        className={cn(
-          'h-[22px] w-[22px] transition-transform duration-200',
-          active ? 'scale-105' : 'text-muted-foreground'
-        )}
-        style={{ color: active ? themeColor : undefined }}
-      />
-      <span
-        className={cn(
-          'text-[10px] font-medium leading-none transition-colors',
-          active ? 'font-semibold' : 'text-muted-foreground'
+          'text-[10px] leading-none transition-colors',
+          active ? 'font-semibold' : 'font-medium text-muted-foreground'
         )}
         style={{ color: active ? themeColor : undefined }}
       >
         {label}
       </span>
-    </>
+    </span>
   )
 }
 
