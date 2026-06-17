@@ -21,6 +21,7 @@ interface AutocompleteProps {
   id?: string
   isLoading?: boolean
   onlyChangeOnSelect?: boolean
+  clearOnFocus?: boolean
 }
 
 export function Autocomplete({
@@ -33,6 +34,7 @@ export function Autocomplete({
   id,
   isLoading = false,
   onlyChangeOnSelect = false,
+  clearOnFocus = false,
 }: AutocompleteProps) {
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState('')
@@ -112,11 +114,31 @@ export function Autocomplete({
         setOpen(false)
         return
       }
+
+      const viewportPadding = 8
+      const dropdownGap = 6
+      const maxDropdownHeight = 224
+      const minDropdownHeight = 96
+      const spaceBelow = Math.max(0, window.innerHeight - rect.bottom - viewportPadding)
+      const spaceAbove = Math.max(0, rect.top - viewportPadding)
+      const openAbove = spaceBelow < maxDropdownHeight && spaceAbove > spaceBelow
+      const availableSpace = openAbove ? spaceAbove : spaceBelow
+      const maxHeight = Math.min(maxDropdownHeight, Math.max(minDropdownHeight, availableSpace - dropdownGap))
+      const width = Math.min(rect.width, window.innerWidth - viewportPadding * 2)
+      const left = Math.min(
+        Math.max(rect.left, viewportPadding),
+        window.innerWidth - width - viewportPadding
+      )
+      const top = openAbove
+        ? Math.max(viewportPadding, rect.top - dropdownGap - maxHeight)
+        : Math.min(rect.bottom + dropdownGap, window.innerHeight - viewportPadding - maxHeight)
+
       setDropdownStyle({
         position: 'fixed',
-        top: rect.bottom + 6,
-        left: rect.left,
-        width: rect.width,
+        top,
+        left,
+        width,
+        maxHeight,
         zIndex: 9999,
       })
     }
@@ -135,6 +157,17 @@ export function Autocomplete({
     setSearchTerm(val)
     if (!onlyChangeOnSelect) {
       onChange(val)
+    }
+    setOpen(true)
+  }
+
+  const handleInputFocus = () => {
+    const selectedOption = normalizedOptions.find(opt => opt.value === value)
+    const isShowingSelectedLabel = selectedOption && searchTerm === selectedOption.label
+
+    if (clearOnFocus && isShowingSelectedLabel) {
+      setSearchTerm('')
+      setHighlightedIndex(-1)
     }
     setOpen(true)
   }
@@ -204,7 +237,8 @@ export function Autocomplete({
           type="text"
           value={searchTerm}
           onChange={handleInputChange}
-          onFocus={() => setOpen(true)}
+          onFocus={handleInputFocus}
+          onClick={handleInputFocus}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
@@ -238,7 +272,7 @@ export function Autocomplete({
         <ul
           ref={listRef}
           style={dropdownStyle}
-          className="max-h-56 overflow-y-auto rounded-lg border border-border bg-popover shadow-xl py-1 focus:outline-none scrollbar-thin dark:border-zinc-800 dark:bg-zinc-950"
+          className="overflow-y-auto rounded-lg border border-border bg-popover shadow-xl py-1 focus:outline-none scrollbar-thin dark:border-zinc-800 dark:bg-zinc-950"
         >
           {filteredOptions.length === 0 ? (
             <li className="px-3 py-2.5 text-xs text-muted-foreground italic font-sans">
@@ -260,13 +294,13 @@ export function Autocomplete({
                   }}
                   onMouseEnter={() => setHighlightedIndex(idx)}
                   className={cn(
-                    "px-3 py-2 text-xs cursor-pointer flex flex-col font-sans transition-colors",
+                    "px-3 py-2 text-xs cursor-pointer flex flex-col min-w-0 font-sans transition-colors",
                     isHighlighted && "bg-amber-500/10 text-amber-500",
                     isSelected && !isHighlighted && "text-amber-500 font-medium bg-muted/50 dark:bg-zinc-900/40",
                     !isSelected && !isHighlighted && "text-foreground/80 hover:bg-muted dark:text-zinc-300 dark:hover:bg-zinc-900"
                   )}
                 >
-                  <span className="font-medium">{option.label}</span>
+                  <span className="font-medium truncate">{option.label}</span>
                   {option.sublabel && (
                     <span className="text-[10px] text-muted-foreground/60 mt-0.5">{option.sublabel}</span>
                   )}

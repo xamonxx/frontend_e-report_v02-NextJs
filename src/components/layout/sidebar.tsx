@@ -17,12 +17,10 @@ import {
   History,
   ChevronLeft,
   ChevronRight,
-  LogOut,
   Building,
   Wrench,
 } from 'lucide-react'
 import Logo from '@/components/brand/logo'
-import { useLogout } from '@/lib/hooks/useAuth'
 import {
   Tooltip,
   TooltipContent,
@@ -47,9 +45,6 @@ export default function Sidebar() {
   const queryClient = useQueryClient()
   const { isOpen, toggle, close } = useSidebarStore()
   const user = useAuthStore((s) => s.user)
-  const logoutMutation = useLogout()
-
-  const handleLogout = () => logoutMutation.mutate()
 
   // Warm the route's data cache on hover/focus (skip the page we're already on).
   const handlePrefetch = (href: string) => {
@@ -163,37 +158,21 @@ export default function Sidebar() {
 
         {/* User Footer */}
         <div className="border-t border-sidebar-border/60 p-3 bg-sidebar/20">
-          <div className="flex items-center gap-2.5 overflow-hidden">
+          <div className="flex items-center justify-center">
             <div
-              className="h-9 w-9 rounded-xl flex items-center justify-center text-zinc-950 font-extrabold shrink-0 text-xs"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-sidebar-border/70 bg-sidebar-accent/40"
               style={{
-                background: `linear-gradient(135deg, ${userThemeColor}, color-mix(in srgb, ${userThemeColor} 70%, black))`,
-                boxShadow: `0 4px 12px ${userThemeColor}25`,
+                boxShadow: `0 4px 12px ${userThemeColor}18`,
               }}
             >
-              {user?.name.slice(0, 2).toUpperCase() || 'US'}
+              <Logo
+                className="h-5 w-5"
+                style={{
+                  color: userThemeColor,
+                  filter: `drop-shadow(0 0 7px ${userThemeColor}55)`,
+                }}
+              />
             </div>
-            {isOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold text-sidebar-foreground truncate">{user?.name}</p>
-                <p className="text-[10px] text-sidebar-foreground/60 truncate capitalize">
-                  {user?.role?.replace('_', ' ')}
-                </p>
-              </div>
-            )}
-            {isOpen && (
-              <Tooltip>
-                <TooltipTrigger
-                  onClick={handleLogout}
-                  className="p-1.5 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-red-400 transition-colors cursor-pointer shrink-0"
-                >
-                  <LogOut className="h-4 w-4" />
-                </TooltipTrigger>
-                <TooltipContent side="top" className="text-[11px]">
-                  Keluar dari akun
-                </TooltipContent>
-              </Tooltip>
-            )}
           </div>
         </div>
       </aside>

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { Reorder, useDragControls } from 'framer-motion'
 import type { StatusCategory } from '@/types'
 import {
@@ -26,6 +26,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Autocomplete, AutocompleteOption } from '@/components/ui/autocomplete'
 import {
   Select,
   SelectContent,
@@ -104,7 +105,13 @@ export default function MasterDataPage() {
   })
 
   const { data: accountsResponse } = useAccounts()
-  const accountsList = accountsResponse || []
+  const accountOptions = useMemo<AutocompleteOption[]>(() => {
+    const accounts = accountsResponse || []
+    return [
+      { label: '-- Pilih Akun --', value: 'none' },
+      ...accounts.map((acc: any) => ({ label: acc.name, value: String(acc.id) })),
+    ]
+  }, [accountsResponse])
 
   const createCat = useCreateCategory()
   const updateCat = useUpdateCategory(0)
@@ -954,22 +961,16 @@ export default function MasterDataPage() {
                     {role === 'admin' && (
                       <div className="space-y-1.5">
                         <Label htmlFor="usr-account" className="text-xs font-semibold text-muted-foreground">Tautan Akun</Label>
-                        <Select
+                        <Autocomplete
+                          id="usr-account"
                           value={accountId || 'none'}
-                          onValueChange={(v) => setAccountId(v && v !== 'none' ? v : '')}
-                        >
-                          <SelectTrigger id="usr-account" className="h-8 rounded-lg border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950">
-                            <SelectValue placeholder="Pilih Akun" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">-- Pilih Akun --</SelectItem>
-                            {accountsList.map((acc: any) => (
-                              <SelectItem key={acc.id} value={String(acc.id)}>
-                                {acc.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          onChange={(v) => setAccountId(v && v !== 'none' ? v : '')}
+                          options={accountOptions}
+                          placeholder="Cari/Pilih Akun..."
+                          onlyChangeOnSelect
+                          clearOnFocus
+                          className="h-8 rounded-lg border-border bg-background text-xs text-foreground focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+                        />
                       </div>
                     )}
                   </div>

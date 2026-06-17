@@ -36,6 +36,8 @@ import {
   CalendarIcon,
   RefreshCw,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react'
 import {
   BarChart,
@@ -61,6 +63,7 @@ import { format } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
 
 const COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#ef4444', '#8b5cf6', '#ec4899']
+const ACCOUNTS_PER_PAGE = 10
 
 function CustomBarTooltip({
   active,
@@ -199,6 +202,7 @@ export default function DashboardPage() {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [weekDate, setWeekDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [accountsPage, setAccountsPage] = useState(1)
 
   const { data: accounts } = useAccounts()
 
@@ -242,6 +246,16 @@ export default function DashboardPage() {
       }
     })
   }, [dashboard, analyticsResponse])
+
+  useEffect(() => {
+    setAccountsPage(1)
+  }, [accountsData.length])
+
+  const totalAccountsPages = Math.max(1, Math.ceil(accountsData.length / ACCOUNTS_PER_PAGE))
+  const accountsPageStart = (accountsPage - 1) * ACCOUNTS_PER_PAGE
+  const paginatedAccountsData = useMemo(() => {
+    return accountsData.slice(accountsPageStart, accountsPageStart + ACCOUNTS_PER_PAGE)
+  }, [accountsData, accountsPageStart])
 
   // NOTE: keep every hook above the early returns below. Calling a hook after
   // a conditional `return` makes the hook order vary between renders (loading
@@ -394,6 +408,7 @@ export default function DashboardPage() {
                   options={accountOptions}
                   placeholder="Cari Akun..."
                   onlyChangeOnSelect={true}
+                  clearOnFocus
                   className="h-8 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50"
                 />
               </div>
@@ -533,9 +548,9 @@ export default function DashboardPage() {
                     <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
                     <ChartTooltip content={<CustomAreaTooltip />} />
                     <Legend verticalAlign="top" height={36} iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '9px', color: '#94a3b8' }} />
-                    <Area name="Total Lead" type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={2} fill="url(#totalG)" />
-                    <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" />
-                    <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" />
+                    <Area name="Total Lead" type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={2} fill="url(#totalG)" animationDuration={400} />
+                    <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" animationDuration={400} animationBegin={30} />
+                    <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" animationDuration={400} animationBegin={60} />
                   </AreaChart>
                 </ChartBox>
               ) : (
@@ -599,7 +614,7 @@ export default function DashboardPage() {
                           tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 14) + '…' : v}
                         />
                         <ChartTooltip content={<CustomBarTooltip />} />
-                        <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                        <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]} maxBarSize={16} animationDuration={450}>
                           {topNeeds.map((_: any, index: number) => (
                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                           ))}
@@ -709,47 +724,99 @@ export default function DashboardPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border text-xs">
-                    {accountsData.map((acct: any, idx: number) => (
-                      <tr key={acct.id} className="hover:bg-muted/40 transition-colors group dark:hover:bg-zinc-800/20">
-                        <td className="py-3.5 px-1">
-                          <span
-                            className={cn(
-                              'inline-flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-black',
-                              idx === 0
-                                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                                : idx === 1
-                                ? 'bg-muted text-muted-foreground'
-                                : idx === 2
-                                ? 'bg-orange-100 text-orange-600 dark:bg-orange-800/20 dark:text-orange-400'
-                                : 'text-muted-foreground/60'
-                            )}
-                          >
-                            {idx + 1}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-1 font-bold text-foreground/80 group-hover:text-foreground transition-colors">
-                          {acct.name}
-                        </td>
-                        <td className="py-3.5 px-1 text-muted-foreground text-[11px]">
-                          {acct.admins.map((a: any) => a.name).join(', ') || '-'}
-                        </td>
-                        <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.total_leads}</td>
-                        <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.deals}</td>
-                        <td className="py-3.5 px-1 text-right">
-                          <Tooltip>
-                            <TooltipTrigger className="font-black text-amber-500 cursor-default">
-                              {acct.conversion_rate}%
-                            </TooltipTrigger>
-                            <TooltipContent className="text-[11px]">
-                              {acct.deals} deal dari {acct.total_leads} leads
-                            </TooltipContent>
-                          </Tooltip>
-                        </td>
-                      </tr>
-                    ))}
+                    {paginatedAccountsData.map((acct: any, idx: number) => {
+                      const rankIndex = accountsPageStart + idx
+
+                      return (
+                        <tr key={acct.id} className="hover:bg-muted/40 transition-colors group dark:hover:bg-zinc-800/20">
+                          <td className="py-3.5 px-1">
+                            <span
+                              className={cn(
+                                'inline-flex h-5 w-5 items-center justify-center rounded-md text-[10px] font-black',
+                                rankIndex === 0
+                                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                                  : rankIndex === 1
+                                  ? 'bg-muted text-muted-foreground'
+                                  : rankIndex === 2
+                                  ? 'bg-orange-100 text-orange-600 dark:bg-orange-800/20 dark:text-orange-400'
+                                  : 'text-muted-foreground/60'
+                              )}
+                            >
+                              {rankIndex + 1}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-1 font-bold text-foreground/80 group-hover:text-foreground transition-colors">
+                            {acct.name}
+                          </td>
+                          <td className="py-3.5 px-1 text-muted-foreground text-[11px]">
+                            {acct.admins.map((a: any) => a.name).join(', ') || '-'}
+                          </td>
+                          <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.total_leads}</td>
+                          <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.deals}</td>
+                          <td className="py-3.5 px-1 text-right">
+                            <Tooltip>
+                              <TooltipTrigger className="font-black text-amber-500 cursor-default">
+                                {acct.conversion_rate}%
+                              </TooltipTrigger>
+                              <TooltipContent className="text-[11px]">
+                                {acct.deals} deal dari {acct.total_leads} leads
+                              </TooltipContent>
+                            </Tooltip>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>
+              {accountsData.length > ACCOUNTS_PER_PAGE && (
+                <div className="mt-4 flex flex-col gap-3 border-t border-border/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-[10px] font-semibold text-muted-foreground text-center sm:text-left">
+                    Menampilkan {accountsPageStart + 1} - {Math.min(accountsPageStart + ACCOUNTS_PER_PAGE, accountsData.length)} dari {accountsData.length} akun
+                  </span>
+                  <div className="flex items-center justify-center gap-1.5">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-xs"
+                      disabled={accountsPage === 1}
+                      onClick={() => setAccountsPage((page) => Math.max(1, page - 1))}
+                      className="border-border"
+                      aria-label="Halaman sebelumnya"
+                    >
+                      <ChevronLeft className="h-3 w-3" />
+                    </Button>
+                    {Array.from({ length: totalAccountsPages }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        type="button"
+                        variant={page === accountsPage ? 'default' : 'outline'}
+                        size="xs"
+                        onClick={() => setAccountsPage(page)}
+                        className={cn(
+                          'h-6 min-w-6 px-2 text-[10px] font-bold',
+                          page === accountsPage
+                            ? 'bg-amber-500 text-zinc-950 hover:bg-amber-400'
+                            : 'border-border text-muted-foreground hover:text-foreground'
+                        )}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-xs"
+                      disabled={accountsPage === totalAccountsPages}
+                      onClick={() => setAccountsPage((page) => Math.min(totalAccountsPages, page + 1))}
+                      className="border-border"
+                      aria-label="Halaman berikutnya"
+                    >
+                      <ChevronRight className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

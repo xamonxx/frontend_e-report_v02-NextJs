@@ -60,7 +60,9 @@ export default function AnalyticsPage() {
 
   const [isMounted, setIsMounted] = useState(false)
   useEffect(() => {
-    setIsMounted(true)
+    // Small delay so the page layout settles before triggering entrance animations
+    const t = setTimeout(() => setIsMounted(true), 80)
+    return () => clearTimeout(t)
   }, [])
 
   // Ref to the trend card; PNG/PDF export helpers live in @/lib/export-card.
@@ -276,7 +278,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Filter panel */}
-      <div className="glass-panel p-5 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:shadow-black/25">
+      <div className="glass-panel p-5 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:bg-zinc-900/40">
         <div className={cn(
           "grid gap-4 grid-cols-1 sm:grid-cols-2",
           isSuperAdmin 
@@ -310,6 +312,7 @@ export default function AnalyticsPage() {
                 options={accountOptions}
                 placeholder="Cari Akun..."
                 onlyChangeOnSelect={true}
+                clearOnFocus
                 className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50"
               />
             </div>
@@ -393,7 +396,7 @@ export default function AnalyticsPage() {
           {/* Summary Cards */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {/* Leads Card */}
-            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-200 ease-out rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950" style={{ opacity: isMounted ? 1 : 0, transform: isMounted ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 250ms ease-out, transform 250ms ease-out' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Total Lead Terkumpul
@@ -418,7 +421,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Survey Card */}
-            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-200 ease-out rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950" style={{ opacity: isMounted ? 1 : 0, transform: isMounted ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 250ms ease-out 30ms, transform 250ms ease-out 30ms' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Survey Terjadwal
@@ -433,14 +436,14 @@ export default function AnalyticsPage() {
                     <span className="text-[9px] font-medium text-muted-foreground/70">Rasio survey dari total lead</span>
                   </div>
                   <div className="w-full bg-muted h-1 rounded-full overflow-hidden mt-1.5 dark:bg-zinc-900">
-                    <div className="bg-amber-500 h-full" style={{ width: `${analytics?.requestSurveyRate || 0}%` }} />
+                    <div className="bg-amber-500 h-full rounded-full" style={{ width: isMounted ? `${analytics?.requestSurveyRate || 0}%` : '0%', transition: 'width 350ms ease-out 100ms' }} />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Deal Card */}
-            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-200 ease-out rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950" style={{ opacity: isMounted ? 1 : 0, transform: isMounted ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 250ms ease-out 60ms, transform 250ms ease-out 60ms' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Closing Deal
@@ -455,14 +458,14 @@ export default function AnalyticsPage() {
                     <span className="text-[9px] font-medium text-muted-foreground/70">Rasio closing dari total lead</span>
                   </div>
                   <div className="w-full bg-muted h-1 rounded-full overflow-hidden mt-1.5 dark:bg-zinc-900">
-                    <div className="bg-emerald-500 h-full" style={{ width: `${analytics?.dealRate || 0}%` }} />
+                    <div className="bg-emerald-500 h-full rounded-full" style={{ width: isMounted ? `${analytics?.dealRate || 0}%` : '0%', transition: 'width 350ms ease-out 120ms' }} />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Quality/Active Days Card */}
-            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-300 rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 h-full flex flex-col border-border bg-card shadow-sm hover:border-amber-500/30 hover:scale-[1.01] transition-all duration-200 ease-out rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950" style={{ opacity: isMounted ? 1 : 0, transform: isMounted ? 'translateY(0)' : 'translateY(8px)', transition: 'opacity 250ms ease-out 90ms, transform 250ms ease-out 90ms' }}>
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Aktivitas Pengisian
@@ -481,7 +484,7 @@ export default function AnalyticsPage() {
           {/* Charts Grid */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Trend Chart */}
-            <Card ref={trendCardRef} className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card ref={trendCardRef} className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
@@ -541,9 +544,9 @@ export default function AnalyticsPage() {
                       <YAxis stroke="#94a3b8" fontSize={10} tickLine={false} axisLine={false} />
                       <Tooltip content={renderAreaTooltip} />
                       <Legend verticalAlign="top" height={36} iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '10px', color: '#94a3b8' }} />
-                      <Area name="Total Lead" type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={2} fill="url(#totalG)" />
-                      <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" />
-                      <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" />
+                      <Area name="Total Lead" type="monotone" dataKey="total" stroke="#f59e0b" strokeWidth={2} fill="url(#totalG)" animationDuration={400} />
+                      <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" animationDuration={400} animationBegin={30} />
+                      <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" animationDuration={400} animationBegin={60} />
                     </AreaChart>
                   </ChartBox>
                 ) : (
@@ -553,7 +556,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Needs Distribution */}
-            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
@@ -595,7 +598,7 @@ export default function AnalyticsPage() {
                             tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 14) + '…' : v}
                           />
                           <Tooltip content={renderBarTooltip} />
-                          <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]} maxBarSize={16}>
+                          <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]} maxBarSize={16} animationDuration={400}>
                             {topNeeds.map((_: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
@@ -638,7 +641,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Status Distribution */}
-            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
@@ -675,7 +678,7 @@ export default function AnalyticsPage() {
                           />
                           <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip content={renderBarTooltip} />
-                          <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                          <Bar dataKey="count" radius={[4, 4, 0, 0]} animationDuration={400}>
                             {statusData.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={entry.color || '#94a3b8'} />
                             ))}
@@ -712,7 +715,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* Geographical Segments */}
-            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+            <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
               <CardHeader>
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                   <div>
@@ -743,6 +746,9 @@ export default function AnalyticsPage() {
                             innerRadius={50}
                             outerRadius={70}
                             paddingAngle={3}
+                            animationDuration={400}
+                            animationEasing="ease-in-out"
+                            animationBegin={100}
                             activeShape={renderActiveShape}
                           >
                             {westJavaSegmentData.map((entry: any, index: number) => (
@@ -784,7 +790,7 @@ export default function AnalyticsPage() {
                             <span>{city.percentage}% ({city.count})</span>
                           </div>
                           <div className="w-full bg-muted h-1.5 rounded-full overflow-hidden dark:bg-zinc-900">
-                            <div className="bg-amber-500 h-full rounded-full" style={{ width: `${city.percentage}%` }} />
+                            <div className="bg-amber-500 h-full rounded-full" style={{ width: isMounted ? `${city.percentage}%` : '0%', transition: `width 350ms ease-out ${50 + idx * 50}ms` }} />
                           </div>
                         </div>
                       ))}
@@ -802,71 +808,75 @@ export default function AnalyticsPage() {
           <div className="grid gap-6 md:grid-cols-2">
             {/* Funnel & System Insights */}
             <div className="space-y-6">
-              {/* Funnel Analysis */}
-              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+              {/* Funnel Analysis — Modern Redesign */}
+              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
-                      <CardTitle className="text-sm font-bold text-foreground">Analisis Konversi Pipeline (Funnel)</CardTitle>
+                      <CardTitle className="text-sm font-bold text-foreground">Pipeline Konversi</CardTitle>
                       <CardDescription className="text-[11px] text-muted-foreground">
-                        Konversi dari Leads Terdaftar → Penjadwalan Survey → Deal Closing
+                        Leads → Survey → Closing Deal
                       </CardDescription>
                     </div>
-                    <CardExportButtons filename="Analisis Konversi Pipeline" compact />
+                    <CardExportButtons filename="Pipeline Konversi" compact />
                   </div>
                 </CardHeader>
                 <CardContent>
                   {(() => {
                     const stages = [
-                      { key: 'leads', tahap: 'Tahap 1', name: 'Leads Terdaftar', value: funnel.leads, sub: 'Volume Awal', conv: null as number | null, from: '#f59e0b', to: '#f97316' },
-                      { key: 'surveys', tahap: 'Tahap 2', name: 'Request / Visit Survey', value: funnel.surveys, sub: 'Aktif Terjadwal', conv: funnel.survey_rate, from: '#3b82f6', to: '#2563eb' },
-                      { key: 'deals', tahap: 'Tahap Akhir', name: 'Closing Deal Penjualan', value: funnel.deals, sub: 'Berhasil Dikonversi', conv: funnel.deal_from_survey_rate, from: '#10b981', to: '#059669' },
+                      { key: 'leads', label: 'Leads', value: funnel.leads, color: '#f59e0b', conv: null as number | null },
+                      { key: 'surveys', label: 'Survey', value: funnel.surveys, color: '#3b82f6', conv: funnel.survey_rate },
+                      { key: 'deals', label: 'Deal', value: funnel.deals, color: '#10b981', conv: funnel.deal_from_survey_rate },
                     ]
                     const maxVal = Math.max(...stages.map((s) => s.value), 1)
                     return (
-                      <div className="relative">
-                        {/* Centerline guide */}
-                        <div className="pointer-events-none absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-gradient-to-b from-transparent via-border to-transparent dark:via-zinc-800" />
+                      <div className="space-y-3">
                         {stages.map((s, i) => {
-                          // Width scales with volume but keeps a readable floor so labels fit.
-                          const widthPct = 52 + (s.value / maxVal) * 48
+                          const barPct = Math.max((s.value / maxVal) * 100, 6)
                           return (
                             <div key={s.key}>
+                              {/* Conversion rate connector */}
                               {i > 0 && (
-                                <div className="relative z-10 flex justify-center py-2">
+                                <div className="flex items-center justify-center gap-2 py-1.5">
+                                  <div className="h-px flex-1 bg-border/50 dark:bg-zinc-800/50" />
                                   <span
-                                    className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[10px] font-extrabold tabular-nums backdrop-blur-sm"
-                                    style={{ color: s.from, borderColor: `${s.from}55`, backgroundColor: `${s.from}1f` }}
+                                    className="text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full border"
+                                    style={{ color: s.color, borderColor: `${s.color}30`, backgroundColor: `${s.color}0d` }}
                                   >
-                                    <ChevronDown className="h-3 w-3" />
-                                    {s.conv}%
+                                    ↓ {s.conv}%
                                   </span>
+                                  <div className="h-px flex-1 bg-border/50 dark:bg-zinc-800/50" />
                                 </div>
                               )}
-                              <div
-                                className="relative mx-auto flex items-center justify-between gap-3 overflow-hidden rounded-2xl px-4 py-3.5 text-white transition-[width,opacity,transform] duration-700 ease-out will-change-transform"
-                                style={{
-                                  width: isMounted ? `${widthPct}%` : '24%',
-                                  opacity: isMounted ? 1 : 0,
-                                  transitionDelay: `${i * 130}ms`,
-                                  background: `linear-gradient(135deg, ${s.from}, ${s.to})`,
-                                  boxShadow: `0 12px 30px -12px ${s.from}cc`,
-                                }}
-                              >
-                                {/* top sheen for depth */}
-                                <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/20 to-transparent" />
-                                <div className="relative min-w-0">
-                                  <span className="block text-[9px] font-bold uppercase tracking-wider text-white/75">{s.tahap}</span>
-                                  <h4 className="truncate text-xs font-bold text-white">{s.name}</h4>
+                              {/* Stage row */}
+                              <div className="flex items-center gap-3">
+                                {/* Label + value */}
+                                <div className="w-[72px] shrink-0">
+                                  <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</span>
+                                  <span className="block text-xl font-black tabular-nums text-foreground leading-tight">{s.value}</span>
                                 </div>
-                                <div className="relative shrink-0 text-right">
-                                  <span className="block text-2xl font-black leading-none tabular-nums text-white drop-shadow-sm">{s.value}</span>
-                                  <span className="mt-0.5 block text-[9px] font-semibold text-white/75">{s.sub}</span>
+                                {/* Progress bar */}
+                                <div className="flex-1 h-8 bg-muted/40 rounded-lg overflow-hidden dark:bg-zinc-900/50">
+                                  <div
+                                    className="h-full rounded-lg"
+                                    style={{
+                                      width: isMounted ? `${barPct}%` : '0%',
+                                      backgroundColor: s.color,
+                                      transition: `width 400ms ease-out ${50 + i * 80}ms`,
+                                      opacity: 0.85,
+                                    }}
+                                  />
                                 </div>
                               </div>
                             </div>
                           )
                         })}
+
+                        {/* Summary line */}
+                        <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/40 dark:border-zinc-800/40">
+                          <span className="text-[10px] text-muted-foreground font-medium">Rasio Keseluruhan (Lead → Deal)</span>
+                          <span className="text-xs font-black tabular-nums text-emerald-600 dark:text-emerald-400">{funnel.deal_rate || 0}%</span>
+                        </div>
                       </div>
                     )
                   })()}
@@ -874,7 +884,7 @@ export default function AnalyticsPage() {
               </Card>
 
               {/* Insights Card */}
-              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
                 <CardHeader className="flex flex-row items-center justify-between pb-3">
                   <div>
                     <CardTitle className="text-sm font-bold text-foreground">Saran & Insights Laporan</CardTitle>
@@ -910,7 +920,7 @@ export default function AnalyticsPage() {
             <div className="space-y-6">
               {/* Account Ranking (Super Admin Only) */}
               {isSuperAdmin && (
-                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950">
                   <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-3">
                     <div>
                       <CardTitle className="text-sm font-bold text-foreground">Peringkat Akun Wilayah</CardTitle>
@@ -1018,7 +1028,7 @@ export default function AnalyticsPage() {
 
               {/* Admin performance ranking */}
               {isSuperAdmin && (
-                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950/40 dark:backdrop-blur-md">
+                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950">
                   <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pb-3">
                     <div>
                       <CardTitle className="text-sm font-bold text-foreground">Kontribusi Admin Teraktif</CardTitle>
