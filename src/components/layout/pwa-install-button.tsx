@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Smartphone, Download, Share, Plus, X, Sparkles, CheckCircle2 } from 'lucide-react'
+import { Smartphone, Download, Share, Plus, X, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -105,63 +105,31 @@ export default function PwaInstallButton() {
 
   return (
     <>
-      {/* Floating Action Button (FAB) */}
-      <div className="fixed bottom-6 right-6 z-50 flex items-center justify-center">
-        <AnimatePresence>
-          {isInstalledSuccessfully ? (
-            <motion.div
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0, opacity: 0 }}
-              className="flex items-center gap-2 rounded-full bg-emerald-500 px-4 py-2.5 text-xs font-bold text-zinc-950 shadow-lg shadow-emerald-500/20"
-            >
-              <CheckCircle2 className="h-4.5 w-4.5" />
-              <span>Aplikasi Terinstal!</span>
-            </motion.div>
-          ) : (
-            <div className="group relative">
-              {/* Pulsing ring outline */}
-              <span className="absolute -inset-1 animate-ping rounded-full bg-amber-500/10 opacity-75" />
-              
-              <motion.button
-                onClick={handleInstallClick}
-                className={cn(
-                  "relative flex h-12 w-12 items-center justify-center rounded-full border border-amber-500/20 bg-zinc-950/80 text-amber-500 shadow-xl backdrop-blur-md transition-all duration-300 hover:scale-115 hover:border-amber-500/40 hover:bg-zinc-900 cursor-pointer",
-                  "dark:bg-zinc-950/80 dark:text-amber-500 dark:border-amber-500/20 dark:hover:bg-zinc-900"
-                )}
-                style={{
-                  borderColor: 'var(--primary-theme)',
-                  color: 'var(--primary-theme)',
-                  boxShadow: '0 4px 20px var(--primary-theme)'
-                }}
-                whileHover={{ y: -2 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Smartphone className="h-5 w-5 animate-pulse" />
-                
-                {/* Microbadge */}
-                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-black text-zinc-950 dark:bg-amber-500 dark:text-zinc-950">
-                  <Download className="h-2 w-2" />
-                </span>
-              </motion.button>
-
-              {/* Tooltip Description */}
-              <div className="absolute bottom-full right-0 mb-3 hidden w-48 flex-col items-end group-hover:flex">
-                <div className="rounded-lg border border-zinc-200 bg-white p-2.5 shadow-md dark:border-zinc-800 dark:bg-zinc-900">
-                  <p className="text-[11px] font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1">
-                    <Sparkles className="h-3 w-3 text-amber-500" />
-                    Instal E-Report PWA
-                  </p>
-                  <p className="mt-1 text-[9px] text-zinc-500 dark:text-zinc-400 leading-normal">
-                    Akses cepat langsung dari layar utama dan hemat data.
-                  </p>
-                </div>
-                <div className="mr-5 h-2 w-2 rotate-45 border-r border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900" />
-              </div>
-            </div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* Header icon button (sits next to the theme toggle) */}
+      <button
+        type="button"
+        onClick={handleInstallClick}
+        title="Instal aplikasi E-Report"
+        aria-label="Instal aplikasi E-Report"
+        className={cn(
+          'relative flex h-9 w-9 items-center justify-center rounded-xl border bg-card/60 backdrop-blur-md shadow-sm shrink-0 cursor-pointer transition-all duration-300',
+          isInstalledSuccessfully
+            ? 'border-emerald-500/40 text-emerald-500'
+            : 'border-border text-muted-foreground hover:text-foreground hover:bg-accent/80'
+        )}
+      >
+        {isInstalledSuccessfully ? (
+          <CheckCircle2 className="h-4 w-4" />
+        ) : (
+          <>
+            <Smartphone className="h-4 w-4 text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.4)]" />
+            {/* Download micro-badge */}
+            <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-500 text-zinc-950">
+              <Download className="h-2 w-2" />
+            </span>
+          </>
+        )}
+      </button>
 
       {/* Manual Installation Guide Modal / Dialog */}
       <AnimatePresence>

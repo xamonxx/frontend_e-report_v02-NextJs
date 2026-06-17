@@ -61,9 +61,10 @@ export default function Sidebar() {
     <TooltipProvider delay={isOpen ? 9999 : 350}>
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 flex flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-sm transition-all duration-300 ease-in-out z-50',
+          // Desktop-only: the mobile bottom nav replaces the sidebar on small screens.
+          'hidden lg:flex flex-col border-r border-sidebar-border bg-sidebar/95 backdrop-blur-sm transition-all duration-300 ease-in-out z-50',
           'lg:relative lg:translate-x-0 lg:bg-sidebar/90 lg:backdrop-blur-sm',
-          isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'
+          isOpen ? 'w-64' : 'w-16'
         )}
       >
         {/* Brand Header */}

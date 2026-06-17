@@ -1,12 +1,12 @@
 'use client'
 
 import { useAuthStore } from '@/lib/stores/authStore'
-import { useSidebarStore } from '@/lib/stores/sidebarStore'
 import { useLogout } from '@/lib/hooks/useAuth'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import NotificationCenter from './notification-center'
 import ThemeToggle from './theme-toggle'
-import { Landmark, User, Shield, Menu, ChevronRight, Settings, LogOut, Clock, Building, ShieldCheck, Loader2 } from 'lucide-react'
+import PwaInstallButton from './pwa-install-button'
+import { Landmark, User, Shield, ChevronRight, Settings, LogOut, Clock, Building, ShieldCheck, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import {
   Tooltip,
@@ -36,7 +36,6 @@ const PAGE_NAMES: Record<string, string> = {
 
 export default function Header() {
   const user = useAuthStore((s) => s.user)
-  const toggleSidebar = useSidebarStore((s) => s.toggle)
   const pathname = usePathname()
   const logoutMutation = useLogout()
 
@@ -56,18 +55,8 @@ export default function Header() {
     <TooltipProvider delay={400}>
       <header className="flex h-16 items-center justify-between border-b border-border bg-card/80 px-4 sm:px-6 backdrop-blur-sm z-20">
 
-        {/* Left: menu toggle + account context + breadcrumb */}
+        {/* Left: account context + breadcrumb */}
         <div className="flex items-center gap-3 min-w-0">
-          <Tooltip>
-            <TooltipTrigger
-              onClick={toggleSidebar}
-              className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/40 text-muted-foreground hover:text-foreground lg:hidden hover:bg-accent transition-colors cursor-pointer shrink-0"
-            >
-              <Menu className="h-5 w-5" />
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-[11px]">Toggle menu</TooltipContent>
-          </Tooltip>
-
           {user?.account ? (
             <Tooltip>
               <TooltipTrigger className="flex items-center gap-2 rounded-xl bg-card/30 px-3 py-1.5 border border-border/60 backdrop-blur-md shadow-sm cursor-default">
@@ -108,8 +97,9 @@ export default function Header() {
           )}
         </div>
 
-        {/* Right: theme toggle, notifications, profile */}
+        {/* Right: install, theme toggle, notifications, profile */}
         <div className="flex items-center gap-3 shrink-0">
+          <PwaInstallButton />
           <ThemeToggle />
           <NotificationCenter />
           <div className="h-4 w-[1px] bg-border" />

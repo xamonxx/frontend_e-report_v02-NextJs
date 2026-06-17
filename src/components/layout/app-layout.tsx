@@ -12,7 +12,7 @@ import { useEffect } from 'react'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isLoginPage = pathname === '/login'
-  const { isOpen, close } = useSidebarStore()
+  const close = useSidebarStore((s) => s.close)
   const user = useAuthStore((s) => s.user)
 
   useEffect(() => {
@@ -44,16 +44,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="absolute top-0 right-0 h-[400px] w-[400px] rounded-full bg-amber-500/[0.02] blur-[120px] pointer-events-none z-0" />
         <div className="absolute bottom-0 left-[200px] h-[300px] w-[300px] rounded-full bg-amber-700/[0.015] blur-[100px] pointer-events-none z-0" />
 
-        {/* Navigation Sidebar */}
+        {/* Navigation Sidebar (desktop only) */}
         <Sidebar />
-
-        {/* Mobile Sidebar Overlay Backdrop */}
-        {isOpen && (
-          <div
-            onClick={close}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden cursor-pointer transition-opacity duration-300"
-          />
-        )}
 
         {/* Main Work Area */}
         <div className="flex flex-1 flex-col overflow-hidden z-10">
