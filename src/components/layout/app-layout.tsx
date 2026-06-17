@@ -2,6 +2,7 @@
 
 import Sidebar from './sidebar'
 import Header from './header'
+import BottomNav from './bottom-nav'
 import { AuthGuard } from '../auth-guard'
 import { usePathname } from 'next/navigation'
 import { useSidebarStore } from '@/lib/stores/sidebarStore'
@@ -60,10 +61,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Header />
 
           {/* Dynamic Content Frame */}
-          <main className="flex-1 overflow-y-auto bg-muted/10 dark:bg-zinc-950/5 p-4 sm:p-6">
+          <main className="flex-1 overflow-y-auto bg-muted/10 dark:bg-zinc-950/5 p-4 sm:p-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6">
             {children}
           </main>
         </div>
+
+        {/* Mobile-only Bottom Navigation */}
+        <BottomNav />
       </div>
     </AuthGuard>
   )
