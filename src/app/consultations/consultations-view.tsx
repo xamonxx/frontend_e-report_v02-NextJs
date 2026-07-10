@@ -197,18 +197,18 @@ export default function ConsultationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-clip sm:space-y-6">
       {/* Header section */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
             Daftar Konsultasi
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="max-w-2xl text-xs text-muted-foreground mt-1">
             Kelola dan pantau seluruh data pipeline lead konsultasi klien secara real-time.
           </p>
         </div>
-        <div className="flex flex-col gap-2 w-full lg:w-auto lg:flex-row lg:items-center">
+        <div className="flex min-w-0 flex-col gap-2 w-full lg:w-auto lg:flex-row lg:items-center">
           <Link
             href="/consultations/create"
             className="order-first lg:order-last inline-flex items-center justify-center h-10 lg:h-9 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-xs rounded-xl transition-all duration-200 shadow-[0_0_16px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)] hover:shadow-[0_0_24px_color-mix(in_srgb,var(--primary-theme)_45%,transparent)] gap-1.5 w-full lg:w-auto shrink-0"
@@ -217,13 +217,13 @@ export default function ConsultationsPage() {
             Lead Baru
           </Link>
 
-          <div className="grid grid-cols-3 gap-2 w-full lg:flex lg:w-auto lg:items-center">
+          <div className="grid w-full grid-cols-3 gap-1.5 sm:gap-2 lg:flex lg:w-auto lg:items-center">
             {/* CSV Import Dialog */}
             <Dialog open={importOpen} onOpenChange={setImportOpen}>
               <DialogTrigger
                 render={
-                  <Button variant="ghost" size="sm" className="w-full lg:w-auto justify-center h-10 lg:h-9 px-3 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 shrink-0">
-                    <FileSpreadsheet className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                  <Button variant="ghost" size="sm" className="w-full lg:w-auto justify-center h-10 lg:h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 shrink-0">
+                    <FileSpreadsheet className="h-3.5 w-3.5 mr-1 sm:mr-1.5 shrink-0" />
                     Import CSV
                   </Button>
                 }
@@ -301,7 +301,7 @@ export default function ConsultationsPage() {
               }) : '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-10 lg:h-9 px-3 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1.5 shrink-0"
+              className="inline-flex items-center justify-center h-10 lg:h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1 sm:gap-1.5 shrink-0"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
               Excel
@@ -318,7 +318,7 @@ export default function ConsultationsPage() {
               }) : '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-10 lg:h-9 px-3 text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1.5 shrink-0"
+              className="inline-flex items-center justify-center h-10 lg:h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1 sm:gap-1.5 shrink-0"
             >
               <Download className="h-3.5 w-3.5 shrink-0" />
               PDF
@@ -328,7 +328,7 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-card border border-border rounded-2xl px-4 py-3 shadow-xs dark:bg-zinc-900 dark:border-zinc-800/80">
+      <div className="max-w-full bg-card border border-border rounded-2xl px-3 py-3 shadow-xs dark:bg-zinc-900 dark:border-zinc-800/80 sm:px-4">
         <div className="flex flex-col md:flex-row md:items-center gap-2">
 
           {/* Search — full width on mobile, constrained on desktop */}
@@ -343,7 +343,7 @@ export default function ConsultationsPage() {
           </div>
 
           {/* Icons + Reset row — full width on mobile so ml-auto works */}
-          <div className="flex items-center gap-1.5 w-full md:w-auto">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 md:w-auto md:flex-nowrap">
 
           <div className="hidden md:block h-5 w-px bg-border mr-0.5 dark:bg-zinc-800/60" />
 
@@ -597,7 +597,7 @@ export default function ConsultationsPage() {
           </Popover>
 
           {/* Reset & Refresh — pushed to the right */}
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             <Button
               variant="ghost"
               size="sm"
@@ -621,7 +621,7 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Main Grid table */}
-      <div className="relative border border-border shadow-2xl rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm dark:border-zinc-700/60 dark:bg-zinc-800/40">
+      <div className="relative max-w-full border border-border shadow-2xl rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm dark:border-zinc-700/60 dark:bg-zinc-800/40">
         {/* Refetching visual feedback overlay */}
         {isRefetching && (
           <div className="absolute inset-0 bg-background/25 backdrop-blur-[1px] z-30 flex items-center justify-center transition-all duration-300">

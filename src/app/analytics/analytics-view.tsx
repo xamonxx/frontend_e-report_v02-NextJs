@@ -223,18 +223,18 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-6 py-4 sm:py-6">
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-clip py-3 sm:space-y-6 sm:py-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
+      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <h1 className="break-words text-2xl sm:text-3xl font-black tracking-tight text-foreground">
             Analitik Laporan
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="max-w-2xl text-xs text-muted-foreground mt-1">
             Analisis performa leads, konversi penjualan, dan demografi wilayah penjualan interior.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2">
           <a
             href={isMounted ? buildExportUrl('/api/v1/export/analytics/excel', {
               period_type: periodType,
@@ -245,7 +245,7 @@ export default function AnalyticsPage() {
             }) : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 text-xs font-semibold transition-all duration-300 h-9 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+            className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-border/80 bg-card px-2 py-2 text-[11px] font-semibold text-foreground/80 transition-all duration-300 hover:bg-muted hover:text-amber-600 hover:border-amber-500/30 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-amber-400 sm:gap-1.5 sm:px-3 sm:text-xs"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
             Excel
@@ -260,7 +260,7 @@ export default function AnalyticsPage() {
             }) : '#'}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 text-xs font-semibold transition-all duration-300 h-9 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+            className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-border/80 bg-card px-2 py-2 text-[11px] font-semibold text-foreground/80 transition-all duration-300 hover:bg-muted hover:text-amber-600 hover:border-amber-500/30 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-amber-400 sm:gap-1.5 sm:px-3 sm:text-xs"
           >
             <Download className="h-3.5 w-3.5" />
             PDF
@@ -269,16 +269,16 @@ export default function AnalyticsPage() {
             variant="outline"
             size="sm"
             onClick={() => refetch()}
-            className="border-border/80 bg-card text-foreground/80 hover:bg-muted hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-500/30 transition-all duration-300 rounded-xl h-9 cursor-pointer dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60"
+            className="h-9 rounded-xl border-border/80 bg-card px-2 text-[11px] text-foreground/80 transition-all duration-300 hover:bg-muted hover:text-amber-600 hover:border-amber-500/30 cursor-pointer dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-amber-400 sm:px-3 sm:text-xs"
           >
-            <RefreshCw className={cn("h-3.5 w-3.5 mr-2", isRefetching && "animate-spin")} />
+            <RefreshCw className={cn("h-3.5 w-3.5 mr-1 sm:mr-2", isRefetching && "animate-spin")} />
             Perbarui Data
           </Button>
         </div>
       </div>
 
       {/* Filter panel */}
-      <div className="glass-panel p-5 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:bg-zinc-900/40">
+      <div className="glass-panel max-w-full p-4 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:bg-zinc-900/40 sm:p-5">
         <div className={cn(
           "grid gap-4 grid-cols-1 sm:grid-cols-2",
           isSuperAdmin 
@@ -809,7 +809,7 @@ export default function AnalyticsPage() {
             {/* Funnel & System Insights */}
             <div className="space-y-6">
               {/* Funnel Analysis — Modern Redesign */}
-              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
+              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-[#111827] dark:shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                     <div>
@@ -824,48 +824,63 @@ export default function AnalyticsPage() {
                 <CardContent>
                   {(() => {
                     const stages = [
-                      { key: 'leads', label: 'Leads', value: funnel.leads, color: '#f59e0b', conv: null as number | null },
-                      { key: 'surveys', label: 'Survey', value: funnel.surveys, color: '#3b82f6', conv: funnel.survey_rate },
-                      { key: 'deals', label: 'Deal', value: funnel.deals, color: '#10b981', conv: funnel.deal_from_survey_rate },
+                      { key: 'leads', label: 'Leads', value: funnel.leads, color: '#f59e0b', textColor: '#f59e0b', conv: null as number | null, unit: 'lead' },
+                      { key: 'surveys', label: 'Survey', value: funnel.surveys, color: '#3b82f6', textColor: '#629bf8', conv: funnel.survey_rate, unit: 'survey' },
+                      { key: 'deals', label: 'Deal', value: funnel.deals, color: '#10b981', textColor: '#10b981', conv: funnel.deal_from_survey_rate, unit: 'deal' },
                     ]
                     const maxVal = Math.max(...stages.map((s) => s.value), 1)
                     return (
-                      <div className="space-y-3">
+                      <div className="space-y-3.5">
                         {stages.map((s, i) => {
-                          const barPct = Math.max((s.value / maxVal) * 100, 6)
+                          const barPct = s.value > 0 ? Math.max((s.value / maxVal) * 100, 8) : 0
+                          const transitionLabel = i === 1 ? 'Lead -> Survey' : 'Survey -> Deal'
                           return (
-                            <div key={s.key}>
+                            <div key={s.key} className="space-y-2">
                               {/* Conversion rate connector */}
                               {i > 0 && (
                                 <div className="flex items-center justify-center gap-2 py-1.5">
-                                  <div className="h-px flex-1 bg-border/50 dark:bg-zinc-800/50" />
+                                  <div className="h-px flex-1 bg-border/50 dark:bg-slate-700/45" />
                                   <span
-                                    className="text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full border"
-                                    style={{ color: s.color, borderColor: `${s.color}30`, backgroundColor: `${s.color}0d` }}
+                                    className="whitespace-nowrap text-[10px] font-bold tabular-nums px-2 py-0.5 rounded-full border"
+                                    style={{ color: s.textColor, borderColor: `${s.color}30`, backgroundColor: `${s.color}0d` }}
                                   >
-                                    ↓ {s.conv}%
+                                    {transitionLabel} {s.conv}%
                                   </span>
-                                  <div className="h-px flex-1 bg-border/50 dark:bg-zinc-800/50" />
+                                  <div className="h-px flex-1 bg-border/50 dark:bg-slate-700/45" />
                                 </div>
                               )}
                               {/* Stage row */}
-                              <div className="flex items-center gap-3">
+                              <div className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-3">
                                 {/* Label + value */}
-                                <div className="w-[72px] shrink-0">
+                                <div className="min-w-0">
                                   <span className="block text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{s.label}</span>
                                   <span className="block text-xl font-black tabular-nums text-foreground leading-tight">{s.value}</span>
                                 </div>
                                 {/* Progress bar */}
-                                <div className="flex-1 h-8 bg-muted/40 rounded-lg overflow-hidden dark:bg-zinc-900/50">
-                                  <div
-                                    className="h-full rounded-lg"
-                                    style={{
-                                      width: isMounted ? `${barPct}%` : '0%',
-                                      backgroundColor: s.color,
-                                      transition: `width 400ms ease-out ${50 + i * 80}ms`,
-                                      opacity: 0.85,
-                                    }}
-                                  />
+                                <div className="min-w-0">
+                                  <div className="mb-1.5 flex items-center justify-between gap-2">
+                                    <span className="truncate text-[10px] font-medium text-muted-foreground/80">{s.label} masuk funnel</span>
+                                    <span className="shrink-0 text-[10px] font-black tabular-nums" style={{ color: s.textColor }}>
+                                      {s.value} {s.unit}
+                                    </span>
+                                  </div>
+                                  <div className="relative h-7 overflow-hidden rounded-lg bg-muted/40 ring-1 ring-inset ring-border/40 dark:bg-slate-950/50 dark:ring-slate-700/45">
+                                    {s.value === 0 && (
+                                      <div
+                                        className="absolute inset-x-2 top-1/2 h-px -translate-y-1/2"
+                                        style={{ backgroundColor: `${s.color}35` }}
+                                      />
+                                    )}
+                                    <div
+                                      className="h-full rounded-lg"
+                                      style={{
+                                        width: isMounted ? `${barPct}%` : '0%',
+                                        backgroundColor: s.color,
+                                        transition: `width 400ms ease-out ${50 + i * 80}ms`,
+                                        opacity: 0.9,
+                                      }}
+                                    />
+                                  </div>
                                 </div>
                               </div>
                             </div>
@@ -873,7 +888,7 @@ export default function AnalyticsPage() {
                         })}
 
                         {/* Summary line */}
-                        <div className="flex items-center justify-between pt-2 mt-1 border-t border-border/40 dark:border-zinc-800/40">
+                        <div className="flex items-center justify-between gap-3 pt-2 mt-1 border-t border-border/40 dark:border-slate-700/45">
                           <span className="text-[10px] text-muted-foreground font-medium">Rasio Keseluruhan (Lead → Deal)</span>
                           <span className="text-xs font-black tabular-nums text-emerald-600 dark:text-emerald-400">{funnel.deal_rate || 0}%</span>
                         </div>

@@ -36,7 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthGuard>
-      <div className="flex h-screen w-screen bg-background overflow-hidden text-foreground relative">
+      <div className="flex h-dvh w-full max-w-full overflow-x-clip bg-background text-foreground relative">
         {/* Sphere grid backdrop (theme-aware: light vs dark) */}
         <div className="app-grid-bg absolute inset-0 z-0 pointer-events-none" />
 
@@ -48,13 +48,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <Sidebar />
 
         {/* Main Work Area */}
-        <div className="flex flex-1 flex-col overflow-hidden z-10">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden z-10">
           {/* Top Navigation / Quick Info */}
           <Header />
 
           {/* Dynamic Content Frame */}
           <main 
-            className="flex-1 overflow-y-auto bg-muted/10 dark:bg-zinc-950/5 p-4 sm:p-6 lg:pb-6"
+            className="flex-1 min-w-0 overflow-x-clip overflow-y-auto bg-muted/10 dark:bg-zinc-950/5 px-3 py-4 sm:p-6 lg:pb-6"
             style={{
               paddingBottom: 'calc(7.5rem + env(safe-area-inset-bottom))'
             }}

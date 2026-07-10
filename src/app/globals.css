@@ -145,9 +145,13 @@
   }
   body {
     @apply bg-background text-foreground;
+    width: 100%;
+    overflow-x: clip;
   }
   html {
     @apply font-sans;
+    width: 100%;
+    overflow-x: clip;
   }
 }
 

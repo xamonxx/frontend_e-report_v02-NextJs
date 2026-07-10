@@ -7,6 +7,21 @@ import type { NeedsCategory, StatusCategory, PaginatedResponse } from '@/types'
 
 // ── Read-only selectors for dropdowns ────────────────────────────
 
+function sortStatuses(statuses: StatusCategory[]) {
+  return [...statuses].sort((a, b) => {
+    const byOrder = (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    return byOrder || a.id - b.id
+  })
+}
+
+function mergeStatus(current: StatusCategory[] | undefined, next: StatusCategory) {
+  const existing = current || []
+  const merged = existing.some((item) => item.id === next.id)
+    ? existing.map((item) => item.id === next.id ? next : item)
+    : [...existing, next]
+  return sortStatuses(merged)
+}
+
 export function useNeedsCategories() {
   return useQuery({
     queryKey: queryKeys.masterData.needsCategories,
@@ -14,7 +29,11 @@ export function useNeedsCategories() {
       const res = await api.get<{ data: NeedsCategory[] }>('/master-data/needs-categories')
       return res.data
     },
-    staleTime: 60 * 60 * 1000, // 1 hour caching
+    // Master data (dropdown) bisa diubah super admin dan dipakai lintas
+    // perangkat/sesi (PWA), jadi jangan cache terlalu lama: selalu revalidasi
+    // saat form dibuka supaya kategori yang baru ditambahkan langsung muncul.
+    staleTime: 30 * 1000,
+    refetchOnMount: 'always',
   })
 }
 
@@ -22,10 +41,21 @@ export function useStatusCategories() {
   return useQuery({
     queryKey: queryKeys.masterData.statusCategories,
     queryFn: async () => {
-      const res = await api.get<{ data: StatusCategory[] }>('/master-data/status-categories')
-      return res.data
+      try {
+        const res = await api.get<PaginatedResponse<StatusCategory>>('/master-data/statuses/list', {
+          page: 1,
+          per_page: 500,
+        })
+        return sortStatuses(res.data)
+      } catch {
+        const res = await api.get<{ data: StatusCategory[] }>('/master-data/status-categories')
+        return sortStatuses(res.data)
+      }
     },
-    staleTime: 60 * 60 * 1000, // 1 hour caching
+    // Dropdown status harus sinkron dengan tabel master data setiap form dibuka.
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -169,7 +199,11 @@ export function useCreateStatus() {
   return useMutation({
     mutationFn: (data: { name: string; color: string }) =>
       api.post<{ message: string; data: StatusCategory }>('/master-data/statuses', data),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      queryClient.setQueryData<StatusCategory[]>(
+        queryKeys.masterData.statusCategories,
+        (current) => mergeStatus(current, res.data)
+      )
       queryClient.invalidateQueries({ queryKey: ['master-data', 'statuses'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.masterData.statusCategories })
     },
@@ -181,7 +215,11 @@ export function useUpdateStatus(id: number) {
   return useMutation({
     mutationFn: (data: { name: string; color: string }) =>
       api.put<{ message: string; data: StatusCategory }>(`/master-data/statuses/${id}`, data),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      queryClient.setQueryData<StatusCategory[]>(
+        queryKeys.masterData.statusCategories,
+        (current) => mergeStatus(current, res.data)
+      )
       queryClient.invalidateQueries({ queryKey: ['master-data', 'statuses'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.masterData.statusCategories })
     },
@@ -193,7 +231,11 @@ export function useDeleteStatus() {
   return useMutation({
     mutationFn: (id: number) =>
       api.delete<{ message: string }>(`/master-data/statuses/${id}`),
-    onSuccess: () => {
+    onSuccess: (_res, id) => {
+      queryClient.setQueryData<StatusCategory[]>(
+        queryKeys.masterData.statusCategories,
+        (current) => (current || []).filter((item) => item.id !== id)
+      )
       queryClient.invalidateQueries({ queryKey: ['master-data', 'statuses'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.masterData.statusCategories })
     },
@@ -206,7 +248,11 @@ export function useReorderStatuses() {
   return useMutation({
     mutationFn: (order: number[]) =>
       api.patch<{ message: string; data: StatusCategory[] }>('/master-data/statuses/reorder', { order }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      queryClient.setQueryData<StatusCategory[]>(
+        queryKeys.masterData.statusCategories,
+        sortStatuses(res.data)
+      )
       queryClient.invalidateQueries({ queryKey: ['master-data', 'statuses'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.masterData.statusCategories })
     },

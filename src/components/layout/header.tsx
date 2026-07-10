@@ -53,21 +53,21 @@ export default function Header() {
 
   return (
     <TooltipProvider delay={400}>
-      <header className="flex h-16 items-center justify-between border-b border-border bg-card/80 px-4 sm:px-6 backdrop-blur-sm z-20">
+      <header className="flex h-16 min-w-0 items-center justify-between border-b border-border bg-card/80 px-3 sm:px-6 backdrop-blur-sm z-20">
 
         {/* Left: account context + breadcrumb */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
           {user?.account ? (
             <Tooltip>
-              <TooltipTrigger className="flex items-center gap-2 rounded-xl bg-card/30 px-3 py-1.5 border border-border/60 backdrop-blur-md shadow-sm cursor-default">
+              <TooltipTrigger className="flex max-w-[150px] items-center gap-2 rounded-xl bg-card/30 px-2.5 py-1.5 border border-border/60 backdrop-blur-md shadow-sm cursor-default focus-visible:ring-2 focus-visible:ring-amber-500/50 sm:max-w-[220px] sm:px-3">
                 <Landmark className="h-4 w-4 text-amber-500 drop-shadow-[0_0_4px_var(--primary-theme)] shrink-0" />
-                <span className="text-xs font-semibold text-muted-foreground truncate max-w-[140px]">
+                <span className="truncate text-xs font-semibold text-muted-foreground sm:max-w-[140px]">
                   {user.account.name}
                 </span>
                 {user.role === 'super_admin' && (
                   <Badge
                     variant="outline"
-                    className="border-amber-500/20 bg-amber-500/5 text-amber-400 text-[10px] h-4 font-semibold shrink-0"
+                    className="hidden border-amber-500/20 bg-amber-500/5 text-amber-400 text-[10px] h-4 font-semibold shrink-0 sm:inline-flex"
                   >
                     Super Admin
                   </Badge>
@@ -79,9 +79,9 @@ export default function Header() {
             </Tooltip>
           ) : (
             <Tooltip>
-              <TooltipTrigger className="flex items-center gap-2 rounded-xl bg-card/30 px-3 py-1.5 border border-border/60 backdrop-blur-md shadow-sm cursor-default">
+              <TooltipTrigger className="flex max-w-[138px] items-center gap-2 rounded-xl bg-card/30 px-2.5 py-1.5 border border-border/60 backdrop-blur-md shadow-sm cursor-default focus-visible:ring-2 focus-visible:ring-amber-500/50 sm:max-w-none sm:px-3">
                 <Shield className="h-4 w-4 text-amber-500 drop-shadow-[0_0_4px_var(--primary-theme)] shrink-0" />
-                <span className="text-xs font-semibold text-muted-foreground">Super Admin</span>
+                <span className="truncate text-xs font-semibold text-muted-foreground">Super Admin</span>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-[11px]">
                 Mode Super Admin — akses semua akun
@@ -98,15 +98,15 @@ export default function Header() {
         </div>
 
         {/* Right: install, theme toggle, notifications, profile */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-3">
           <PwaInstallButton />
           <ThemeToggle />
           <NotificationCenter />
-          <div className="h-4 w-[1px] bg-border" />
+          <div className="hidden h-4 w-[1px] bg-border sm:block" />
 
           {/* Profile Popover */}
           <Popover>
-            <PopoverTrigger className="flex items-center gap-2 rounded-xl px-2 py-1 hover:bg-muted/60 transition-colors cursor-pointer group">
+            <PopoverTrigger className="flex items-center gap-2 rounded-xl px-1.5 py-1 hover:bg-muted/60 transition-colors cursor-pointer group focus-visible:ring-2 focus-visible:ring-amber-500/50 sm:px-2">
               <div className="hidden text-right md:block">
                 <p className="text-xs font-semibold text-foreground/90 truncate max-w-[120px] group-hover:text-foreground transition-colors">
                   {user?.name}

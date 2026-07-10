@@ -32,6 +32,18 @@ export function useAccountsList(filters: {
   })
 }
 
+/** Daftar kategori akun unik (kolom description) untuk dropdown filter. */
+export function useAccountCategories() {
+  return useQuery({
+    queryKey: [...queryKeys.accounts.all, 'categories'],
+    queryFn: async () => {
+      const res = await api.get<{ data: string[] }>('/accounts/categories')
+      return res.data
+    },
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
 export function useAccount(id: number) {
   return useQuery({
     queryKey: [...queryKeys.accounts.all, 'detail', id],

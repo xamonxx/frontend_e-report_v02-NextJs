@@ -221,18 +221,18 @@ export default function BottomNav() {
 
       {/* ── Floating pill bar ───────────────────────────────────── */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 lg:hidden px-4 flex justify-center pointer-events-none"
+        className="fixed inset-x-0 bottom-0 z-50 lg:hidden px-2.5 flex justify-center pointer-events-none sm:px-4"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
       >
-        <div className="relative w-full max-w-[400px] h-[68px] rounded-[28px] border border-zinc-200/80 dark:border-white/15 bg-zinc-50/95 dark:bg-zinc-800/85 backdrop-blur-xl shadow-[0_10px_35px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex items-center justify-between px-2 pointer-events-auto transition-all duration-300">
+        <div className="relative h-16 w-full max-w-[400px] rounded-[26px] border border-zinc-200/80 dark:border-white/15 bg-zinc-50/95 dark:bg-zinc-800/85 backdrop-blur-xl shadow-[0_10px_35px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex items-center justify-between px-1.5 pointer-events-auto transition-all duration-300 sm:h-[68px] sm:rounded-[28px] sm:px-2">
           
           {/* Centre FAB Action Button — floats beautifully above the bar */}
-          <div className="absolute left-1/2 bottom-[24px] -translate-x-1/2 z-20">
+          <div className="absolute left-1/2 bottom-[22px] -translate-x-1/2 z-20 sm:bottom-[24px]">
             <Link
               href="/consultations/create"
               onTouchStart={() => handlePrefetch('/consultations/create')}
               aria-label="Tambah data konsultasi"
-              className="relative block outline-none focus:outline-none"
+              className="relative block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-amber-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               {/* Outer Breathing Glow Ring */}
               <motion.div
@@ -258,7 +258,7 @@ export default function BottomNav() {
                 whileHover={{ scale: 1.06 }}
                 whileTap={{ scale: 0.92 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                className="flex h-[56px] w-[56px] items-center justify-center rounded-full text-zinc-950 dark:text-zinc-900 cursor-pointer shadow-lg"
+                className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-zinc-950 dark:text-zinc-900 cursor-pointer shadow-lg sm:h-[56px] sm:w-[56px]"
                 style={{
                   background: `linear-gradient(135deg, ${userThemeColor}, color-mix(in srgb, ${userThemeColor} 75%, black))`,
                   boxShadow: fabHovered 
@@ -295,7 +295,7 @@ export default function BottomNav() {
           </div>
 
           {/* Gap spacer for Center FAB */}
-          <div className="w-[68px] shrink-0" aria-hidden="true" />
+          <div className="w-[56px] shrink-0 sm:w-[68px]" aria-hidden="true" />
 
           {/* Right group */}
           <div className="flex flex-1 items-stretch h-full justify-around">
@@ -310,7 +310,7 @@ export default function BottomNav() {
             <button
               onClick={() => setMoreOpen(true)}
               aria-label="Menu lainnya"
-              className="relative flex flex-1 items-center justify-center cursor-pointer outline-none focus:outline-none"
+              className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
               <TabInner 
                 icon={MoreHorizontal} 
@@ -349,7 +349,7 @@ function Tab({
       href={item.href}
       onTouchStart={() => onPrefetch(item.href)}
       aria-label={item.label}
-      className="relative flex flex-1 items-center justify-center cursor-pointer outline-none focus:outline-none"
+      className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
     >
       <TabInner 
         icon={item.icon} 
@@ -431,7 +431,7 @@ function TabInner({
 
         {/* Label Text */}
         <span
-          className="text-[9px] sm:text-[10px] tracking-tight font-medium mt-0.5 select-none transition-colors duration-300"
+          className="max-w-[58px] truncate text-[8px] sm:text-[10px] tracking-tight font-medium mt-0.5 select-none transition-colors duration-300"
           style={{
             color: active ? themeColor : '#9CA3AF',
             opacity: active ? 1 : 0.8,

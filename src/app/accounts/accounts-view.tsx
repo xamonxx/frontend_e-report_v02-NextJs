@@ -3,11 +3,13 @@
 import { useState, useEffect } from 'react'
 import {
   useAccountsList,
+  useAccountCategories,
   useCreateAccount,
   useUpdateAccount,
   useDeleteAccount,
   AccountItem
 } from '@/lib/hooks/useAccounts'
+import { CustomSelect } from '@/components/ui/custom-select'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -36,16 +38,21 @@ export default function AccountsPage() {
   const confirm = useConfirm()
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
+  const [category, setCategory] = useState('')
   const [page, setPage] = useState(1)
 
-  // Reset to first page when search changes
+  // Reset to first page when search or category filter changes
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch])
+  }, [debouncedSearch, category])
+
+  // Category filter options (kolom description)
+  const { data: categoryOptions } = useAccountCategories()
 
   // API query
   const { data: response, isLoading, refetch } = useAccountsList({
     search: debouncedSearch,
+    category: category || undefined,
     page,
     per_page: 8,
   })
@@ -285,28 +292,53 @@ export default function AccountsPage() {
         </Dialog>
       </div>
 
-      {/* Search Filter */}
-      <div className="relative w-full max-w-md">
-        <Search className={cn(
-          "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50 transition-colors",
-          searchTerm && "text-amber-500"
-        )} />
-        <Input
-          placeholder="Cari nama akun, kategori, atau admin..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-amber-500/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60 dark:focus-visible:bg-zinc-900"
-        />
-        {searchTerm && (
-          <button
-            type="button"
-            onClick={() => setSearchTerm('')}
-            className="absolute right-2.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800 cursor-pointer"
-            title="Bersihkan pencarian"
-          >
-            <X className="size-3.5" />
-          </button>
-        )}
+      {/* Search + Category Filter */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="relative w-full sm:max-w-md">
+          <Search className={cn(
+            "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50 transition-colors",
+            searchTerm && "text-amber-500"
+          )} />
+          <Input
+            placeholder="Cari nama akun, kategori, atau admin..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-amber-500/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60 dark:focus-visible:bg-zinc-900"
+          />
+          {searchTerm && (
+            <button
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-2.5 top-1/2 grid size-6 -translate-y-1/2 place-items-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800 cursor-pointer"
+              title="Bersihkan pencarian"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <CustomSelect
+            value={category}
+            onChange={setCategory}
+            placeholder="Semua Kategori"
+            options={[
+              { value: '', label: 'Semua Kategori' },
+              ...(categoryOptions || []).map((cat) => ({ value: cat, label: cat })),
+            ]}
+            className="h-11 w-full sm:w-56 rounded-xl border border-border/60 bg-muted/40 px-3 text-sm text-foreground focus:outline-none focus-visible:border-amber-500/50 focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60"
+          />
+          {category && (
+            <button
+              type="button"
+              onClick={() => setCategory('')}
+              className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800 cursor-pointer"
+              title="Bersihkan filter kategori"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Grid View */}
