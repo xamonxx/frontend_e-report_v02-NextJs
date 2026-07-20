@@ -19,6 +19,8 @@ import {
   ChevronRight,
   Building,
   Wrench,
+  ClipboardCheck,
+  ClipboardList,
 } from 'lucide-react'
 import Logo from '@/components/brand/logo'
 import {
@@ -27,16 +29,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import { canAccess } from '@/lib/auth/roles'
+import type { UserRole } from '@/types'
 
-const NAV_LINKS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Ringkasan performa & statistik' },
-  { href: '/consultations', label: 'Consultations', icon: CalendarDays, hint: 'Kelola data leads konsultasi' },
-  { href: '/analytics', label: 'Analytics', icon: BarChart3, hint: 'Laporan & analitik mendalam' },
-  { href: '/accounts', label: 'Akun', icon: Building, hint: 'Manajemen akun', adminOnly: true },
-  { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & data referensi', adminOnly: true },
-  { href: '/report-attendances', label: 'Absensi', icon: FileSpreadsheet, hint: 'Laporan absensi harian' },
-  { href: '/audit-logs', label: 'Audit Logs', icon: History, hint: 'Log aktivitas sistem', adminOnly: true },
-  { href: '/debug', label: 'Debug & Test', icon: Wrench, hint: 'Data dummy & pengujian sistem', adminOnly: true },
+const NAV_LINKS: { href: string; label: string; icon: typeof LayoutDashboard; hint: string; roles?: UserRole[] }[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Ringkasan performa & statistik', roles: ['admin'] },
+  { href: '/consultations', label: 'Konsultasi', icon: CalendarDays, hint: 'Kelola data leads konsultasi', roles: ['admin'] },
+  { href: '/analytics', label: 'Analitik', icon: BarChart3, hint: 'Laporan & analitik mendalam', roles: ['admin'] },
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck, hint: 'Penugasan dan hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
+  { href: '/rekap-jadwal-surveyor', label: 'Rekap Jadwal', icon: CalendarDays, hint: 'Jadwal mingguan surveyor', roles: ['manager_surveyor'] },
+  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: ClipboardList, hint: 'Daftar konsumen dan hasil survey', roles: ['manager_surveyor'] },
+  { href: '/accounts', label: 'Akun', icon: Building, hint: 'Manajemen akun', roles: ['super_admin'] },
+  { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & data referensi', roles: ['super_admin'] },
+  { href: '/report-attendances', label: 'Absensi', icon: FileSpreadsheet, hint: 'Laporan absensi harian', roles: ['admin'] },
+  { href: '/audit-logs', label: 'Audit Logs', icon: History, hint: 'Log aktivitas sistem', roles: ['super_admin'] },
+  { href: '/debug', label: 'Debug & Test', icon: Wrench, hint: 'Data dummy & pengujian sistem', roles: ['super_admin'] },
   { href: '/settings', label: 'Settings', icon: Settings, hint: 'Pengaturan akun & preferensi' },
 ]
 
@@ -97,7 +104,7 @@ export default function Sidebar() {
         {/* Navigation Links */}
         <nav className="flex-1 space-y-1 px-2.5 py-5 overflow-y-auto">
           {NAV_LINKS.map((link) => {
-            if (link.adminOnly && user?.role !== 'super_admin') return null
+            if (!canAccess(user, link.roles)) return null
 
             const isActive = pathname === link.href
             const Icon = link.icon

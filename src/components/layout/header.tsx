@@ -8,6 +8,7 @@ import ThemeToggle from './theme-toggle'
 import PwaInstallButton from './pwa-install-button'
 import { Landmark, User, Shield, ChevronRight, Settings, LogOut, Clock, Building, ShieldCheck, Loader2 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { roleLabel } from '@/lib/auth/roles'
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +39,14 @@ export default function Header() {
   const user = useAuthStore((s) => s.user)
   const pathname = usePathname()
   const logoutMutation = useLogout()
+  const userRoleLabel = roleLabel(user)
+  const roleTone = user?.role === 'super_admin'
+    ? 'border-amber-500/30 text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20'
+    : user?.role === 'manager_surveyor'
+      ? 'border-purple-500/30 text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-950/20'
+      : user?.role === 'surveyor'
+        ? 'border-emerald-500/30 text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-950/20'
+        : 'border-blue-500/30 text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/20'
 
   const pageName = Object.entries(PAGE_NAMES).find(([key]) => pathname.startsWith(key))?.[1] ?? ''
 
@@ -81,7 +90,7 @@ export default function Header() {
             <Tooltip>
               <TooltipTrigger className="flex max-w-[138px] items-center gap-2 rounded-xl bg-card/30 px-2.5 py-1.5 border border-border/60 backdrop-blur-md shadow-sm cursor-default focus-visible:ring-2 focus-visible:ring-amber-500/50 sm:max-w-none sm:px-3">
                 <Shield className="h-4 w-4 text-amber-500 drop-shadow-[0_0_4px_var(--primary-theme)] shrink-0" />
-                <span className="truncate text-xs font-semibold text-muted-foreground">Super Admin</span>
+                <span className="truncate text-xs font-semibold text-muted-foreground">{userRoleLabel}</span>
               </TooltipTrigger>
               <TooltipContent side="bottom" className="text-[11px]">
                 Mode Super Admin — akses semua akun
@@ -112,7 +121,7 @@ export default function Header() {
                   {user?.name}
                 </p>
                 <p className="text-[10px] text-muted-foreground capitalize">
-                  {user?.role?.replace('_', ' ')}
+                  {userRoleLabel}
                 </p>
               </div>
               <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-card border border-border text-amber-500 shadow-inner group-hover:border-amber-500/40 group-hover:bg-amber-500/5 transition-all">
@@ -139,15 +148,13 @@ export default function Header() {
                       variant="outline"
                       className={cn(
                         "mt-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0",
-                        user?.role === 'super_admin'
-                          ? "border-amber-500/30 text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20"
-                          : "border-border text-muted-foreground dark:border-zinc-700"
+                        roleTone
                       )}
                     >
                       {user?.role === 'super_admin' ? (
                         <><ShieldCheck className="h-2.5 w-2.5 mr-1 inline" />Super Admin</>
                       ) : (
-                        'Admin'
+                        userRoleLabel
                       )}
                     </Badge>
                   </div>

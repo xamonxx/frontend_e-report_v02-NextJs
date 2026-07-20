@@ -10,7 +10,6 @@ import {
   AccountItem
 } from '@/lib/hooks/useAccounts'
 import { CustomSelect } from '@/components/ui/custom-select'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -50,11 +49,11 @@ export default function AccountsPage() {
   const { data: categoryOptions } = useAccountCategories()
 
   // API query
-  const { data: response, isLoading, refetch } = useAccountsList({
+  const { data: response, isLoading } = useAccountsList({
     search: debouncedSearch,
     category: category || undefined,
     page,
-    per_page: 8,
+    per_page: 10,
   })
   const accounts = response?.data || []
   const meta = response?.meta
@@ -341,7 +340,7 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      {/* Main Grid View */}
+      {/* Accounts table */}
       {isLoading ? (
         <div className="flex h-48 items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
@@ -349,116 +348,109 @@ export default function AccountsPage() {
       ) : accounts.length === 0 ? (
         <p className="text-xs text-muted-foreground/70 text-center py-12">Tidak ada akun terdaftar.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-          {accounts.map((acc) => (
-            <Card key={acc.id} className="border-border bg-card shadow-sm hover:border-border/80 transition-all flex flex-col justify-between group dark:border-zinc-800 dark:bg-zinc-900/40">
-              <CardHeader className="p-3 pb-2 relative">
-                <div className="flex items-center gap-2">
-                  <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-muted flex items-center justify-center border border-border shrink-0 overflow-hidden relative dark:bg-zinc-950 dark:border-zinc-800">
-                    {acc.logo_path ? (
-                      <img
-                        src={buildExportUrl(`/storage/${acc.logo_path}`)}
-                        alt={acc.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <Building className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground/50" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1 pr-8">
-                    <CardTitle className="text-[11px] sm:text-sm font-bold text-foreground truncate leading-tight">{acc.name}</CardTitle>
-                    <CardDescription className="text-[9px] sm:text-[10px] text-muted-foreground font-semibold truncate uppercase">
-                      {acc.description || 'Umum'}
-                    </CardDescription>
-                  </div>
-                </div>
+        <div className="relative max-w-full overflow-hidden rounded-2xl border border-border bg-card/50 shadow-2xl backdrop-blur-sm dark:border-zinc-700/60 dark:bg-zinc-800/40">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-left text-xs">
+              <thead className="sticky top-0 z-10">
+                <tr>
+                  {['Akun / Interior', 'Kategori', 'Total Leads', 'Deal', 'Progress Target', 'Admin', 'Aksi'].map((heading) => (
+                    <th key={heading} className="whitespace-nowrap border-b border-border bg-muted/60 px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:border-zinc-700/60 dark:bg-zinc-800/80 dark:text-zinc-300">
+                      {heading}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-300/65 dark:divide-white/10">
+                {accounts.map((acc) => {
+                  const totalLeads = acc.consultations_count || 0
+                  const targetLeads = acc.target_leads || 0
+                  const progress = targetLeads > 0
+                    ? Math.min(100, Math.round((totalLeads / targetLeads) * 100))
+                    : 0
 
-                <div className="absolute top-2.5 right-2.5 flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    onClick={() => handleOpenEdit(acc)}
-                    className="text-muted-foreground hover:text-foreground hover:bg-muted h-6 w-6 rounded-lg dark:hover:bg-zinc-800"
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    size="icon-xs"
-                    variant="ghost"
-                    onClick={() => handleDelete(acc.id)}
-                    className="text-muted-foreground/70 hover:text-red-500 hover:bg-muted h-6 w-6 rounded-lg dark:hover:bg-zinc-800"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="px-3 pt-2 pb-3 space-y-2.5 border-t border-border/50 mt-1 dark:border-zinc-800/50">
-                <div className="grid grid-cols-2 gap-1.5 text-[10px]">
-                  <div className="border border-border/80 bg-muted/20 p-1.5 rounded-lg dark:border-zinc-800/80 dark:bg-zinc-950/20">
-                    <p className="font-semibold text-muted-foreground/70 uppercase text-[7px] sm:text-[8px]">Total Leads</p>
-                    <p className="text-foreground/80 font-bold mt-0.5 text-xs">{acc.consultations_count || 0}</p>
-                  </div>
-                  <div className="border border-border/80 bg-muted/20 p-1.5 rounded-lg dark:border-zinc-800/80 dark:bg-zinc-950/20">
-                    <p className="font-semibold text-muted-foreground/70 uppercase text-[7px] sm:text-[8px]">Deal</p>
-                    <p className="text-amber-500 font-bold mt-0.5 text-xs">{acc.deals_count || 0}</p>
-                  </div>
-                </div>
-
-                {acc.target_leads && (
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[8px] sm:text-[9px] font-semibold text-muted-foreground">
-                      <span>Target</span>
-                      <span>{acc.consultations_count || 0}/{acc.target_leads}</span>
-                    </div>
-                    <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden dark:bg-zinc-950">
-                      <div
-                        className="h-full bg-amber-500 rounded-full"
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            ((acc.consultations_count || 0) / acc.target_leads) * 100
-                          )}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div className="border-t border-border/50 pt-2 dark:border-zinc-800/50">
-                  <p className="text-[8px] sm:text-[9px] font-bold text-muted-foreground/70 uppercase mb-1 flex items-center gap-1">
-                    <UserCheck className="h-2.5 w-2.5" />
-                    Admin ({acc.admins?.length || 0})
-                  </p>
-                  {acc.admins && acc.admins.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {acc.admins.map((adm) => (
-                        <span key={adm.id} className="text-[8px] sm:text-[9px] font-semibold bg-muted text-muted-foreground border border-border px-1.5 py-0.5 rounded dark:bg-zinc-950 dark:text-zinc-400 dark:border-zinc-800 truncate max-w-full">
-                          {adm.name}
+                  return (
+                    <tr key={acc.id} className="group border-b border-border border-l-2 border-transparent odd:bg-card even:bg-muted/[0.18] transition-colors hover:border-l-amber-500/60 hover:bg-amber-500/[0.06] dark:border-zinc-800">
+                      <td className="px-5 py-3.5 align-middle">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted dark:border-zinc-700 dark:bg-zinc-900">
+                            {acc.logo_path ? (
+                              <img
+                                src={buildExportUrl(`/storage/${acc.logo_path}`)}
+                                alt={acc.name}
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <Building className="h-5 w-5 text-muted-foreground/50" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="max-w-[220px] truncate font-semibold text-foreground">{acc.name}</p>
+                            <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">ID #{acc.id}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 align-middle">
+                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 shadow-sm dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
+                          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.65)]" />
+                          {acc.description || 'Umum'}
                         </span>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-[8px] text-muted-foreground/50 italic">Belum ada admin.</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                      </td>
+                      <td className="px-5 py-3.5 align-middle font-semibold text-foreground/90">{totalLeads}</td>
+                      <td className="px-5 py-3.5 align-middle font-bold text-amber-500">{acc.deals_count || 0}</td>
+                      <td className="w-[250px] px-5 py-3.5 align-middle">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] font-semibold">
+                            <span className="text-muted-foreground">{targetLeads > 0 ? `${totalLeads} / ${targetLeads}` : 'Target belum diatur'}</span>
+                            <span className={cn(progress >= 100 ? 'text-emerald-500' : 'text-amber-500', targetLeads === 0 && 'text-muted-foreground')}>{progress}%</span>
+                          </div>
+                          <div className="h-2 overflow-hidden rounded-full bg-muted dark:bg-zinc-950" role="progressbar" aria-label={`Progress target ${acc.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+                            <div className={cn('h-full rounded-full transition-[width] duration-500', progress >= 100 ? 'bg-emerald-500' : 'bg-amber-500')} style={{ width: `${progress}%` }} />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 align-middle">
+                        {acc.admins && acc.admins.length > 0 ? (
+                          <div className="flex max-w-[220px] flex-wrap gap-1">
+                            {acc.admins.map((adm) => (
+                              <span key={adm.id} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-cyan-700 shadow-sm dark:border-cyan-400/25 dark:bg-cyan-400/10 dark:text-cyan-300">
+                                <UserCheck className="h-3 w-3" />
+                                {adm.name}
+                              </span>
+                            ))}
+                          </div>
+                        ) : <span className="text-[10px] italic text-muted-foreground/60">Belum ada admin</span>}
+                      </td>
+                      <td className="px-5 py-3.5 align-middle">
+                        <div className="flex items-center gap-1">
+                          <Button size="icon-xs" variant="ghost" onClick={() => handleOpenEdit(acc)} aria-label={`Edit ${acc.name}`} title="Edit akun" className="h-7 w-7 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800">
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon-xs" variant="ghost" onClick={() => handleDelete(acc.id)} aria-label={`Hapus ${acc.name}`} title="Hapus akun" className="h-7 w-7 rounded-lg text-muted-foreground/70 hover:bg-red-500/10 hover:text-red-500">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
-      {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-between pt-1">
+      {meta && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/60 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900/50">
           <p className="text-[10px] text-muted-foreground/70">
             Menampilkan <span className="font-semibold text-muted-foreground">{accounts.length}</span> dari <span className="font-semibold text-muted-foreground">{meta.total}</span> akun.
           </p>
-          <div className="flex items-center gap-2">
+          <nav aria-label="Pagination akun" className="flex items-center justify-between gap-2 sm:justify-end">
             <Button
               variant="outline"
               size="xs"
-              disabled={page <= 1}
+              disabled={meta.current_page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               Sebelumnya
@@ -469,14 +461,14 @@ export default function AccountsPage() {
             <Button
               variant="outline"
               size="xs"
-              disabled={page >= meta.last_page}
+              disabled={meta.current_page >= meta.last_page}
               onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
             >
               Selanjutnya
               <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
             </Button>
-          </div>
+          </nav>
         </div>
       )}
     </div>

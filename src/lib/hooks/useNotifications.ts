@@ -117,3 +117,12 @@ export function useMarkReminderRead() {
     },
   })
 }
+
+export function useMarkSurveyRead() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (notificationId: number) =>
+      api.patch<{ success: boolean }>(`/notifications/surveys/${notificationId}/read`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+  })
+}

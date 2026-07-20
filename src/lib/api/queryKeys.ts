@@ -24,6 +24,18 @@ export const queryKeys = {
     summary: (filters: Record<string, unknown>) =>
       [...queryKeys.analytics.all, 'summary', filters] as const,
   },
+  surveys: {
+    all: ['surveys'] as const,
+    list: (filters: Record<string, unknown>) =>
+      [...queryKeys.surveys.all, 'list', filters] as const,
+    detail: (id: number) => [...queryKeys.surveys.all, 'detail', id] as const,
+    recap: (filters: Record<string, unknown>) =>
+      [...queryKeys.surveys.all, 'recap', filters] as const,
+  },
+  bugReports: {
+    all: ['bug-reports'] as const,
+    detail: (id: number) => [...queryKeys.bugReports.all, 'detail', id] as const,
+  },
   notifications: {
     all: ['notifications'] as const,
     count: () => [...queryKeys.notifications.all, 'count'] as const,
@@ -32,6 +44,8 @@ export const queryKeys = {
   masterData: {
     needsCategories: ['master-data', 'needs-categories'] as const,
     statusCategories: ['master-data', 'status-categories'] as const,
+    surveyors: ['master-data', 'surveyors'] as const,
+    surveyStatuses: ['master-data', 'survey-statuses'] as const,
   },
   wilayah: {
     provinces: ['wilayah', 'provinces'] as const,

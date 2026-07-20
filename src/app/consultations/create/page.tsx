@@ -13,17 +13,19 @@ import {
 } from '@/lib/hooks/useMasterData'
 import { Autocomplete } from '@/components/ui/autocomplete'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { cn, formatApiError, formatPhoneInput, isPhoneValid, normalizeRegionName } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Loader2, Save, Building2, User, MapPin, ClipboardList, Tag, Calendar as CalendarIcon } from 'lucide-react'
+import { ArrowLeft, User, MapPin, ClipboardList, Calendar as CalendarIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { CustomSelect } from '@/components/ui/custom-select'
-import { formatPhoneInput, isPhoneValid } from '@/lib/utils'
+import { PanduanPengisian } from '@/components/consultations/panduan-pengisian'
+import { ConsultationFormActions } from '@/components/consultations/consultation-form-actions'
+import { NeedsCategoryOption } from '@/components/consultations/needs-category-option'
+import { SearchField } from '@/components/ui/search-field'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { format, parseISO } from 'date-fns'
@@ -42,6 +44,7 @@ export default function CreateConsultationPage() {
   const [selectedAccount, setSelectedAccount] = useState<number | undefined>(undefined)
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined)
   const [selectedNeeds, setSelectedNeeds] = useState<number[]>([])
+  const [needsQuery, setNeedsQuery] = useState('')
   const [consultationDate, setConsultationDate] = useState(new Date().toISOString().split('T')[0])
   const [productDetails, setProductDetails] = useState('')
   const [address, setAddress] = useState('')
@@ -108,6 +111,9 @@ export default function CreateConsultationPage() {
 
   const createMutation = useCreateConsultation()
   const requiresProductDetails = selectedNeeds.some(id => needs?.find(item => item.id === id)?.name.toLowerCase().includes('lain'))
+  const filteredNeeds = needs?.filter((need) =>
+    need.name.toLowerCase().includes(needsQuery.trim().toLowerCase()),
+  ) ?? []
 
   const handleNeedsToggle = (id: number) => {
     setSelectedNeeds(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id])
@@ -115,14 +121,14 @@ export default function CreateConsultationPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!clientName.trim()) { toast.error('Nama klien wajib diisi'); return }
+    if (!phone.trim()) { toast.error('Nomor telepon / WhatsApp wajib diisi'); return }
     if (!selectedAccount) { toast.error('Akun wajib dipilih'); return }
     if (!selectedStatus) { toast.error('Status awal lead wajib dipilih'); return }
     if (selectedNeeds.length === 0) { toast.error('Pilih minimal satu kategori kebutuhan'); return }
     if (requiresProductDetails && productDetails.trim().length < 3) {
       toast.error('Detail kebutuhan wajib diisi ketika memilih kategori Lain-lain'); return
     }
-    if (phone.trim() && !isPhoneValid(phone)) {
+    if (!isPhoneValid(phone)) {
       toast.error('Nomor telepon / WhatsApp tidak valid'); return
     }
 
@@ -141,37 +147,43 @@ export default function CreateConsultationPage() {
       notes: notes || undefined,
     } as any, {
       onSuccess: () => { toast.success('Lead konsultasi baru berhasil didaftarkan!'); router.push('/consultations') },
-      onError: (err: any) => { toast.error(err.message || 'Gagal mendaftarkan lead konsultasi.') },
+      onError: (err: unknown) => { toast.error(formatApiError(err, 'Gagal mendaftarkan lead konsultasi.')) },
     })
   }
 
+  const cardClassName = 'overflow-hidden rounded-2xl border-border/70 bg-card shadow-[0_16px_40px_-32px_rgba(0,0,0,0.8)] ring-1 ring-inset ring-white/[0.03] dark:border-white/[0.07]'
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="mx-auto w-full max-w-[1520px] space-y-6 pb-8">
 
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-start gap-3">
         <Link
           href="/consultations"
-          className={cn(buttonVariants({ variant: 'ghost', size: 'icon' }), 'text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800')}
+          aria-label="Kembali ke daftar konsultasi"
+          title="Kembali"
+          className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-border/70 bg-card text-muted-foreground transition-colors hover:border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="size-4" />
         </Link>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold tracking-tight text-foreground">Tambah Lead Baru</h1>
           <p className="text-xs text-muted-foreground/70">Mendaftarkan lead baru ke pipeline akun interior.</p>
         </div>
+        <PanduanPengisian isSuperAdmin={isSuperAdmin} />
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-5 lg:grid-cols-[1fr_300px]">
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-8 min-[1440px]:grid-cols-[minmax(0,1fr)_460px]">
 
           {/* ── LEFT: Main Form ───────────────────────────── */}
-          <div className="space-y-5">
+          <div className="min-w-0 space-y-5">
 
             {/* Section 1: Lead Config */}
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <Card className={cardClassName}>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-foreground/90 flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground/80">
+                  <span className="grid size-6 place-items-center rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-500">01</span>
                   <ClipboardList className="h-4 w-4 text-amber-500" />
                   Konfigurasi Lead
                 </CardTitle>
@@ -187,6 +199,7 @@ export default function CreateConsultationPage() {
                       placeholder="Cari/Pilih Akun..."
                       options={(accounts || []).map(acc => ({ value: acc.id.toString(), label: acc.name }))}
                       onlyChangeOnSelect
+                      className="h-10 rounded-xl border-border/70 bg-background/60 text-xs shadow-inner shadow-black/[0.03] focus:border-amber-500/55 focus:ring-2 focus:ring-amber-500/15 dark:border-white/10 dark:bg-zinc-950/60"
                     />
                   </div>
                 )}
@@ -203,7 +216,7 @@ export default function CreateConsultationPage() {
                         { value: '', label: 'Pilih Status Awal' },
                         ...(statuses || []).map(st => ({ value: st.id.toString(), label: st.name })),
                       ]}
-                      className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                      className="h-10 w-full rounded-xl border border-border/70 bg-background/60 px-3 text-xs text-foreground shadow-inner shadow-black/[0.03] focus:outline-none focus:ring-2 focus:ring-amber-500/15 dark:border-white/10 dark:bg-zinc-950/60"
                     />
                   </div>
 
@@ -215,7 +228,7 @@ export default function CreateConsultationPage() {
                         id="cons-date"
                         type="button"
                         className={cn(
-                          "w-full h-9 justify-between text-left font-normal border border-border bg-background/60 hover:bg-background/80 dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/60 text-foreground/80 rounded-lg px-3 text-xs focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center",
+                          "flex h-10 w-full items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3.5 text-left text-sm font-normal text-foreground/80 shadow-inner shadow-black/[0.03] transition-[border-color,background-color,box-shadow] duration-200 outline-none hover:border-border focus-visible:border-ring/60 focus-visible:ring-3 focus-visible:ring-ring/20 dark:border-white/10 dark:hover:border-white/20",
                           !consultationDate && "text-muted-foreground"
                         )}
                       >
@@ -246,7 +259,7 @@ export default function CreateConsultationPage() {
                   {/* ID Preview */}
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">ID Lead (Pratinjau)</Label>
-                    <div className="h-9 px-3 rounded-lg border border-border bg-muted/20 text-xs font-bold text-amber-500 flex items-center dark:border-zinc-800 dark:bg-zinc-950/20">
+                    <div className="flex h-10 items-center rounded-xl border border-border/70 bg-muted/20 px-3.5 text-xs font-bold text-amber-500 dark:border-white/10">
                       {previewIdData?.consultation_id || previewIdData?.id || 'Generating...'}
                     </div>
                   </div>
@@ -255,9 +268,10 @@ export default function CreateConsultationPage() {
             </Card>
 
             {/* Section 2: Data Klien */}
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <Card className={cardClassName}>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-foreground/90 flex items-center gap-2">
+                <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground/80">
+                  <span className="grid size-6 place-items-center rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-500">02</span>
                   <User className="h-4 w-4 text-amber-500" />
                   Informasi Klien
                 </CardTitle>
@@ -265,18 +279,17 @@ export default function CreateConsultationPage() {
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
-                    <Label htmlFor="client-name" className="text-xs font-semibold text-muted-foreground">Nama Klien *</Label>
+                    <Label htmlFor="client-name" className="text-xs font-semibold text-muted-foreground">Nama Klien</Label>
                     <Input
                       id="client-name"
                       placeholder="Masukkan nama lengkap klien"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
-                      className="border-border bg-background/60 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950/60"
-                      required
+                      className="h-10 rounded-xl border-border/70 bg-background/60 shadow-inner shadow-black/[0.03] focus-visible:border-amber-500/55 focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-white/10 dark:bg-zinc-950/60"
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="client-phone" className="text-xs font-semibold text-muted-foreground">No. Telepon / WhatsApp</Label>
+                    <Label htmlFor="client-phone" className="text-xs font-semibold text-muted-foreground">No. Telepon / WhatsApp *</Label>
                     <Input
                       id="client-phone"
                       placeholder="+62 812-3456-7890"
@@ -285,7 +298,7 @@ export default function CreateConsultationPage() {
                       inputMode="tel"
                       aria-invalid={phone.trim() !== '' && !isPhoneValid(phone)}
                       className={cn(
-                        "bg-background/60 dark:bg-zinc-950/60",
+                        "h-10 rounded-xl bg-background/60 shadow-inner shadow-black/[0.03] dark:bg-zinc-950/60",
                         phone.trim() !== '' && !isPhoneValid(phone)
                           ? "border-red-500/60 focus-visible:ring-red-500/40 dark:border-red-500/50"
                           : "border-border focus-visible:ring-amber-500/50 dark:border-zinc-800"
@@ -314,6 +327,7 @@ export default function CreateConsultationPage() {
                         options={provinceOptions}
                         placeholder="Cari/Pilih Provinsi"
                         isLoading={isLoadingProvinces}
+                        className="h-10 rounded-xl"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -322,8 +336,11 @@ export default function CreateConsultationPage() {
                         value={selectedCity}
                         onChange={handleCityChange}
                         options={cityOptions}
-                        placeholder="Cari/Pilih Kota"
+                        placeholder="Ketik/Pilih Kota"
                         isLoading={isLoadingCities}
+                        allowCustomValue
+                        normalizeCustomValue={normalizeRegionName}
+                        className="h-10 rounded-xl"
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -332,8 +349,11 @@ export default function CreateConsultationPage() {
                         value={selectedDistrict}
                         onChange={handleDistrictChange}
                         options={districtOptions}
-                        placeholder="Cari/Pilih Kecamatan"
+                        placeholder="Ketik/Pilih Kecamatan"
                         isLoading={isLoadingDistricts}
+                        allowCustomValue
+                        normalizeCustomValue={normalizeRegionName}
+                        className="h-10 rounded-xl"
                       />
                     </div>
                   </div>
@@ -346,7 +366,7 @@ export default function CreateConsultationPage() {
                     placeholder="Masukkan alamat lengkap rumah/proyek klien"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="border-border bg-background/60 focus-visible:ring-amber-500/50 min-h-[60px] dark:border-zinc-800 dark:bg-zinc-950/60"
+                    className="min-h-[72px] rounded-xl border-border/70 bg-background/60 focus-visible:ring-amber-500/20 dark:border-white/10 dark:bg-zinc-950/60"
                   />
                 </div>
 
@@ -357,92 +377,82 @@ export default function CreateConsultationPage() {
                     placeholder="Masukkan catatan atau keterangan tambahan..."
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="border-border bg-background/60 focus-visible:ring-amber-500/50 min-h-[72px] dark:border-zinc-800 dark:bg-zinc-950/60"
+                    className="min-h-[84px] rounded-xl border-border/70 bg-background/60 focus-visible:ring-amber-500/20 dark:border-white/10 dark:bg-zinc-950/60"
                   />
                 </div>
               </CardContent>
             </Card>
 
-            {/* Section 3: Kebutuhan Produk */}
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold text-foreground/90 flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-amber-500" />
-                  Kebutuhan Produk &amp; Interior
-                </CardTitle>
-                <CardDescription className="text-[11px] text-muted-foreground/70">
-                  Rincian pengerjaan mebel, kitchen set, atau konsep dekorasi interior.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  placeholder={requiresProductDetails
-                    ? 'Wajib diisi untuk kategori Lain-lain...'
-                    : 'Deskripsikan model, bahan baku, ukuran ruangan, estimasi budget, dsb...'}
-                  value={productDetails}
-                  onChange={(e) => setProductDetails(e.target.value)}
-                  className="border-border bg-background/60 focus-visible:ring-amber-500/50 min-h-[110px] dark:border-zinc-800 dark:bg-zinc-950/60"
-                />
-              </CardContent>
-            </Card>
           </div>
 
-          {/* ── RIGHT: Kategori + Submit ───────────────────── */}
-          <div className="space-y-5">
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+          {/* ── RIGHT: Kategori + Detail + Submit ──────────── */}
+          <div className="min-w-0 space-y-4 xl:sticky xl:top-4">
+            <Card className={cardClassName}>
               <CardHeader className="pb-3">
-                <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
-                  <Tag className="h-3.5 w-3.5 text-amber-500" />
-                  Kategori Kebutuhan *
+                <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground/80">
+                  <span className="grid size-6 place-items-center rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-500">03</span>
+                  Kategori Kebutuhan <span className="text-amber-500">*</span>
                 </CardTitle>
                 {selectedNeeds.length > 0 && (
                   <p className="text-[10px] text-amber-500 font-semibold">{selectedNeeds.length} dipilih</p>
                 )}
               </CardHeader>
               <CardContent className="p-0">
-                <div className="max-h-[460px] overflow-y-auto px-5 pb-4 space-y-1 scrollbar-thin">
-                  {needs?.map((nd) => (
-                    <label
-                      key={nd.id}
-                      htmlFor={`nd-${nd.id}`}
-                      className={cn(
-                        'flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors',
-                        selectedNeeds.includes(nd.id)
-                          ? 'bg-amber-500/10 dark:bg-amber-500/10'
-                          : 'hover:bg-muted/60 dark:hover:bg-zinc-800/50',
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        id={`nd-${nd.id}`}
-                        checked={selectedNeeds.includes(nd.id)}
-                        onChange={() => handleNeedsToggle(nd.id)}
-                        className="h-3.5 w-3.5 rounded border-border bg-background text-amber-500 focus:ring-amber-500/50 accent-amber-500 dark:border-zinc-700 dark:bg-zinc-950 shrink-0"
-                      />
-                      <span className={cn(
-                        'text-xs font-medium',
-                        selectedNeeds.includes(nd.id) ? 'text-amber-600 dark:text-amber-400' : 'text-foreground/80',
-                      )}>
-                        {nd.name}
-                      </span>
-                    </label>
+                <div className="px-4 pb-3 sm:px-5">
+                  <SearchField
+                    value={needsQuery}
+                    onValueChange={setNeedsQuery}
+                    placeholder="Cari kategori kebutuhan"
+                    aria-label="Cari kategori kebutuhan"
+                    size="compact"
+                    showShortcut
+                    pageSearch
+                  />
+                </div>
+                <div className="grid max-h-[min(48dvh,420px)] grid-cols-1 gap-2 overflow-y-auto px-4 pb-4 min-[390px]:grid-cols-2 sm:max-h-[380px] sm:px-5 xl:max-h-[330px] scrollbar-thin">
+                  {filteredNeeds.map((need) => (
+                    <NeedsCategoryOption
+                      key={need.id}
+                      inputId={`nd-${need.id}`}
+                      label={need.name}
+                      checked={selectedNeeds.includes(need.id)}
+                      onChange={() => handleNeedsToggle(need.id)}
+                    />
                   ))}
+                  {needsQuery && filteredNeeds.length === 0 && (
+                    <p className="col-span-full px-2.5 py-6 text-center text-xs text-muted-foreground">
+                      Kategori &quot;{needsQuery}&quot; tidak ditemukan.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Submit */}
-            <Button
-              type="submit"
-              disabled={createMutation.isPending}
-              className="w-full bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold h-10 shadow-[0_0_15px_color-mix(in_srgb,var(--primary-theme)_20%,transparent)] hover:shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] transition-all duration-300 rounded-xl"
-            >
-              {createMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Menyimpan Lead...</>
-              ) : (
-                <><Save className="h-4 w-4 mr-1.5" />Simpan Lead</>
-              )}
-            </Button>
+            <Card className={cardClassName}>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground/80">
+                  <span className="grid size-6 place-items-center rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-500">04</span>
+                  Detail Proyek
+                </CardTitle>
+                <CardDescription className="text-[11px] text-muted-foreground">Model, material, ukuran, dan estimasi anggaran.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Textarea
+                  placeholder={requiresProductDetails ? 'Wajib diisi untuk kategori Lain-lain...' : 'Deskripsikan model, bahan baku, ukuran ruangan, estimasi budget, dsb...'}
+                  value={productDetails}
+                  onChange={(event) => setProductDetails(event.target.value)}
+                  className="min-h-[132px] rounded-xl border-border/70 bg-background/60 focus-visible:ring-amber-500/20 dark:border-white/10 dark:bg-zinc-950/60"
+                />
+              </CardContent>
+            </Card>
+
+            <ConsultationFormActions
+              cancelHref="/consultations"
+              isPending={createMutation.isPending}
+              pendingLabel="Menyimpan Lead..."
+              selectedCount={selectedNeeds.length}
+              submitLabel="Simpan Lead"
+            />
           </div>
 
         </div>

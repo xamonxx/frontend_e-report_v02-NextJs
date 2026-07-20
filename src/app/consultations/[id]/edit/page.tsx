@@ -13,17 +13,20 @@ import {
 } from '@/lib/hooks/useMasterData'
 import { Autocomplete } from '@/components/ui/autocomplete'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { buttonVariants } from '@/components/ui/button'
+import { cn, formatApiError, formatPhoneInput, isPhoneValid, normalizeRegionName, regionFieldValue } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Loader2, Save, Tag, Calendar as CalendarIcon } from 'lucide-react'
+import { ArrowLeft, Loader2, Tag, Calendar as CalendarIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { CustomSelect } from '@/components/ui/custom-select'
-import { formatPhoneInput, isPhoneValid } from '@/lib/utils'
+import { PanduanPengisian } from '@/components/consultations/panduan-pengisian'
+import { ConsultationFormActions } from '@/components/consultations/consultation-form-actions'
+import { NeedsCategoryOption } from '@/components/consultations/needs-category-option'
+import { SearchField } from '@/components/ui/search-field'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { format, parseISO } from 'date-fns'
@@ -51,6 +54,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
   const [selectedAccount, setSelectedAccount] = useState<number | undefined>(undefined)
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined)
   const [selectedNeeds, setSelectedNeeds] = useState<number[]>([])
+  const [needsQuery, setNeedsQuery] = useState('')
   const [consultationDate, setConsultationDate] = useState('')
   const [productDetails, setProductDetails] = useState('')
   const [address, setAddress] = useState('')
@@ -155,9 +159,9 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
       setProductDetails(consultation.product_details || '')
       setAddress(consultation.address || '')
       setNotes(consultation.notes || '')
-      setSelectedProvince(consultation.province || '')
-      setSelectedCity(consultation.city || '')
-      setSelectedDistrict(consultation.district || '')
+      setSelectedProvince(regionFieldValue(consultation.province))
+      setSelectedCity(regionFieldValue(consultation.city))
+      setSelectedDistrict(regionFieldValue(consultation.district))
 
       if (consultation.needs_categories) {
         setSelectedNeeds(consultation.needs_categories.map((nc) => nc.id))
@@ -172,6 +176,9 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
     const selected = needs?.find((item) => item.id === id)
     return selected?.name.toLowerCase().includes('lain')
   })
+  const filteredNeeds = needs?.filter((need) =>
+    need.name.toLowerCase().includes(needsQuery.trim().toLowerCase()),
+  ) ?? []
 
   const handleNeedsToggle = (id: number) => {
     setSelectedNeeds((prev) =>
@@ -182,8 +189,8 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!clientName.trim()) {
-      toast.error('Nama klien wajib diisi')
+    if (!phone.trim()) {
+      toast.error('Nomor telepon / WhatsApp wajib diisi')
       return
     }
     if (!selectedAccount) {
@@ -202,7 +209,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
       toast.error('Detail kebutuhan wajib diisi ketika memilih kategori Lain-lain')
       return
     }
-    if (phone.trim() && !isPhoneValid(phone)) {
+    if (!isPhoneValid(phone)) {
       toast.error('Nomor telepon / WhatsApp tidak valid')
       return
     }
@@ -227,8 +234,8 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
         toast.success('Data lead konsultasi berhasil diperbarui!')
         router.push(`/consultations/${consultationId}`)
       },
-      onError: (err: any) => {
-        toast.error(err.message || 'Gagal memperbarui lead konsultasi.')
+      onError: (err: unknown) => {
+        toast.error(formatApiError(err, 'Gagal memperbarui lead konsultasi.'))
       },
     })
   }
@@ -261,7 +268,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="mx-auto w-full max-w-[1520px] space-y-6 pb-8">
       <div className="flex items-center gap-3">
         <Link
           href={`/consultations/${consultationId}`}
@@ -272,15 +279,16 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div>
+        <div className="min-w-0 flex-1">
           <h1 className="text-xl font-bold tracking-tight text-foreground font-sans">Update Data Lead</h1>
-          <p className="text-xs text-muted-foreground/70">ID: {consultation.consultation_id} • Mengubah informasi lead dalam pipeline.</p>
+          <p className="text-xs text-muted-foreground/70">ID: {consultation.consultation_id} - Mengubah informasi lead dalam pipeline.</p>
         </div>
+        <PanduanPengisian isSuperAdmin={isSuperAdmin} />
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2 space-y-6">
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-8 min-[1440px]:grid-cols-[minmax(0,1fr)_460px]">
+          <div className="min-w-0 space-y-6">
             <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold text-foreground/90">Informasi Dasar Klien</CardTitle>
@@ -288,14 +296,13 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
               <CardContent className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="client-name" className="text-xs font-semibold text-muted-foreground">Nama Klien *</Label>
+                    <Label htmlFor="client-name" className="text-xs font-semibold text-muted-foreground">Nama Klien</Label>
                     <Input
                       id="client-name"
                       placeholder="Masukkan nama lengkap klien"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       className="border-border bg-background/60 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950/60"
-                      required
                     />
                   </div>
 
@@ -387,8 +394,10 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                         value={selectedCity}
                         onChange={handleCityChange}
                         options={cityOptions}
-                        placeholder="Cari/Pilih Kota"
+                        placeholder="Ketik/Pilih Kota"
                         isLoading={isLoadingCities}
+                        allowCustomValue
+                        normalizeCustomValue={normalizeRegionName}
                       />
                     </div>
 
@@ -399,8 +408,10 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                         value={selectedDistrict}
                         onChange={handleDistrictChange}
                         options={districtOptions}
-                        placeholder="Cari/Pilih Kecamatan"
+                        placeholder="Ketik/Pilih Kecamatan"
                         isLoading={isLoadingDistricts}
+                        allowCustomValue
+                        normalizeCustomValue={normalizeRegionName}
                       />
                     </div>
                   </div>
@@ -448,7 +459,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
             </Card>
           </div>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-4 xl:sticky xl:top-4">
             {isSuperAdmin && (
               <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
                 <CardHeader>
@@ -502,59 +513,43 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                 )}
               </CardHeader>
               <CardContent className="p-0">
-                <div className="max-h-[460px] overflow-y-auto px-5 pb-4 space-y-1 scrollbar-thin">
-                  {needs?.map((nd) => (
-                    <label
-                      key={nd.id}
-                      htmlFor={`nd-${nd.id}`}
-                      className={cn(
-                        'flex items-center gap-2.5 px-2.5 py-2 rounded-lg cursor-pointer transition-colors',
-                        selectedNeeds.includes(nd.id)
-                          ? 'bg-amber-500/10 dark:bg-amber-500/10'
-                          : 'hover:bg-muted/60 dark:hover:bg-zinc-800/50',
-                      )}
-                    >
-                      <input
-                        type="checkbox"
-                        id={`nd-${nd.id}`}
-                        checked={selectedNeeds.includes(nd.id)}
-                        onChange={() => handleNeedsToggle(nd.id)}
-                        className="h-3.5 w-3.5 rounded border-border bg-background text-amber-500 focus:ring-amber-500/50 accent-amber-500 dark:border-zinc-700 dark:bg-zinc-950 shrink-0"
-                      />
-                      <span className={cn(
-                        'text-xs font-medium',
-                        selectedNeeds.includes(nd.id) ? 'text-amber-600 dark:text-amber-400' : 'text-foreground/80',
-                      )}>
-                        {nd.name}
-                      </span>
-                    </label>
+                <div className="px-4 pb-3 sm:px-5">
+                  <SearchField
+                    value={needsQuery}
+                    onValueChange={setNeedsQuery}
+                    placeholder="Cari kategori kebutuhan"
+                    aria-label="Cari kategori kebutuhan"
+                    size="compact"
+                    showShortcut
+                    pageSearch
+                  />
+                </div>
+                <div className="grid max-h-[min(48dvh,420px)] grid-cols-1 gap-2 overflow-y-auto px-4 pb-4 min-[390px]:grid-cols-2 sm:max-h-[380px] sm:px-5 xl:max-h-[330px] scrollbar-thin">
+                  {filteredNeeds.map((need) => (
+                    <NeedsCategoryOption
+                      key={need.id}
+                      inputId={`nd-${need.id}`}
+                      label={need.name}
+                      checked={selectedNeeds.includes(need.id)}
+                      onChange={() => handleNeedsToggle(need.id)}
+                    />
                   ))}
+                  {needsQuery && filteredNeeds.length === 0 && (
+                    <p className="col-span-full px-2.5 py-6 text-center text-xs text-muted-foreground">
+                      Kategori &quot;{needsQuery}&quot; tidak ditemukan.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
-            {/* Submit + Cancel */}
-            <Button
-              type="submit"
-              disabled={updateMutation.isPending}
-              className="w-full bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold h-10 shadow-[0_0_15px_color-mix(in_srgb,var(--primary-theme)_20%,transparent)] hover:shadow-[0_0_20px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)] transition-all duration-300 rounded-xl"
-            >
-              {updateMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Menyimpan Perubahan...</>
-              ) : (
-                <><Save className="h-4 w-4 mr-1.5" />Simpan Perubahan</>
-              )}
-            </Button>
-
-            <Link
-              href={`/consultations/${consultationId}`}
-              className={cn(
-                buttonVariants({ variant: 'outline' }),
-                'w-full border-border text-muted-foreground hover:text-foreground h-10 font-semibold dark:border-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-300'
-              )}
-            >
-              Batal
-            </Link>
+            <ConsultationFormActions
+              cancelHref={`/consultations/${consultationId}`}
+              isPending={updateMutation.isPending}
+              pendingLabel="Menyimpan Perubahan..."
+              selectedCount={selectedNeeds.length}
+              submitLabel="Simpan Perubahan"
+            />
           </div>
         </div>
       </form>

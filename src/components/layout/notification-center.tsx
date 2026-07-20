@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { useNotificationCount, useNotificationSummary, useMarkNoteRead, useMarkReminderRead } from '@/lib/hooks/useNotifications'
+import { useNotificationCount, useNotificationSummary, useMarkNoteRead, useMarkReminderRead, useMarkSurveyRead } from '@/lib/hooks/useNotifications'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -22,11 +22,12 @@ export default function NotificationCenter() {
   const { data: summary, isLoading } = useNotificationSummary(open)
   const markNoteRead = useMarkNoteRead()
   const markReminderRead = useMarkReminderRead()
+  const markSurveyRead = useMarkSurveyRead()
 
   const totalUnread = count
-    ? count.unread_notes + count.upcoming_reminders
+    ? count.unread_notes + count.upcoming_reminders + (count.unread_surveys ?? 0)
     : summary
-      ? summary.unread_notes + summary.upcoming_reminders
+      ? summary.unread_notes + summary.upcoming_reminders + (summary.unread_surveys ?? 0)
       : 0
 
   return (
@@ -52,8 +53,11 @@ export default function NotificationCenter() {
           </div>
         </div>
 
-        <Tabs defaultValue="notes" className="w-full">
+        <Tabs defaultValue="surveys" className="w-full">
           <TabsList className="w-full justify-start rounded-none border-b border-zinc-800 bg-transparent h-10 p-0">
+            <TabsTrigger value="surveys" className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-amber-500 bg-transparent text-zinc-400 data-[state=active]:text-zinc-100 text-xs h-full">
+              Survey ({summary?.surveys?.filter((item) => !item.is_read).length || 0})
+            </TabsTrigger>
             <TabsTrigger
               value="notes"
               className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-amber-500 bg-transparent text-zinc-400 data-[state=active]:text-zinc-100 text-xs h-full"
@@ -126,6 +130,27 @@ export default function NotificationCenter() {
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="surveys" className="m-0">
+            <ScrollArea className="h-64">
+              {!summary?.surveys?.length ? (
+                <div className="flex h-40 flex-col items-center justify-center text-center p-4">
+                  <Bell className="h-8 w-8 text-zinc-600 mb-2" />
+                  <p className="text-xs text-zinc-500">Tidak ada notifikasi survey</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-zinc-800">
+                  {summary.surveys.map((notification) => (
+                    <button key={notification.id} type="button" onClick={() => !notification.is_read && markSurveyRead.mutate(notification.id)} className={cn('w-full p-3 text-left hover:bg-zinc-800/40', !notification.is_read && 'bg-amber-500/5')}>
+                      <p className="text-xs font-semibold text-zinc-200">{notification.title}</p>
+                      <p className="mt-0.5 text-xs text-zinc-400">{notification.message}</p>
+                      <p className="mt-1 text-[10px] text-zinc-500">{notification.created_human}</p>
+                    </button>
+                  ))}
                 </div>
               )}
             </ScrollArea>

@@ -56,12 +56,13 @@ export default function LoginPage() {
   const [authError, setAuthError] = useState<string | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
+  const [isBlocked, setIsBlocked] = useState(false)
+  const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
   const [forgotOpen, setForgotOpen] = useState(false)
 
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -104,12 +105,40 @@ export default function LoginPage() {
     root.style.setProperty('--primary-theme', '#f59e0b')
   }, [])
 
+  // Auto-hide error or blocked alert after 3 seconds so it doesn't block other users
+  useEffect(() => {
+    if (authError || isBlocked) {
+      const timer = setTimeout(() => {
+        setAuthError(null)
+        setIsBlocked(false)
+        setBlockedUntil(null)
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [authError, isBlocked])
+
   const onSubmit = (data: LoginFormValues) => {
     setAuthError(null)
+    setIsBlocked(false)
+    setBlockedUntil(null)
     loginMutation.mutate(data, {
       onError: (err: unknown) => {
-        const msg = err instanceof Error ? err.message : 'Email atau password tidak sesuai.'
-        setAuthError(msg)
+        // err is ApiError { message, errors } thrown by api client, not Error instance
+        const apiErr = err as { message?: string; errors?: Record<string, string[]> } | null
+        const msg = apiErr?.message || 'Email atau password tidak sesuai.'
+
+        // Check if account is temporarily blocked (429 Too Many Requests)
+        const isAccountBlocked = msg.includes('Terlalu banyak percobaan login')
+
+        if (isAccountBlocked) {
+          setIsBlocked(true)
+          // Set blocked until 15 minutes from now
+          setBlockedUntil(Date.now() + 15 * 60 * 1000)
+          setAuthError(null)
+        } else {
+          setAuthError(msg)
+        }
+
         setIsShaking(true)
         setTimeout(() => setIsShaking(false), 560)
       },
@@ -119,13 +148,13 @@ export default function LoginPage() {
   return (
     <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8">
 
-      {/* ─── Animated Background ─── */}
+      {/* Animated background */}
       <LoginBackground />
 
-      {/* ─── Bug Report (floating, bottom-left) ─── */}
+      {/* Floating bug report action */}
       <BugReportWidget />
 
-      {/* ─── Login Card ─── */}
+      {/* Login card */}
       <motion.div
         className={cn('relative w-full max-w-[420px] z-10', isShaking && 'animate-shake')}
         variants={cardVariants}
@@ -155,7 +184,7 @@ export default function LoginPage() {
             initial="hidden"
             animate="visible"
           >
-            {/* ─── Logo + Heading ─── */}
+            {/* Logo and heading */}
             <motion.div className="mb-8 text-center" variants={itemVariants}>
               <div className="mb-5 flex justify-center">
                 <div className="relative">
@@ -179,9 +208,35 @@ export default function LoginPage() {
             </motion.div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Blocked alert - shows for 3 seconds only */}
+              <AnimatePresence>
+                {isBlocked && (
+                  <motion.div
+                    key="blocked-alert"
+                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    animate={{ opacity: 1, height: 'auto', marginBottom: 4 }}
+                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                    transition={{ duration: 0.22 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="flex items-start gap-3 rounded-xl border border-orange-400/40 bg-orange-50/60 px-4 py-3.5 text-sm font-semibold text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-400">
+                      <div className="shrink-0 pt-0.5">
+                        <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1 space-y-1">
+                        <div className="font-bold">🔒 Akun Anda Diblokir Sementara</div>
+                        <div className="text-xs font-medium opacity-90">Terlalu banyak percobaan login gagal. Silakan coba lagi dalam 15 menit atau hubungi administrator.</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               {/* Auth error */}
               <AnimatePresence>
-                {authError && (
+                {authError && !isBlocked && (
                   <motion.div
                     key="auth-error"
                     initial={{ opacity: 0, height: 0, marginBottom: 0 }}
@@ -335,12 +390,12 @@ export default function LoginPage() {
         </div>
       </motion.div>
 
-      {/* ─── Forgot Password Modal ─── */}
+      {/* Forgot password modal */}
       <AnimatePresence>
         {forgotOpen && (
           <motion.div
             key="forgot-overlay"
-            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
+            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-8"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -357,14 +412,20 @@ export default function LoginPage() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="forgot-title"
-              className="relative w-full max-w-[440px] rounded-[24px] border border-zinc-200 bg-white shadow-2xl shadow-black/20 overflow-hidden dark:border-zinc-800 dark:bg-[#12121a] dark:shadow-black/70"
+              className="relative w-full max-w-[440px] rounded-[26px] p-px bg-gradient-to-b from-amber-400/60 via-amber-500/15 to-white/10 shadow-2xl shadow-black/40 dark:from-amber-400/50 dark:via-amber-500/10 dark:to-white/[0.06] dark:shadow-black/70"
               initial={{ opacity: 0, y: 24, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.97 }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
+              {/* Inner surface (sits inside the 1px gradient border frame) */}
+              <div className="relative overflow-hidden rounded-[25px] bg-white dark:bg-[#0e0e16]">
+              {/* Ambient amber gradient wash + top glow */}
+              <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-amber-500/[0.09] via-transparent to-transparent" />
+              <div aria-hidden className="pointer-events-none absolute -top-28 left-1/2 h-56 w-80 -translate-x-1/2 rounded-full bg-amber-500/25 blur-[80px] dark:bg-amber-500/20" />
+
               {/* Top amber hairline */}
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent dark:via-amber-500/50" />
+              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/70 to-transparent dark:via-amber-500/60" />
 
               {/* Close */}
               <button
@@ -381,15 +442,15 @@ export default function LoginPage() {
                 <div className="mb-6 text-center">
                   <div className="mb-4 flex justify-center">
                     <div className="relative">
-                      <div className="absolute inset-0 rounded-2xl bg-amber-500/25 blur-xl dark:bg-amber-500/30" />
-                      <div className="relative flex h-[52px] w-[52px] items-center justify-center rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/18 to-amber-600/8 dark:border-amber-500/20 dark:from-amber-500/15 dark:to-amber-600/5">
-                        <KeyRound className="h-6 w-6 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.55)]" />
+                      <div className="absolute inset-0 rounded-[18px] bg-amber-500/35 blur-2xl" />
+                      <div className="relative flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-amber-300 via-amber-500 to-amber-600 shadow-lg shadow-amber-500/30 ring-1 ring-inset ring-white/30">
+                        <KeyRound className="h-6 w-6 text-zinc-950 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
                       </div>
                     </div>
                   </div>
                   <h2
                     id="forgot-title"
-                    className="text-[17px] font-bold text-zinc-800 dark:text-zinc-100"
+                    className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-white"
                   >
                     Permohonan Reset Password
                   </h2>
@@ -500,21 +561,21 @@ export default function LoginPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-3 pt-1">
+                  <div className="flex flex-col gap-2.5 pt-1 sm:flex-row sm:items-stretch sm:gap-3">
                     <button
                       type="button"
                       onClick={closeForgot}
-                      className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-600 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-transparent dark:text-zinc-300 dark:hover:bg-white/[0.05] cursor-pointer"
+                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-600 whitespace-nowrap transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-transparent dark:text-zinc-300 dark:hover:bg-white/[0.05] cursor-pointer sm:flex-1"
                     >
                       Batal
                     </button>
                     <motion.button
                       type="submit"
                       className={cn(
-                        'relative flex flex-[1.4] items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-bold text-zinc-950 cursor-pointer',
+                        'relative flex w-full items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl px-4 py-3 text-sm font-bold text-zinc-950 cursor-pointer sm:flex-[1.5]',
                         'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600',
-                        'shadow-md shadow-amber-500/20 dark:shadow-amber-500/15',
-                        'transition-all duration-250 hover:shadow-lg hover:shadow-amber-500/30'
+                        'shadow-md shadow-amber-500/25 ring-1 ring-inset ring-white/25 dark:shadow-amber-500/20',
+                        'transition-all duration-250 hover:shadow-lg hover:shadow-amber-500/35'
                       )}
                       whileHover={{ scale: 1.015 }}
                       whileTap={{ scale: 0.985 }}
@@ -524,6 +585,7 @@ export default function LoginPage() {
                     </motion.button>
                   </div>
                 </form>
+              </div>
               </div>
             </motion.div>
           </motion.div>

@@ -2,7 +2,7 @@
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, X, Loader2 } from 'lucide-react'
+import { ChevronDown, X, Loader2, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export interface AutocompleteOption {
@@ -22,6 +22,9 @@ interface AutocompleteProps {
   isLoading?: boolean
   onlyChangeOnSelect?: boolean
   clearOnFocus?: boolean
+  allowCustomValue?: boolean
+  createLabel?: string
+  normalizeCustomValue?: (value: string) => string
 }
 
 export function Autocomplete({
@@ -35,6 +38,9 @@ export function Autocomplete({
   isLoading = false,
   onlyChangeOnSelect = false,
   clearOnFocus = false,
+  allowCustomValue = false,
+  createLabel = 'Gunakan',
+  normalizeCustomValue,
 }: AutocompleteProps) {
   const [open, setOpen] = React.useState(false)
   const [searchTerm, setSearchTerm] = React.useState('')
@@ -75,13 +81,30 @@ export function Autocomplete({
     return filtered
   }, [normalizedOptions, searchTerm])
 
+  const trimmedTerm = searchTerm.trim()
+  const hasExactMatch = React.useMemo(
+    () => normalizedOptions.some((option) => option.label.toLowerCase() === trimmedTerm.toLowerCase()),
+    [normalizedOptions, trimmedTerm]
+  )
+  const showCreate = allowCustomValue && trimmedTerm.length > 0 && !hasExactMatch
+  const createIndex = filteredOptions.length
+  const totalItems = filteredOptions.length + (showCreate ? 1 : 0)
+
   React.useEffect(() => {
     setHighlightedIndex((prev) => {
-      if (filteredOptions.length === 0) return -1
-      if (prev >= filteredOptions.length) return filteredOptions.length - 1
+      if (totalItems === 0) return -1
+      if (prev >= totalItems) return totalItems - 1
       return prev
     })
-  }, [filteredOptions])
+  }, [totalItems])
+
+  const commitCustom = React.useCallback(() => {
+    if (!trimmedTerm) return
+    const normalized = normalizeCustomValue ? normalizeCustomValue(trimmedTerm) : trimmedTerm
+    setSearchTerm(normalized)
+    onChange(normalized)
+    setOpen(false)
+  }, [normalizeCustomValue, onChange, trimmedTerm])
 
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -172,6 +195,10 @@ export function Autocomplete({
     setOpen(true)
   }
 
+  const handleInputBlur = () => {
+    if (showCreate && !onlyChangeOnSelect) commitCustom()
+  }
+
   const handleSelectOption = (option: AutocompleteOption) => {
     setSearchTerm(option.label)
     onChange(option.value)
@@ -200,23 +227,27 @@ export function Autocomplete({
       case 'ArrowDown':
         e.preventDefault()
         setHighlightedIndex((prev) => {
-          if (filteredOptions.length === 0) return -1
-          return prev < filteredOptions.length - 1 ? prev + 1 : 0
+          if (totalItems === 0) return -1
+          return prev < totalItems - 1 ? prev + 1 : 0
         })
         break
       case 'ArrowUp':
         e.preventDefault()
         setHighlightedIndex((prev) => {
-          if (filteredOptions.length === 0) return -1
-          return prev > 0 ? prev - 1 : filteredOptions.length - 1
+          if (totalItems === 0) return -1
+          return prev > 0 ? prev - 1 : totalItems - 1
         })
         break
       case 'Enter':
         e.preventDefault()
         if (highlightedIndex >= 0 && highlightedIndex < filteredOptions.length) {
           handleSelectOption(filteredOptions[highlightedIndex])
+        } else if (showCreate && highlightedIndex === createIndex) {
+          commitCustom()
         } else if (filteredOptions.length > 0) {
           handleSelectOption(filteredOptions[0])
+        } else if (showCreate) {
+          commitCustom()
         }
         break
       case 'Escape':
@@ -224,7 +255,8 @@ export function Autocomplete({
         setOpen(false)
         break
       case 'Tab':
-        setOpen(false)
+        if (showCreate) commitCustom()
+        else setOpen(false)
         break
     }
   }
@@ -238,6 +270,7 @@ export function Autocomplete({
           value={searchTerm}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
           onClick={handleInputFocus}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
@@ -274,12 +307,13 @@ export function Autocomplete({
           style={dropdownStyle}
           className="overflow-y-auto rounded-lg border border-border bg-popover shadow-xl py-1 focus:outline-none scrollbar-thin dark:border-zinc-800 dark:bg-zinc-950"
         >
-          {filteredOptions.length === 0 ? (
+          {filteredOptions.length === 0 && !showCreate ? (
             <li className="px-3 py-2.5 text-xs text-muted-foreground italic font-sans">
               Tidak ada hasil ditemukan
             </li>
           ) : (
-            filteredOptions.map((option, idx) => {
+            <>
+            {filteredOptions.map((option, idx) => {
               const isSelected = value === option.value
               const isHighlighted = idx === highlightedIndex
 
@@ -306,7 +340,28 @@ export function Autocomplete({
                   )}
                 </li>
               )
-            })
+            })}
+            {showCreate && (
+              <li
+                role="option"
+                aria-selected={highlightedIndex === createIndex}
+                onMouseDown={(event) => {
+                  event.preventDefault()
+                  commitCustom()
+                }}
+                onMouseEnter={() => setHighlightedIndex(createIndex)}
+                className={cn(
+                  'flex cursor-pointer items-center gap-2 border-t border-border/60 px-3 py-2.5 text-xs font-sans transition-colors',
+                  highlightedIndex === createIndex
+                    ? 'bg-amber-500/10 text-amber-500'
+                    : 'text-foreground/80 hover:bg-muted dark:text-zinc-300 dark:hover:bg-zinc-900'
+                )}
+              >
+                <Plus className="size-3.5 shrink-0 text-amber-500" />
+                <span className="min-w-0 truncate">{createLabel} &ldquo;{trimmedTerm}&rdquo;</span>
+              </li>
+            )}
+            </>
           )}
         </ul>,
         document.body

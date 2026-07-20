@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api/client'
 import { queryKeys } from '@/lib/api/queryKeys'
-import type { NeedsCategory, StatusCategory, PaginatedResponse } from '@/types'
+import type { NeedsCategory, StatusCategory, SurveyStatusItem, PaginatedResponse } from '@/types'
 
 // ── Read-only selectors for dropdowns ────────────────────────────
 
@@ -256,6 +256,54 @@ export function useReorderStatuses() {
       queryClient.invalidateQueries({ queryKey: ['master-data', 'statuses'] })
       queryClient.invalidateQueries({ queryKey: queryKeys.masterData.statusCategories })
     },
+  })
+}
+
+// â”€â”€ Super Admin Survey Status CRUD â”€â”€
+
+export function useSurveyStatusesList() {
+  return useQuery({
+    queryKey: queryKeys.masterData.surveyStatuses,
+    queryFn: () => api.get<{ data: SurveyStatusItem[] }>('/master-data/survey-statuses'),
+  })
+}
+
+function invalidateSurveyStatuses(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: queryKeys.masterData.surveyStatuses })
+}
+
+export function useCreateSurveyStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; color: string }) =>
+      api.post<{ message: string; data: SurveyStatusItem }>('/master-data/survey-statuses', data),
+    onSuccess: () => invalidateSurveyStatuses(queryClient),
+  })
+}
+
+export function useUpdateSurveyStatus(id: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; color: string }) =>
+      api.put<{ message: string; data: SurveyStatusItem }>(`/master-data/survey-statuses/${id}`, data),
+    onSuccess: () => invalidateSurveyStatuses(queryClient),
+  })
+}
+
+export function useDeleteSurveyStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.delete<{ message: string }>(`/master-data/survey-statuses/${id}`),
+    onSuccess: () => invalidateSurveyStatuses(queryClient),
+  })
+}
+
+export function useReorderSurveyStatuses() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (order: number[]) =>
+      api.patch<{ message: string; data: SurveyStatusItem[] }>('/master-data/survey-statuses/reorder', { order }),
+    onSuccess: () => invalidateSurveyStatuses(queryClient),
   })
 }
 

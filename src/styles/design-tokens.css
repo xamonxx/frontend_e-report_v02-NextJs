@@ -1,0 +1,72 @@
+/*
+ * E-REPORT design tokens.
+ *
+ * Dihasilkan oleh GradientDeck MCP `generate_design_system` (seed #06B6D4 â€”
+ * warna brand Super Admin; tema per-user tetap lewat --primary-theme) lalu
+ * diverifikasi per pasangan dengan `check_contrast` (WCAG AA, teks 12px):
+ *
+ *   #a8b3c7 / #0b0f19  9.06 : 1   #06b6d4 / #131b2e  7.07 : 1
+ *   #a8b3c7 / #131b2e  8.12 : 1   #0b0f19 / #06b6d4  7.89 : 1
+ *   success / card     8.82 : 1   warning / card     8.27 : 1
+ *   info    / card     4.89 : 1
+ *
+ * Penyesuaian dari hasil generate: danger-500 #e23636 GAGAL AA sebagai teks
+ * di permukaan gelap (3.93:1), maka dark mode memakai #e85e5e (5.65:1) sesuai
+ * saran check_contrast, dan tombol danger memakai danger-600 + teks putih
+ * (5.71:1). Jangan pakai --color-danger-500 sebagai warna teks di dark mode.
+ */
+
+:root {
+  /* Skala brand (seed #06b6d4). Tema runtime tetap --primary-theme;
+     skala ini untuk grafik, badge, dan aksen statis bernuansa brand. */
+  --color-brand-50: #f0fcfe;
+  --color-brand-100: #e2f9fd;
+  --color-brand-200: #bbf2fb;
+  --color-brand-300: #90eaf9;
+  --color-brand-400: #5ae0f6;
+  --color-brand-500: #25d5f4;
+  --color-brand-600: #0cc8e9;
+  --color-brand-700: #0aa7c2;
+  --color-brand-800: #087d91;
+  --color-brand-900: #055461;
+  --color-brand-950: #03363f;
+
+  /* Warna status â€” satu sumber untuk chart, badge, dan pesan. */
+  --color-success-500: #47d191;
+  --color-success-600: #2eb877;
+  --color-warning-500: #eea62b;
+  --color-warning-600: #d48d11;
+  --color-danger-500: #e23636;
+  --color-danger-600: #c91d1d;
+  --color-danger-text: var(--color-danger-600);
+  --color-info-500: #3c8cdd;
+  --color-info-600: #2273c3;
+
+  --color-neutral-50: #f6f7f8;
+  --color-neutral-100: #eeeff2;
+  --color-neutral-200: #d6d9e0;
+  --color-neutral-300: #bcc1cd;
+  --color-neutral-400: #9ca3b4;
+  --color-neutral-500: #7c869c;
+  --color-neutral-600: #69748c;
+  --color-neutral-700: #586074;
+  --color-neutral-800: #424857;
+  --color-neutral-900: #2c303a;
+  --color-neutral-950: #1d1f26;
+
+  --motion-fast: 150ms;
+  --motion-normal: 250ms;
+  --motion-slow: 400ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --shadow-token-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-token-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --shadow-token-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  --shadow-token-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-token-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.dark {
+  /* Merah teks versi gelap: #e23636 hanya 3.93:1 di atas card. */
+  --color-danger-text: #e85e5e;
+}

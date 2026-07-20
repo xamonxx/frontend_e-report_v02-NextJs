@@ -28,6 +28,109 @@ export const UserRole = {
 } as const
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
+export const ACCOUNT_GROUP_LABELS = {
+  PC: 'PC',
+  NPP1: 'NPP 1',
+  NPP2: 'NPP 2',
+} as const
+export type AccountGroup = keyof typeof ACCOUNT_GROUP_LABELS
+
+export type SurveyorRecapDay = {
+  date: string
+  dayName: string
+  dateLabel: string
+  isFirstDay: boolean
+  isLastDay: boolean
+  surveyorNames: string[]
+  count: number
+}
+
+export type SurveyorRecapSummary = {
+  surveyorId: number
+  surveyorName: string
+  count: number
+}
+
+export type SurveyorRecapFilters = {
+  week_date?: string
+  account_group?: AccountGroup
+  account?: number
+  surveyor?: number
+}
+
+export type SurveyorRecapReport = {
+  period: { type: string; start: string; end: string; label: string; anchorDate: string }
+  subtitle: string
+  accountGroup: AccountGroup | null
+  rowCount: number
+  days: SurveyorRecapDay[]
+  summary: SurveyorRecapSummary[]
+  total: number
+  generatedAt: string
+}
+
+export type SurveyState = 'requested' | 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+
+export type SurveyFilters = {
+  page?: number
+  per_page?: number
+  state?: SurveyState | ''
+  search?: string
+  account?: number
+  surveyor_id?: number
+  start_date?: string
+  end_date?: string
+}
+
+export type SurveyorItem = { id: number; name: string }
+export type SurveyorAvailability = SurveyorItem & {
+  email: string
+  schedule_count: number
+  schedules: string[]
+}
+export type SurveyActivity = {
+  id: number
+  action: string
+  old_status?: SurveyState | null
+  new_status?: SurveyState | null
+  notes?: string | null
+  created_at: string
+  user?: { id: number; name: string; role?: UserRole } | null
+}
+export type SurveyStatusItem = {
+  id: number
+  name: string
+  color?: string
+  css_class?: string
+  sort_order?: number
+}
+
+export type Survey = {
+  id: number
+  state: SurveyState
+  requested_at?: string | null
+  requested_date?: string | null
+  requested_time?: string | null
+  surveyor_id?: number | null
+  assigned_by?: number | null
+  assigned_at?: string | null
+  scheduled_at?: string | null
+  actual_start_at?: string | null
+  actual_finish_at?: string | null
+  location_notes?: string | null
+  google_maps_url?: string | null
+  requested_item?: string | null
+  admin_notes?: string | null
+  result_notes?: string | null
+  recommendations?: string | null
+  consultation?: Consultation | null
+  surveyor?: SurveyorItem | null
+  assigner?: SurveyorItem | null
+  requester?: SurveyorItem | null
+  result_status?: SurveyStatusItem | null
+  activity_logs?: SurveyActivity[]
+}
+
 export type AuthUser = {
   id: number
   name: string
@@ -144,6 +247,7 @@ export type StatusCategory = {
 export type NotificationCount = {
   unread_notes: number
   upcoming_reminders: number
+  unread_surveys?: number
   total: number
   timestamp: string
 }
@@ -151,6 +255,16 @@ export type NotificationCount = {
 export type NotificationSummary = NotificationCount & {
   notes: NoteNotification[]
   reminders: ReminderNotification[]
+  surveys?: SurveyNotification[]
+}
+
+export type SurveyNotification = {
+  id: number
+  type: string
+  title: string
+  message: string
+  is_read: boolean
+  created_human?: string
 }
 
 export type NoteNotification = {
