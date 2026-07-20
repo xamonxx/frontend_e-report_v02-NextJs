@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useConsultations, useDeleteConsultation, useImportConsultations } from '@/lib/hooks/useConsultations'
 import { useAccounts, useStatusCategories } from '@/lib/hooks/useMasterData'
-import { Input } from '@/components/ui/input'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
@@ -25,6 +24,8 @@ import {
   Building2,
   Trash2,
   Eye,
+  Edit2,
+  ListChecks,
   Loader2,
   ChevronLeft,
   ChevronRight,
@@ -46,6 +47,45 @@ import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { format, parseISO } from 'date-fns'
+import { SearchField } from '@/components/ui/search-field'
+import { Checkbox } from '@/components/ui/checkbox'
+
+const softActionGradientClass = 'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_7%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_2%,var(--background))_100%)]'
+const softActionSurfaceClass = [
+  'border-[color:color-mix(in_srgb,var(--primary-theme)_18%,var(--border))]',
+  softActionGradientClass,
+].join(' ')
+
+const secondaryFileActionClass = [
+  'group inline-flex h-10 shrink-0 items-center justify-center gap-1 rounded-xl border px-2 text-[11px] font-semibold sm:gap-1.5 sm:px-3 sm:text-xs',
+  softActionSurfaceClass,
+  'text-foreground/70',
+  'shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_5px_14px_-12px_rgba(15,23,42,0.4)]',
+  'transition-[background-image,border-color,color,box-shadow,transform] duration-200',
+  'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_42%,var(--border))] hover:text-amber-700',
+  'hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_14%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_5%,var(--background))_100%)]',
+  'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_18px_-12px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)]',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 active:translate-y-px',
+  'dark:text-foreground/70 dark:hover:text-amber-300',
+].join(' ')
+
+const filterControlSurfaceClass = [
+  softActionSurfaceClass,
+  'text-muted-foreground',
+  'shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_5px_14px_-12px_rgba(15,23,42,0.42)]',
+  'transition-[background-image,border-color,color,box-shadow,transform] duration-200',
+  'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_38%,var(--border))] hover:text-foreground',
+  'hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_13%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_5%,var(--background))_100%)]',
+  'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_18px_-13px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)]',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30 active:translate-y-px',
+].join(' ')
+
+const filterIconButtonClass = [
+  'relative inline-flex size-10 shrink-0 items-center justify-center rounded-xl border',
+  filterControlSurfaceClass,
+].join(' ')
+
+const activeFilterControlClass = 'border-amber-500/50 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_18%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_8%,var(--background))_100%)] text-amber-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_7px_18px_-13px_rgba(245,158,11,0.7)] hover:border-amber-500/65 hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_24%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_11%,var(--background))_100%)] hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300'
 
 export default function ConsultationsPage() {
   const confirm = useConfirm()
@@ -67,6 +107,8 @@ export default function ConsultationsPage() {
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
   const [page, setPage] = useState(1)
+  const [selectedConsultationIds, setSelectedConsultationIds] = useState<Set<number>>(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
 
   // Filter bar icon popovers
   const [barStatusOpen, setBarStatusOpen] = useState(false)
@@ -84,6 +126,10 @@ export default function ConsultationsPage() {
   useEffect(() => {
     setPage(1)
   }, [debouncedSearch, statusFilter, accountFilter, monthFilter, yearFilter, startDate, endDate])
+
+  useEffect(() => {
+    setSelectedConsultationIds(new Set())
+  }, [page, debouncedSearch, statusFilter, accountFilter, monthFilter, yearFilter, startDate, endDate])
 
   // CSV Import states
   const [importOpen, setImportOpen] = useState(false)
@@ -122,6 +168,31 @@ export default function ConsultationsPage() {
         return updateSortDir === 'asc' ? aTime - bTime : bTime - aTime
       })
     : consultations
+
+  const visibleConsultationIds = sortedConsultations.map((consultation) => consultation.id)
+  const selectedVisibleCount = visibleConsultationIds.filter((id) => selectedConsultationIds.has(id)).length
+  const areAllVisibleSelected = visibleConsultationIds.length > 0 && selectedVisibleCount === visibleConsultationIds.length
+  const areSomeVisibleSelected = selectedVisibleCount > 0 && !areAllVisibleSelected
+
+  const toggleConsultationSelection = (id: number, checked: boolean) => {
+    setSelectedConsultationIds((current) => {
+      const next = new Set(current)
+      if (checked) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
+
+  const toggleAllVisibleConsultations = (checked: boolean) => {
+    setSelectedConsultationIds((current) => {
+      const next = new Set(current)
+      visibleConsultationIds.forEach((id) => {
+        if (checked) next.add(id)
+        else next.delete(id)
+      })
+      return next
+    })
+  }
 
   const getStatusColor = (name: string, cssClass?: string | null): string => {
     if (cssClass && /^#[0-9a-fA-F]{3,8}$/.test(cssClass)) return cssClass
@@ -165,6 +236,11 @@ export default function ConsultationsPage() {
     if (isConfirmed) {
       deleteMutation.mutate(id, {
         onSuccess: () => {
+          setSelectedConsultationIds((current) => {
+            const next = new Set(current)
+            next.delete(id)
+            return next
+          })
           toast.success('Konsultasi berhasil dihapus')
         },
         onError: () => {
@@ -172,6 +248,39 @@ export default function ConsultationsPage() {
         },
       })
     }
+  }
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedConsultationIds)
+    if (ids.length === 0 || isBulkDeleting) return
+
+    const isConfirmed = await confirm({
+      title: `Hapus ${ids.length} Data Konsultasi?`,
+      description: 'Data yang dipilih akan dihapus permanen. Tindakan ini tidak dapat dibatalkan.',
+      actionLabel: `Hapus ${ids.length} Data`,
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (!isConfirmed) return
+
+    setIsBulkDeleting(true)
+    const failedIds: number[] = []
+
+    for (const id of ids) {
+      try {
+        await deleteMutation.mutateAsync(id)
+      } catch {
+        failedIds.push(id)
+      }
+    }
+
+    setSelectedConsultationIds(new Set(failedIds))
+    setIsBulkDeleting(false)
+
+    const deletedCount = ids.length - failedIds.length
+    if (deletedCount > 0) toast.success(`${deletedCount} data konsultasi berhasil dihapus`)
+    if (failedIds.length > 0) toast.error(`${failedIds.length} data gagal dihapus dan tetap dipilih`)
   }
 
   const handleImportSubmit = (e: React.FormEvent) => {
@@ -222,8 +331,8 @@ export default function ConsultationsPage() {
             <Dialog open={importOpen} onOpenChange={setImportOpen}>
               <DialogTrigger
                 render={
-                  <Button variant="ghost" size="sm" className="w-full lg:w-auto justify-center h-10 lg:h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 shrink-0">
-                    <FileSpreadsheet className="h-3.5 w-3.5 mr-1 sm:mr-1.5 shrink-0" />
+                  <Button variant="ghost" size="sm" className={cn(secondaryFileActionClass, 'w-full lg:w-auto')}>
+                    <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
                     Import CSV
                   </Button>
                 }
@@ -301,9 +410,9 @@ export default function ConsultationsPage() {
               }) : '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-10 lg:h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1 sm:gap-1.5 shrink-0"
+              className={secondaryFileActionClass}
             >
-              <FileSpreadsheet className="h-3.5 w-3.5 shrink-0" />
+              <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
               Excel
             </a>
             <a
@@ -318,9 +427,9 @@ export default function ConsultationsPage() {
               }) : '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center h-10 lg:h-9 px-2 sm:px-3 text-[11px] sm:text-xs font-medium text-muted-foreground border border-border hover:border-border/80 hover:text-foreground bg-muted/40 hover:bg-muted/60 rounded-xl transition-all duration-200 dark:text-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-700 dark:hover:text-zinc-100 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 gap-1 sm:gap-1.5 shrink-0"
+              className={secondaryFileActionClass}
             >
-              <Download className="h-3.5 w-3.5 shrink-0" />
+              <Download className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
               PDF
             </a>
           </div>
@@ -328,19 +437,25 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Filters */}
-      <div className="max-w-full bg-card border border-border rounded-2xl px-3 py-3 shadow-xs dark:bg-zinc-900 dark:border-zinc-800/80 sm:px-4">
+      <div className={cn('data-toolbar max-w-full px-3 py-3 sm:px-4', softActionSurfaceClass)}>
         <div className="flex flex-col md:flex-row md:items-center gap-2">
 
           {/* Search — full width on mobile, constrained on desktop */}
-          <div className="relative w-full md:min-w-[180px] md:flex-1 md:max-w-[260px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-zinc-600 pointer-events-none" />
-            <Input
-              placeholder="Cari nama atau telepon..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-9 w-full bg-background border-border text-foreground placeholder:text-muted-foreground/50 rounded-xl text-xs focus-visible:ring-amber-500/20 focus-visible:border-amber-500/40 transition-all dark:bg-zinc-900/60 dark:border-zinc-800 dark:text-zinc-200 dark:placeholder:text-zinc-600"
-            />
-          </div>
+          <SearchField
+            containerClassName="w-full md:min-w-[180px] md:flex-1 md:max-w-[260px]"
+            pageSearch
+            showShortcut
+            placeholder="Cari nama atau telepon..."
+            value={searchTerm}
+            onValueChange={setSearchTerm}
+            className={cn(
+              filterControlSurfaceClass,
+              'h-10 border-[color:color-mix(in_srgb,var(--primary-theme)_34%,var(--border))] bg-transparent text-xs',
+              'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_48%,var(--border))]',
+              'focus-visible:border-[color:color-mix(in_srgb,var(--primary-theme)_68%,var(--border))] focus-visible:bg-transparent',
+              'focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_22%,transparent)]',
+            )}
+          />
 
           {/* Icons + Reset row — full width on mobile so ml-auto works */}
           <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 md:w-auto md:flex-nowrap">
@@ -352,10 +467,8 @@ export default function ConsultationsPage() {
             <PopoverTrigger
               title="Filter Status"
               className={cn(
-                "relative inline-flex items-center justify-center h-9 w-9 rounded-xl border transition-all duration-150 shrink-0",
-                statusFilter
-                  ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                  : "border-border bg-muted/40 text-muted-foreground hover:border-border/80 hover:text-foreground dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
+                filterIconButtonClass,
+                statusFilter && activeFilterControlClass,
               )}
             >
               <ListFilter className="h-4 w-4" />
@@ -400,10 +513,8 @@ export default function ConsultationsPage() {
               <PopoverTrigger
                 title="Filter Akun"
                 className={cn(
-                  "relative inline-flex items-center justify-center h-9 w-9 rounded-xl border transition-all duration-150 shrink-0",
-                  accountFilter
-                    ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                    : "border-border bg-muted/40 text-muted-foreground hover:border-border/80 hover:text-foreground dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
+                  filterIconButtonClass,
+                  accountFilter && activeFilterControlClass,
                 )}
               >
                 <Building2 className="h-4 w-4" />
@@ -446,10 +557,8 @@ export default function ConsultationsPage() {
             <PopoverTrigger
               title="Filter Bulan & Tahun"
               className={cn(
-                "relative inline-flex items-center justify-center h-9 w-9 rounded-xl border transition-all duration-150 shrink-0",
-                (monthFilter || yearFilter)
-                  ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                  : "border-border bg-muted/40 text-muted-foreground hover:border-border/80 hover:text-foreground dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
+                filterIconButtonClass,
+                (monthFilter || yearFilter) && activeFilterControlClass,
               )}
             >
               <CalendarDays className="h-4 w-4" />
@@ -508,10 +617,8 @@ export default function ConsultationsPage() {
             <PopoverTrigger
               title="Filter Rentang Tanggal"
               className={cn(
-                "relative inline-flex items-center justify-center h-9 w-9 rounded-xl border transition-all duration-150 shrink-0",
-                (startDate || endDate)
-                  ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-                  : "border-border bg-muted/40 text-muted-foreground hover:border-border/80 hover:text-foreground dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-500 dark:hover:border-zinc-700 dark:hover:text-zinc-300"
+                filterIconButtonClass,
+                (startDate || endDate) && activeFilterControlClass,
               )}
             >
               <CalendarRange className="h-4 w-4" />
@@ -602,7 +709,7 @@ export default function ConsultationsPage() {
               variant="ghost"
               size="sm"
               onClick={() => { setSearchTerm(''); setStatusFilter(''); setAccountFilter(''); setMonthFilter(''); setYearFilter(''); setStartDate(''); setEndDate(''); setPage(1) }}
-              className="h-9 px-3.5 text-xs text-muted-foreground hover:text-foreground border border-border hover:border-border/80 rounded-xl bg-muted/40 hover:bg-muted/60 transition-all duration-200 dark:text-zinc-500 dark:hover:text-zinc-200 dark:border-zinc-800 dark:hover:border-zinc-700 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60"
+              className={cn('h-10 rounded-xl border px-3.5 text-xs', filterControlSurfaceClass)}
             >
               Reset
             </Button>
@@ -610,7 +717,9 @@ export default function ConsultationsPage() {
               variant="ghost"
               size="sm"
               onClick={() => refetch()}
-              className="h-9 w-9 p-0 border border-border hover:border-border/80 rounded-xl bg-muted/40 hover:bg-muted/60 transition-all duration-200 text-muted-foreground hover:text-foreground dark:border-zinc-800 dark:hover:border-zinc-700 dark:bg-zinc-900/40 dark:hover:bg-zinc-800/60 dark:text-zinc-500 dark:hover:text-zinc-200"
+              title="Perbarui data"
+              aria-label="Perbarui data konsultasi"
+              className={cn('size-10 rounded-xl border p-0', filterControlSurfaceClass)}
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isRefetching && "animate-spin")} />
             </Button>
@@ -621,7 +730,48 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Main Grid table */}
-      <div className="relative max-w-full border border-border shadow-2xl rounded-2xl overflow-hidden bg-card/50 backdrop-blur-sm dark:border-zinc-700/60 dark:bg-zinc-800/40">
+      {selectedConsultationIds.size > 0 && (
+        <div
+          className="flex flex-col gap-3 rounded-2xl border border-red-500/20 bg-[linear-gradient(135deg,color-mix(in_srgb,#ef4444_8%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_4%,var(--background))_100%)] px-4 py-3 shadow-[0_12px_28px_-24px_rgba(239,68,68,0.7)] sm:flex-row sm:items-center sm:justify-between"
+          role="status"
+          aria-live="polite"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid size-9 shrink-0 place-items-center rounded-xl border border-red-500/20 bg-red-500/10 text-red-500">
+              <ListChecks className="size-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-foreground">{selectedConsultationIds.size} data dipilih</p>
+              <p className="text-[10px] text-muted-foreground">Pilih data lain atau hapus semua data yang sudah ditandai.</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isBulkDeleting}
+              onClick={() => setSelectedConsultationIds(new Set())}
+              className="h-9 rounded-xl border-border/80 bg-background/45 px-3 text-[11px]"
+            >
+              Batal pilih
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={isBulkDeleting}
+              onClick={handleBulkDelete}
+              className="h-9 rounded-xl px-3 text-[11px] shadow-[0_8px_18px_-12px_rgba(239,68,68,0.75)]"
+            >
+              {isBulkDeleting ? <Loader2 className="size-3.5 animate-spin" aria-hidden="true" /> : <Trash2 className="size-3.5" aria-hidden="true" />}
+              {isBulkDeleting ? 'Menghapus...' : `Hapus ${selectedConsultationIds.size} data`}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <div className="data-table-shell">
         {/* Refetching visual feedback overlay */}
         {isRefetching && (
           <div className="absolute inset-0 bg-background/25 backdrop-blur-[1px] z-30 flex items-center justify-center transition-all duration-300">
@@ -633,8 +783,20 @@ export default function ConsultationsPage() {
         )}
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader>
+            <TableHeader className={cn(softActionGradientClass, '[&_th]:!bg-transparent')}>
               <TableRow className="border-0 hover:bg-transparent">
+                <TableHead className="w-[52px] border-b border-border bg-muted/60 px-4 py-3.5 text-center dark:border-zinc-700/60 dark:bg-zinc-800/80">
+                  <Checkbox
+                    checked={areAllVisibleSelected}
+                    indeterminate={areSomeVisibleSelected}
+                    disabled={visibleConsultationIds.length === 0 || isBulkDeleting}
+                    onCheckedChange={toggleAllVisibleConsultations}
+                    aria-label="Pilih semua data konsultasi pada halaman ini"
+                    title="Pilih semua pada halaman ini"
+                    className="mx-auto size-[18px] rounded-md border-border/90 bg-background/50 data-checked:border-amber-500 data-checked:bg-amber-500 data-indeterminate:border-amber-500 data-indeterminate:bg-amber-500"
+                  />
+                </TableHead>
+
                 {/* ID Lead */}
                 <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-300 dark:bg-zinc-800/80 dark:border-zinc-700/60 w-[130px]">
                   ID Lead
@@ -846,7 +1008,7 @@ export default function ConsultationsPage() {
                 )}
 
                 {/* Aksi */}
-                <TableHead className="text-muted-foreground text-[10px] font-semibold uppercase tracking-[0.14em] py-3.5 px-5 bg-muted/60 border-b border-border whitespace-nowrap dark:text-zinc-300 dark:bg-zinc-800/80 dark:border-zinc-700/60 text-right w-[88px]">
+                <TableHead className="w-[132px] whitespace-nowrap border-b border-border bg-muted/60 px-5 py-3.5 text-right text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:border-zinc-700/60 dark:bg-zinc-800/80 dark:text-zinc-300">
                   Aksi
                 </TableHead>
               </TableRow>
@@ -854,7 +1016,7 @@ export default function ConsultationsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 9 : 8} className="h-48 text-center">
+                  <TableCell colSpan={isSuperAdmin ? 10 : 9} className="h-48 text-center">
                     <div className="flex flex-col items-center justify-center gap-3 text-muted-foreground">
                       <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
                       <span className="text-xs font-medium tracking-wide">Memuat data konsultasi...</span>
@@ -863,7 +1025,7 @@ export default function ConsultationsPage() {
                 </TableRow>
               ) : consultations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isSuperAdmin ? 9 : 8} className="h-48 text-center">
+                  <TableCell colSpan={isSuperAdmin ? 10 : 9} className="h-48 text-center">
                     <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground/50">
                       <Search className="h-7 w-7" />
                       <span className="text-xs">Tidak ditemukan data konsultasi yang sesuai filter.</span>
@@ -874,14 +1036,27 @@ export default function ConsultationsPage() {
                 sortedConsultations.map((lead, idx) => (
                   <TableRow
                     key={lead.id}
+                    data-state={selectedConsultationIds.has(lead.id) ? 'selected' : undefined}
                     className={cn(
                       'border-b border-border/30 transition-all duration-150 group dark:border-zinc-700/30',
-                      idx % 2 !== 0 ? 'bg-muted/20 dark:bg-zinc-700/20' : 'bg-transparent dark:bg-zinc-800/10',
+                      selectedConsultationIds.has(lead.id)
+                        ? 'bg-amber-500/[0.075] shadow-[inset_3px_0_0_rgba(245,158,11,0.8)] dark:bg-amber-500/[0.09]'
+                        : idx % 2 !== 0 ? 'bg-muted/20 dark:bg-zinc-700/20' : 'bg-transparent dark:bg-zinc-800/10',
                       'hover:bg-amber-500/[0.04] dark:hover:bg-amber-500/[0.06]'
                     )}
                   >
                     {/* ID Lead — left border accent on hover */}
-                    <TableCell className="py-3.5 px-5 border-l-2 border-transparent group-hover:border-amber-500/50 transition-colors duration-150">
+                    <TableCell className="w-[52px] px-4 py-3.5 text-center">
+                      <Checkbox
+                        checked={selectedConsultationIds.has(lead.id)}
+                        disabled={isBulkDeleting}
+                        onCheckedChange={(checked) => toggleConsultationSelection(lead.id, checked)}
+                        aria-label={`Pilih konsultasi ${lead.client_name}`}
+                        className="mx-auto size-[18px] rounded-md border-border/90 bg-background/50 data-checked:border-amber-500 data-checked:bg-amber-500"
+                      />
+                    </TableCell>
+
+                    <TableCell className="py-3.5 px-5 transition-colors duration-150">
                       <span className="font-mono text-[11px] font-medium text-muted-foreground group-hover:text-amber-500/80 transition-colors dark:text-zinc-400 dark:group-hover:text-amber-400/80">
                         {lead.consultation_id}
                       </span>
@@ -965,23 +1140,38 @@ export default function ConsultationsPage() {
 
                     {/* Aksi */}
                     <TableCell className="py-3.5 px-5 text-right">
-                      <div className="flex justify-end items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity duration-150">
+                      <div className="flex items-center justify-end gap-1.5 opacity-80 transition-opacity duration-150 group-hover:opacity-100">
                         <Link
                           href={`/consultations/${lead.id}`}
+                          aria-label={`Lihat detail ${lead.client_name}`}
+                          title="Lihat detail"
                           className={cn(
                             buttonVariants({ size: "icon-xs", variant: "ghost" }),
-                            "h-7 w-7 text-muted-foreground hover:text-amber-500 hover:bg-amber-500/10 rounded-lg transition-all duration-150 dark:text-zinc-400 dark:hover:text-amber-400"
+                            "h-9 w-9 rounded-xl border border-border/70 bg-background/35 text-sky-500 transition-[border-color,background-color,color,transform] duration-150 hover:border-sky-500/35 hover:bg-sky-500/10 hover:text-sky-400 focus-visible:ring-2 focus-visible:ring-sky-500/40 active:translate-y-px dark:border-slate-400/15 dark:bg-slate-900/35 dark:text-sky-400"
                           )}
                         >
-                          <Eye className="h-3.5 w-3.5" />
+                          <Eye className="h-4 w-4" strokeWidth={2.25} />
+                        </Link>
+                        <Link
+                          href={`/consultations/${lead.id}/edit`}
+                          aria-label={`Edit ${lead.client_name}`}
+                          title="Edit konsultasi"
+                          className={cn(
+                            buttonVariants({ size: "icon-xs", variant: "ghost" }),
+                            "h-9 w-9 rounded-xl border border-border/70 bg-background/35 text-amber-500 transition-[border-color,background-color,color,transform] duration-150 hover:border-amber-500/35 hover:bg-amber-500/10 hover:text-amber-400 focus-visible:ring-2 focus-visible:ring-amber-500/40 active:translate-y-px dark:border-slate-400/15 dark:bg-slate-900/35 dark:text-amber-400"
+                          )}
+                        >
+                          <Edit2 className="h-4 w-4" strokeWidth={2.25} />
                         </Link>
                         <Button
                           size="icon-xs"
                           variant="ghost"
                           onClick={() => handleDelete(lead.id)}
-                          className="h-7 w-7 text-zinc-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-150"
+                          aria-label={`Hapus ${lead.client_name}`}
+                          title="Hapus konsultasi"
+                          className="h-9 w-9 rounded-xl border border-border/70 bg-background/35 text-red-500/85 transition-[border-color,background-color,color,transform] duration-150 hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-400 focus-visible:ring-2 focus-visible:ring-red-500/40 active:translate-y-px dark:border-slate-400/15 dark:bg-slate-900/35"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" strokeWidth={2.25} />
                         </Button>
                       </div>
                     </TableCell>

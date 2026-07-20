@@ -5,8 +5,7 @@ import { useRouter, usePathname } from 'next/navigation'
 import { useCurrentUser } from '@/lib/hooks/useAuth'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { Loader2 } from 'lucide-react'
-
-const SUPER_ADMIN_ONLY_PATHS = ['/accounts', '/master-data', '/audit-logs', '/debug']
+import { canAccessPath, isSurveyTeam } from '@/lib/auth/roles'
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -14,7 +13,8 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isSuccess, data, isChecking } = useCurrentUser()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated) || (isSuccess && !!data)
   const user = useAuthStore((s) => s.user) || (isSuccess ? data : null)
-  const requiresSuperAdmin = SUPER_ADMIN_ONLY_PATHS.some((path) => pathname.startsWith(path))
+  const fallbackPath = isSurveyTeam(user) ? '/surveys' : '/dashboard'
+  const canAccessCurrentPath = !user || canAccessPath(user, pathname)
 
   useEffect(() => {
     // Only run redirection checks when not actively checking the session
@@ -22,12 +22,12 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
       if (!isAuthenticated && pathname !== '/login') {
         router.push('/login')
       } else if (isAuthenticated && pathname === '/login') {
-        router.push('/dashboard')
-      } else if (isAuthenticated && requiresSuperAdmin && user?.role !== 'super_admin') {
-        router.push('/dashboard')
+        router.push(fallbackPath)
+      } else if (isAuthenticated && !canAccessCurrentPath) {
+        router.push(fallbackPath)
       }
     }
-  }, [isChecking, isAuthenticated, pathname, requiresSuperAdmin, router, user?.role])
+  }, [isChecking, isAuthenticated, pathname, canAccessCurrentPath, fallbackPath, router])
 
   if (isChecking) {
     // Allow immediate rendering on login page without flashing spinner
@@ -51,7 +51,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     return null
   }
 
-  if (isAuthenticated && requiresSuperAdmin && user?.role !== 'super_admin') {
+  if (isAuthenticated && !canAccessCurrentPath) {
     return null
   }
 

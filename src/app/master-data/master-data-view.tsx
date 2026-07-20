@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { Reorder, useDragControls } from 'framer-motion'
-import type { StatusCategory } from '@/types'
+import type { StatusCategory, SurveyStatusItem } from '@/types'
 import {
   useCategoriesList,
   useCreateCategory,
@@ -13,6 +13,11 @@ import {
   useUpdateStatus,
   useDeleteStatus,
   useReorderStatuses,
+  useSurveyStatusesList,
+  useCreateSurveyStatus,
+  useUpdateSurveyStatus,
+  useDeleteSurveyStatus,
+  useReorderSurveyStatuses,
   useUsersList,
   useCreateUser,
   useUpdateUser,
@@ -64,6 +69,7 @@ import {
   EyeOff,
   AlertCircle,
   CheckCircle2,
+  ClipboardCheck,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
@@ -72,7 +78,7 @@ import { useConfirm } from '@/components/ui/confirm-dialog'
 
 export default function MasterDataPage() {
   const confirm = useConfirm()
-  const [activeTab, setActiveTab] = useState<'categories' | 'statuses' | 'users'>('categories')
+  const [activeTab, setActiveTab] = useState<'categories' | 'statuses' | 'survey-statuses' | 'users'>('categories')
 
   const [userSearch, setUserSearch] = useState('')
   const [debouncedUserSearch] = useDebounce(userSearch, 400)
@@ -99,6 +105,7 @@ export default function MasterDataPage() {
   const catMeta = catResponse?.meta
   // Statuses: load all in one page so drag-reorder covers every row.
   const { data: statResponse, isLoading: statLoading } = useStatusesList({ page: statusesPage, per_page: 500 })
+  const { data: surveyStatusesResponse, isLoading: surveyStatusesLoading } = useSurveyStatusesList()
   const { data: userResponse, isLoading: userLoading, refetch: refetchUsers } = useUsersList({
     search: debouncedUserSearch,
     page: usersPage,
@@ -120,6 +127,9 @@ export default function MasterDataPage() {
   const createStat = useCreateStatus()
   const deleteStat = useDeleteStatus()
   const reorderStat = useReorderStatuses()
+  const createSurveyStat = useCreateSurveyStatus()
+  const deleteSurveyStat = useDeleteSurveyStatus()
+  const reorderSurveyStat = useReorderSurveyStatuses()
 
   // Local drag order for pipeline stages (mouse + touch via framer-motion).
   // Synced from the server list; updated live while dragging and persisted on drop.
@@ -127,12 +137,22 @@ export default function MasterDataPage() {
   const orderRef = useRef<StatusCategory[]>([])
   // Constrains each row's drag to the list bounds (no flying off the container).
   const statusListRef = useRef<HTMLUListElement>(null)
+  const [orderedSurveyStatuses, setOrderedSurveyStatuses] = useState<SurveyStatusItem[]>([])
+  const surveyOrderRef = useRef<SurveyStatusItem[]>([])
+  const surveyStatusListRef = useRef<HTMLUListElement>(null)
   useEffect(() => {
     if (statResponse?.data) {
       setOrderedStatuses(statResponse.data)
       orderRef.current = statResponse.data
     }
   }, [statResponse?.data])
+
+  useEffect(() => {
+    if (surveyStatusesResponse?.data) {
+      setOrderedSurveyStatuses(surveyStatusesResponse.data)
+      surveyOrderRef.current = surveyStatusesResponse.data
+    }
+  }, [surveyStatusesResponse?.data])
 
   const handleStatusReorder = (next: StatusCategory[]) => {
     setOrderedStatuses(next)
@@ -154,7 +174,7 @@ export default function MasterDataPage() {
   const resetUserPass = useResetUserPassword()
 
   const [openModal, setOpenModal] = useState(false)
-  const [modalType, setModalType] = useState<'cat' | 'stat' | 'user' | 'reset-pass'>('cat')
+  const [modalType, setModalType] = useState<'cat' | 'stat' | 'survey-stat' | 'user' | 'reset-pass'>('cat')
   const [editingId, setEditingId] = useState<number | null>(null)
 
   const [name, setName] = useState('')
@@ -169,6 +189,7 @@ export default function MasterDataPage() {
 
   const updateCatMutation = useUpdateCategory(editingId || 0)
   const updateStatMutation = useUpdateStatus(editingId || 0)
+  const updateSurveyStatMutation = useUpdateSurveyStatus(editingId || 0)
   const updateUserMutation = useUpdateUser(editingId || 0)
 
   const handleOpenCatCreate = () => {
@@ -198,6 +219,38 @@ export default function MasterDataPage() {
     setEditingId(id)
     setName(currentName)
     setColor(currentColor || '#f59e0b')
+    setOpenModal(true)
+  }
+
+  const handleSurveyStatusReorder = (next: SurveyStatusItem[]) => {
+    setOrderedSurveyStatuses(next)
+    surveyOrderRef.current = next
+  }
+
+  const commitSurveyStatusOrder = () => {
+    const ids = surveyOrderRef.current.map((status) => status.id)
+    const original = surveyStatusesResponse?.data?.map((status) => status.id) ?? []
+    if (ids.length === original.length && ids.every((id, index) => id === original[index])) return
+
+    reorderSurveyStat.mutate(ids, {
+      onSuccess: () => toast.success('Urutan status hasil survey diperbarui.'),
+      onError: () => toast.error('Gagal menyimpan urutan status survey.'),
+    })
+  }
+
+  const handleOpenSurveyStatCreate = () => {
+    setModalType('survey-stat')
+    setEditingId(null)
+    setName('')
+    setColor('#0ea5e9')
+    setOpenModal(true)
+  }
+
+  const handleOpenSurveyStatEdit = (status: SurveyStatusItem) => {
+    setModalType('survey-stat')
+    setEditingId(status.id)
+    setName(status.name)
+    setColor(status.color || '#0ea5e9')
     setOpenModal(true)
   }
 
@@ -288,6 +341,19 @@ export default function MasterDataPage() {
           }
         )
       }
+    } else if (modalType === 'survey-stat') {
+      if (!name.trim() || !color.trim()) return
+      const mutation = editingId ? updateSurveyStatMutation : createSurveyStat
+      mutation.mutate(
+        { name, color },
+        {
+          onSuccess: (res) => {
+            toast.success(res.message || 'Status survey berhasil disimpan.')
+            setOpenModal(false)
+          },
+          onError: (err: any) => toast.error(err.message || 'Gagal menyimpan status survey.'),
+        }
+      )
     } else if (modalType === 'user') {
       if (!name.trim() || !email.trim()) return
       const payload: any = { name, email, role }
@@ -377,6 +443,23 @@ export default function MasterDataPage() {
     }
   }
 
+  const handleDeleteSurveyStat = async (id: number) => {
+    const isConfirmed = await confirm({
+      title: 'Hapus Status Survey?',
+      description: 'Status hasil survey yang masih digunakan tidak dapat dihapus.',
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+
+    if (isConfirmed) {
+      deleteSurveyStat.mutate(id, {
+        onSuccess: (res) => toast.success(res.message || 'Status survey berhasil dihapus.'),
+        onError: (err: any) => toast.error(err.message || 'Status survey ini masih digunakan.'),
+      })
+    }
+  }
+
   const handleDeleteUser = async (id: number) => {
     const isConfirmed = await confirm({
       title: 'Hapus User?',
@@ -398,33 +481,39 @@ export default function MasterDataPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-4 sm:space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2.5">
-            <Settings className="h-7 w-7 text-amber-500 shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)] hover:rotate-45 transition-transform duration-500" />
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
+            <Settings className="h-5 w-5 sm:h-7 sm:w-7 text-amber-500 shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)] hover:rotate-45 transition-transform duration-500" />
             Konfigurasi Master Data
           </h1>
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 leading-relaxed">
             Halaman pengaturan sistem untuk kebutuhan produk interior, pipeline status deal, dan pendaftaran user operator.
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex w-full sm:w-auto gap-2">
           {activeTab === 'categories' && (
-            <Button onClick={handleOpenCatCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+            <Button onClick={handleOpenCatCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
               <Plus className="h-4 w-4 mr-1.5" />
               Kategori Baru
             </Button>
           )}
           {activeTab === 'statuses' && (
-            <Button onClick={handleOpenStatCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+            <Button onClick={handleOpenStatCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
               <Plus className="h-4 w-4 mr-1.5" />
               Status Baru
             </Button>
           )}
+          {activeTab === 'survey-statuses' && (
+            <Button onClick={handleOpenSurveyStatCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+              <Plus className="h-4 w-4 mr-1.5" />
+              Status Survey Baru
+            </Button>
+          )}
           {activeTab === 'users' && (
-            <Button onClick={handleOpenUserCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+            <Button onClick={handleOpenUserCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
               <Plus className="h-4 w-4 mr-1.5" />
               User Baru
             </Button>
@@ -433,42 +522,54 @@ export default function MasterDataPage() {
       </div>
 
       {/* Tabs navigation */}
-      <div className="inline-flex p-1.5 gap-1.5 rounded-2xl glass-panel border border-border/40 shadow-sm overflow-x-auto max-w-full dark:border-zinc-800/60 dark:shadow-none scrollbar-none">
+      <div className="grid w-full grid-cols-4 gap-1 rounded-xl glass-panel border border-border/40 p-1 dark:border-zinc-800/60 dark:shadow-none sm:inline-flex sm:w-auto sm:gap-1.5 sm:rounded-2xl sm:p-1.5">
         <button
           onClick={() => setActiveTab('categories')}
           className={cn(
-            "px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 flex items-center gap-2 shrink-0 cursor-pointer select-none",
+            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
             activeTab === 'categories'
               ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
           )}
         >
-          <Tag className={cn("h-4 w-4 transition-transform duration-300", activeTab === 'categories' && "scale-110")} />
-          <span>Kategori Kebutuhan</span>
+          <Tag className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'categories' && "scale-110")} />
+          <span className="truncate sm:hidden">Kategori</span><span className="hidden sm:inline">Kategori Kebutuhan</span>
         </button>
         <button
           onClick={() => setActiveTab('statuses')}
           className={cn(
-            "px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 flex items-center gap-2 shrink-0 cursor-pointer select-none",
+            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
             activeTab === 'statuses'
               ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
           )}
         >
-          <Kanban className={cn("h-4 w-4 transition-transform duration-300", activeTab === 'statuses' && "scale-110")} />
-          <span>Status Pipeline</span>
+          <Kanban className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'statuses' && "scale-110")} />
+          <span className="truncate sm:hidden">Pipeline</span><span className="hidden sm:inline">Status Pipeline</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('survey-statuses')}
+          className={cn(
+            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
+            activeTab === 'survey-statuses'
+              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
+          )}
+        >
+          <ClipboardCheck className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'survey-statuses' && "scale-110")} />
+          <span className="truncate sm:hidden">Survey</span><span className="hidden sm:inline">Status Hasil Survey</span>
         </button>
         <button
           onClick={() => setActiveTab('users')}
           className={cn(
-            "px-4 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 flex items-center gap-2 shrink-0 cursor-pointer select-none",
+            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
             activeTab === 'users'
               ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
               : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
           )}
         >
-          <Users className={cn("h-4 w-4 transition-transform duration-300", activeTab === 'users' && "scale-110")} />
-          <span>Akun Pengguna Admin</span>
+          <Users className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'users' && "scale-110")} />
+          <span className="truncate sm:hidden">User</span><span className="hidden sm:inline">Akun Pengguna Admin</span>
         </button>
       </div>
 
@@ -638,6 +739,46 @@ export default function MasterDataPage() {
       )}
 
       {/* ── Users Tab ────────────────────────────────────────────── */}
+      {activeTab === 'survey-statuses' && (
+        <Card className="glass-panel border border-border/50 shadow-md rounded-2xl dark:border-zinc-900/60 dark:shadow-none overflow-hidden">
+          <CardContent className="p-0">
+            <div className="overflow-x-auto scrollbar-thin">
+              <div className="flex min-w-[640px] items-center border-b border-border/40 bg-muted/20 px-5 py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:border-zinc-900/50 dark:bg-zinc-950/40">
+                <div className="w-[120px]">Urutan</div>
+                <div className="flex-1">Status Hasil</div>
+                <div className="w-[200px]">Warna</div>
+                <div className="w-[110px] text-right">Aksi</div>
+              </div>
+              {surveyStatusesLoading ? (
+                <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-amber-500" /></div>
+              ) : orderedSurveyStatuses.length === 0 ? (
+                <div className="flex h-24 items-center justify-center text-xs font-semibold text-muted-foreground">Belum ada status hasil survey.</div>
+              ) : (
+                <Reorder.Group
+                  ref={surveyStatusListRef}
+                  axis="y"
+                  values={orderedSurveyStatuses}
+                  onReorder={handleSurveyStatusReorder}
+                  className="min-w-[640px] list-none"
+                >
+                  {orderedSurveyStatuses.map((status, index) => (
+                    <SortableStatusRow
+                      key={status.id}
+                      status={status}
+                      index={index}
+                      constraintsRef={surveyStatusListRef}
+                      onCommit={commitSurveyStatusOrder}
+                      onEdit={() => handleOpenSurveyStatEdit(status)}
+                      onDelete={() => handleDeleteSurveyStat(status.id)}
+                    />
+                  ))}
+                </Reorder.Group>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {activeTab === 'users' && (
         <div className="space-y-4">
           <div className="relative w-full max-w-md">
@@ -773,21 +914,25 @@ export default function MasterDataPage() {
 
       {/* ── Dialog Modals ────────────────────────────────────────── */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
-        <DialogContent className="border-border bg-card text-foreground max-w-sm dark:border-zinc-800 dark:bg-zinc-900">
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            <DialogHeader>
+        <DialogContent className={cn(
+          "border-border bg-card text-foreground dark:border-zinc-800 dark:bg-zinc-900",
+          modalType === 'user' ? "max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1rem)] max-w-3xl overflow-y-auto p-0 sm:w-full" : "max-w-sm"
+        )}>
+          <form onSubmit={handleFormSubmit} className={cn("space-y-4", modalType === 'user' && "min-w-0")}>
+            <DialogHeader className={cn(modalType === 'user' && "border-b border-amber-500/15 bg-amber-500/[0.035] px-5 py-5 pr-12 sm:px-6")}>
               <DialogTitle className="text-foreground">
                 {modalType === 'cat' && (editingId ? 'Edit Kategori Kebutuhan' : 'Kategori Kebutuhan Baru')}
                 {modalType === 'stat' && (editingId ? 'Edit Status Pipeline' : 'Status Pipeline Baru')}
+                {modalType === 'survey-stat' && (editingId ? 'Edit Status Hasil Survey' : 'Status Hasil Survey Baru')}
                 {modalType === 'user' && (editingId ? 'Edit Akun Pengguna' : 'Buat Akun Pengguna Baru')}
                 {modalType === 'reset-pass' && 'Reset Password User'}
               </DialogTitle>
               <DialogDescription className="text-muted-foreground text-xs">
-                Masukkan nilai parameter yang sesuai pada form di bawah.
+                {modalType === 'user' ? 'Atur identitas, keamanan, dan cakupan akses pengguna.' : 'Masukkan nilai parameter yang sesuai pada form di bawah.'}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3 py-2">
+            <div className={cn("space-y-3 py-2", modalType === 'user' && "space-y-5 px-5 pb-5 sm:px-6 sm:pb-6")}>
               {/* Category form */}
               {modalType === 'cat' && (
                 <div className="space-y-1.5">
@@ -835,9 +980,31 @@ export default function MasterDataPage() {
                 </>
               )}
 
+              {modalType === 'survey-stat' && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="survey-stat-name" className="text-xs font-semibold text-muted-foreground">Nama Status Hasil Survey</Label>
+                    <Input id="survey-stat-name" placeholder="Contoh: Hold Up Desain, Deal" value={name} onChange={(e) => setName(e.target.value)} className="border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="survey-stat-color" className="text-xs font-semibold text-muted-foreground block">Warna Aksen</Label>
+                    <div className="flex gap-2">
+                      <Input id="survey-stat-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-8 w-12 p-0 border-border bg-background cursor-pointer dark:border-zinc-800 dark:bg-zinc-950" />
+                      <Input value={color} onChange={(e) => setColor(e.target.value)} className="border-border bg-background text-xs text-foreground/80 flex-1 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300" />
+                    </div>
+                  </div>
+                </>
+              )}
+
               {/* User Account CRUD form */}
               {modalType === 'user' && (
-                <>
+                <div className="space-y-5">
+                  <section className="space-y-3">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      <Users className="h-3.5 w-3.5" />
+                      Identitas
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="usr-name" className="text-xs font-semibold text-muted-foreground">Nama Lengkap</Label>
                     <Input
@@ -860,9 +1027,16 @@ export default function MasterDataPage() {
                       className="border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
                     />
                   </div>
+                    </div>
+                  </section>
 
                   {!editingId && (
-                    <div className="space-y-3">
+                    <section className="space-y-3 border-t border-border/60 pt-4 dark:border-zinc-800">
+                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        <Lock className="h-3.5 w-3.5" />
+                        Keamanan
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {/* Password field */}
                       <div className="space-y-1.5">
                         <Label htmlFor="usr-pass" className="text-xs font-semibold text-muted-foreground">Password</Label>
@@ -936,10 +1110,16 @@ export default function MasterDataPage() {
                           </p>
                         )}
                       </div>
-                    </div>
+                      </div>
+                    </section>
                   )}
 
-                  <div className="grid gap-2 grid-cols-2">
+                  <section className="space-y-3 border-t border-border/60 pt-4 dark:border-zinc-800">
+                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      Cakupan Akses
+                    </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
                       <Label htmlFor="usr-role" className="text-xs font-semibold text-muted-foreground">Role Pengguna</Label>
                       <Select
@@ -974,7 +1154,8 @@ export default function MasterDataPage() {
                       </div>
                     )}
                   </div>
-                </>
+                  </section>
+                </div>
               )}
 
               {/* Reset Password Form */}
@@ -1005,7 +1186,10 @@ export default function MasterDataPage() {
               )}
             </div>
 
-            <div className="flex justify-end gap-2 border-t border-border/80 pt-4 dark:border-zinc-800/80">
+            <div className={cn(
+              "flex justify-end gap-2 border-t border-border/80 pt-4 dark:border-zinc-800/80",
+              modalType === 'user' && "sticky bottom-0 -mx-5 bg-card/95 px-5 pb-5 pt-4 backdrop-blur sm:-mx-6 sm:px-6 sm:pb-6 dark:bg-zinc-900/95"
+            )}>
               <Button
                 type="button"
                 variant="ghost"
@@ -1021,6 +1205,8 @@ export default function MasterDataPage() {
                   updateCatMutation.isPending ||
                   createStat.isPending ||
                   updateStatMutation.isPending ||
+                  createSurveyStat.isPending ||
+                  updateSurveyStatMutation.isPending ||
                   createUser.isPending ||
                   updateUserMutation.isPending ||
                   resetUserPass.isPending
@@ -1031,6 +1217,8 @@ export default function MasterDataPage() {
                 updateCatMutation.isPending ||
                 createStat.isPending ||
                 updateStatMutation.isPending ||
+                createSurveyStat.isPending ||
+                updateSurveyStatMutation.isPending ||
                 createUser.isPending ||
                 updateUserMutation.isPending ||
                 resetUserPass.isPending ? (
@@ -1063,7 +1251,7 @@ function SortableStatusRow({
   onEdit,
   onDelete,
 }: {
-  status: StatusCategory
+  status: StatusCategory | SurveyStatusItem
   index: number
   constraintsRef: React.RefObject<HTMLUListElement | null>
   onCommit: () => void

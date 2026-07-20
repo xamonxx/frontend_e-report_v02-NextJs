@@ -6,6 +6,29 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
+/** Normalizes only manually typed region values; selected master-data labels stay untouched. */
+export function normalizeRegionName(input: string): string {
+  const cleaned = input.trim().replace(/\s+/g, ' ')
+  if (!cleaned) return ''
+
+  return cleaned
+    .split(' ')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ')
+}
+
+export const PENDING_CONFIRMATION_LABEL = 'Belum ada konfirmasi'
+
+export function isPendingConfirmation(value?: string | null): boolean {
+  if (!value) return false
+  return value.trim().replace(/\s+/g, ' ').toLowerCase() === PENDING_CONFIRMATION_LABEL.toLowerCase()
+}
+
+/** Displays an API placeholder as an empty region field in create/edit forms. */
+export function regionFieldValue(value?: string | null): string {
+  return !value || isPendingConfirmation(value) ? '' : value
+}
+
 /** Default country assumed when the user types a number without a "+" prefix. */
 const DEFAULT_COUNTRY: CountryCode = "ID"
 
@@ -53,4 +76,16 @@ export function isPhoneValid(value: string): boolean {
   if (!value) return false
   const parsed = parsePhoneNumberFromString(value, DEFAULT_COUNTRY)
   return parsed?.isValid() ?? false
+}
+
+/** Converts Laravel validation responses into one concise toast message. */
+export function formatApiError(error: unknown, fallback = 'Terjadi kesalahan.'): string {
+  if (!error || typeof error !== 'object') return fallback
+
+  const apiError = error as { message?: string; errors?: Record<string, string[] | string> }
+  const details = Object.values(apiError.errors ?? {})
+    .flatMap((messages) => Array.isArray(messages) ? messages : [messages])
+    .filter(Boolean)
+
+  return details.length > 0 ? details.join('\n') : apiError.message || fallback
 }

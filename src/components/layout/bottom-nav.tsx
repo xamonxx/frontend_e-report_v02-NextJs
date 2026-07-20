@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -20,13 +20,15 @@ import {
   MoreHorizontal,
   ChevronRight,
   X,
-  Sparkles,
+  ClipboardCheck,
+  ClipboardList,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { useLogout } from '@/lib/hooks/useAuth'
 import { prefetchRoute } from '@/lib/prefetch'
 import { cn } from '@/lib/utils'
+import { isManagerSurveyor, isSurveyTeam } from '@/lib/auth/roles'
 
 type NavItem = {
   href: string
@@ -42,6 +44,18 @@ const PRIMARY_TABS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/consultations', label: 'Konsultasi', icon: CalendarDays },
   { href: '/analytics', label: 'Analisa', icon: BarChart3 },
+]
+
+const SURVEY_TEAM_TABS: NavItem[] = [
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
+  { href: '/settings', label: 'Pengaturan', icon: Settings },
+]
+
+const MANAGER_SURVEY_TABS: NavItem[] = [
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
+  { href: '/rekap-jadwal-surveyor', label: 'Rekap', icon: CalendarDays },
+  { href: '/survey-consumers', label: 'Data', icon: ClipboardList },
+  { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
 
 // Overflow items surfaced in the "More" sheet. Role gating mirrors the sidebar.
@@ -69,19 +83,26 @@ export default function BottomNav() {
   const [fabHovered, setFabHovered] = useState(false)
 
   const isSuperAdmin = user?.role === 'super_admin'
+  const surveyTeam = isSurveyTeam(user)
+  const primaryTabs = isManagerSurveyor(user) ? MANAGER_SURVEY_TABS : surveyTeam ? SURVEY_TEAM_TABS : PRIMARY_TABS
   const visible = (item: NavItem) => !item.superOnly || isSuperAdmin
 
-  const moreItems = MORE_ITEMS.filter(visible)
-  const settingsItems = SETTINGS_ITEMS.filter(visible)
+  const moreItems = surveyTeam ? [] : MORE_ITEMS.filter(visible)
+  const settingsItems = SETTINGS_ITEMS.filter(visible).filter((item) => !surveyTeam || item.href !== '/settings')
 
   // Highlight "More" whenever the active route lives inside the sheet.
   const moreActive = [...moreItems, ...settingsItems].some((i) => pathname.startsWith(i.href))
 
-  let activeIndex = -1
-  if (pathname.startsWith('/dashboard')) activeIndex = 0
-  else if (pathname.startsWith('/consultations')) activeIndex = 1
-  else if (pathname.startsWith('/analytics')) activeIndex = 3
-  else if (moreActive) activeIndex = 4
+  const primaryIndex = primaryTabs.findIndex((item) => pathname.startsWith(item.href))
+  let activeIndex = surveyTeam ? primaryIndex : -1
+  if (!surveyTeam) {
+    if (pathname.startsWith('/dashboard')) activeIndex = 0
+    else if (pathname.startsWith('/consultations')) activeIndex = 1
+    else if (pathname.startsWith('/analytics')) activeIndex = 3
+    else if (moreActive) activeIndex = 4
+  } else if (moreActive) {
+    activeIndex = primaryTabs.length
+  }
 
   const handlePrefetch = (href: string) => {
     if (href !== pathname) prefetchRoute(queryClient, href)
@@ -135,7 +156,7 @@ export default function BottomNav() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              className="absolute inset-x-0 bottom-0 rounded-t-[32px] border-t border-zinc-200/50 dark:border-white/10 bg-card/98 dark:bg-[#131b2e]/98 backdrop-blur-2xl shadow-[0_-12px_40px_rgba(0,0,0,0.5)] touch-none pb-6"
+              className="absolute inset-x-0 bottom-0 rounded-t-[32px] border-t border-sky-200/60 bg-gradient-to-b from-sky-50/98 via-blue-50/98 to-cyan-50/98 dark:border-sky-300/10 dark:from-slate-800/98 dark:via-blue-950/98 dark:to-cyan-950/90 backdrop-blur-2xl shadow-[0_-12px_40px_rgba(0,0,0,0.22)] touch-none pb-6"
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
             >
               {/* Grab handle */}
@@ -171,11 +192,11 @@ export default function BottomNav() {
               )}
 
               {/* Pengaturan group */}
-              <div className="px-6">
+              {settingsItems.length > 0 && <div className="px-6">
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
                   Pengaturan
                 </p>
-                <div className="overflow-hidden rounded-2xl border border-zinc-200/40 dark:border-white/[0.03] bg-zinc-500/[0.02] dark:bg-white/[0.01] divide-y divide-zinc-200/30 dark:divide-white/[0.02]">
+                <div className="overflow-hidden rounded-2xl border border-sky-200/60 bg-gradient-to-br from-white/70 to-cyan-100/40 dark:border-sky-200/[0.08] dark:from-white/[0.055] dark:to-cyan-400/[0.04] divide-y divide-sky-200/50 dark:divide-white/[0.05]">
                   {settingsItems.map((item) => {
                     const Icon = item.icon
                     const active = pathname.startsWith(item.href)
@@ -201,14 +222,14 @@ export default function BottomNav() {
                     )
                   })}
                 </div>
-              </div>
+              </div>}
 
               {/* Logout */}
               <div className="px-6 pt-5">
                 <button
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-500/10 bg-rose-500/[0.01] hover:bg-rose-500/[0.05] active:scale-[0.98] py-3 text-sm font-semibold text-rose-500 transition-all duration-300 cursor-pointer"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-400/30 bg-gradient-to-r from-rose-50/90 to-pink-50/80 hover:from-rose-100 hover:to-pink-100 dark:border-rose-400/15 dark:from-rose-500/[0.12] dark:to-pink-500/[0.08] active:scale-[0.98] py-3 text-sm font-semibold text-rose-500 transition-all duration-300 cursor-pointer"
                 >
                   <LogOut className="h-4 w-4" />
                   {logoutMutation.isPending ? 'Keluar...' : 'Keluar dari akun'}
@@ -225,7 +246,7 @@ export default function BottomNav() {
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
       >
         <div className="relative h-16 w-full max-w-[400px] rounded-[26px] border border-zinc-200/80 dark:border-white/15 bg-zinc-50/95 dark:bg-zinc-800/85 backdrop-blur-xl shadow-[0_10px_35px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex items-center justify-between px-1.5 pointer-events-auto transition-all duration-300 sm:h-[68px] sm:rounded-[28px] sm:px-2">
-          
+          {!surveyTeam && <>
           {/* Centre FAB Action Button — floats beautifully above the bar */}
           <div className="absolute left-1/2 bottom-[22px] -translate-x-1/2 z-20 sm:bottom-[24px]">
             <Link
@@ -322,6 +343,29 @@ export default function BottomNav() {
               />
             </button>
           </div>
+          </>}
+          {surveyTeam && (
+            <div className="flex h-full w-full items-stretch justify-around">
+              {primaryTabs.map((tab, index) => (
+                <Tab
+                  key={tab.href}
+                  item={tab}
+                  active={pathname.startsWith(tab.href)}
+                  position={index}
+                  indicatorPosition={activeIndex}
+                  themeColor={userThemeColor}
+                  onPrefetch={handlePrefetch}
+                />
+              ))}
+              <button
+                onClick={() => setMoreOpen(true)}
+                aria-label="Menu lainnya"
+                className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} position={primaryTabs.length} indicatorPosition={activeIndex} themeColor={userThemeColor} />
+              </button>
+            </div>
+          )}
         </div>
       </nav>
     </>
@@ -465,7 +509,7 @@ function SheetTile({
         'flex flex-col items-center justify-center gap-2.5 rounded-[20px] border px-4 py-4.5 transition-all duration-300 active:scale-[0.96] shadow-sm hover:shadow-md cursor-pointer outline-none focus:outline-none',
         active 
           ? 'border-transparent bg-gradient-to-br' 
-          : 'border-zinc-200/50 dark:border-white/[0.04] bg-zinc-500/[0.05] dark:bg-white/[0.02] hover:bg-muted/40 hover:border-zinc-350 dark:hover:border-white/10'
+          : 'border-sky-200/60 dark:border-white/[0.06] bg-gradient-to-br from-white/70 to-cyan-50/60 dark:from-white/[0.055] dark:to-cyan-400/[0.04] hover:bg-sky-50 hover:border-sky-300 dark:hover:border-cyan-200/15'
       )}
       style={
         active 
