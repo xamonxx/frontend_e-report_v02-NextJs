@@ -14,7 +14,6 @@ import { useStatusCategories } from '@/lib/hooks/useMasterData'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -192,7 +191,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
   const whatsappNumber = consultation.phone ? rawPhoneDigits(consultation.phone) : ''
 
   return (
-    <div className="space-y-6">
+    <div className="consultation-page mx-auto w-full max-w-[1520px] space-y-6 pb-8">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <Link
@@ -233,7 +232,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                 value: st.id.toString(),
                 label: st.name.toUpperCase()
               }))}
-              className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs text-foreground font-semibold focus:outline-none focus:ring-1 focus:ring-amber-500/50 w-[180px] dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-100"
+              className="h-11 w-[190px] text-xs font-semibold"
             />
           </div>
 
@@ -253,7 +252,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           {/* Metadata Card */}
-          <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+          <Card className="consultation-card">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-foreground/90">Informasi Klien</CardTitle>
             </CardHeader>
@@ -384,7 +383,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
           </Card>
 
           {/* Product requirements detail box */}
-          <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+          <Card className="consultation-card">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-foreground/90">Detail & Kebutuhan Produk</CardTitle>
               <CardDescription className="text-[11px] text-muted-foreground/70">
@@ -402,7 +401,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
         {/* Timeline Notes log & Reminder Schedule */}
         <div className="space-y-6">
           {/* Timeline Notes */}
-          <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+          <Card className="consultation-card">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-foreground/90">Catatan Aktivitas</CardTitle>
               <CardDescription className="text-[11px] text-muted-foreground/70">
@@ -415,13 +414,13 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                   placeholder="Tambah catatan timeline baru..."
                   value={noteBody}
                   onChange={(e) => setNoteBody(e.target.value)}
-                  className="h-8 text-xs border-border bg-background focus-visible:ring-amber-500/50 flex-1 dark:border-zinc-800 dark:bg-zinc-950"
+                  className="flex-1 text-xs"
                 />
                 <Button
                   type="submit"
                   size="xs"
                   disabled={createNoteMutation.isPending}
-                  className="bg-amber-500 text-zinc-950 hover:bg-amber-400 h-8 font-semibold shrink-0"
+                  className="consultation-primary-action size-11 shrink-0 rounded-[10px] p-0 font-semibold"
                 >
                   {createNoteMutation.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -470,7 +469,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
           </Card>
 
           {/* Reminders List */}
-          <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+          <Card className="consultation-card">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-foreground/90">Pengingat Terjadwal</CardTitle>
             </CardHeader>
@@ -483,7 +482,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                     placeholder="Hubungi klien untuk survey..."
                     value={reminderMessage}
                     onChange={(e) => setReminderMessage(e.target.value)}
-                    className="h-8 text-xs border-border bg-background focus-visible:ring-amber-500/50 mt-1 dark:border-zinc-800 dark:bg-zinc-950"
+                    className="mt-1 text-xs"
                   />
                 </div>
                 <div className="flex gap-2">
@@ -492,14 +491,14 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                       type="datetime-local"
                       value={reminderDate}
                       onChange={(e) => setReminderDate(e.target.value)}
-                      className="h-8 text-xs border-border bg-background focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+                      className="text-xs"
                     />
                   </div>
                   <Button
                     type="submit"
                     size="xs"
                     disabled={createReminderMutation.isPending}
-                    className="bg-amber-500 text-zinc-950 hover:bg-amber-400 h-8 font-semibold"
+                    className="consultation-primary-action h-11 rounded-[10px] px-4 font-semibold"
                   >
                     {createReminderMutation.isPending ? (
                       <Loader2 className="h-3.5 w-3.5 animate-spin" />

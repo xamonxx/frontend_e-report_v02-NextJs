@@ -151,10 +151,10 @@ export default function CreateConsultationPage() {
     })
   }
 
-  const cardClassName = 'overflow-hidden rounded-2xl border-border/70 bg-card shadow-[0_16px_40px_-32px_rgba(0,0,0,0.8)] ring-1 ring-inset ring-white/[0.03] dark:border-white/[0.07]'
+  const cardClassName = 'consultation-card overflow-hidden'
 
   return (
-    <div className="mx-auto w-full max-w-[1520px] space-y-6 pb-8">
+    <div className="consultation-page mx-auto w-full max-w-[1520px] space-y-6 pb-8">
 
       {/* Header */}
       <div className="flex items-start gap-3">
@@ -162,7 +162,7 @@ export default function CreateConsultationPage() {
           href="/consultations"
           aria-label="Kembali ke daftar konsultasi"
           title="Kembali"
-          className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-xl border border-border/70 bg-card text-muted-foreground transition-colors hover:border-amber-500/30 hover:bg-amber-500/10 hover:text-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40"
+          className="mt-0.5 grid size-10 shrink-0 place-items-center rounded-[10px] border border-[color-mix(in_srgb,var(--primary-theme)_18%,var(--border))] bg-card text-muted-foreground transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_42%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] hover:text-[var(--primary-theme)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_30%,transparent)]"
         >
           <ArrowLeft className="size-4" />
         </Link>
@@ -228,7 +228,7 @@ export default function CreateConsultationPage() {
                         id="cons-date"
                         type="button"
                         className={cn(
-                          "flex h-10 w-full items-center justify-between rounded-xl border border-border/70 bg-background/60 px-3.5 text-left text-sm font-normal text-foreground/80 shadow-inner shadow-black/[0.03] transition-[border-color,background-color,box-shadow] duration-200 outline-none hover:border-border focus-visible:border-ring/60 focus-visible:ring-3 focus-visible:ring-ring/20 dark:border-white/10 dark:hover:border-white/20",
+                          "consultation-control flex h-11 w-full items-center justify-between px-3.5 text-left text-sm font-normal text-foreground/80 outline-none",
                           !consultationDate && "text-muted-foreground"
                         )}
                       >
@@ -259,7 +259,7 @@ export default function CreateConsultationPage() {
                   {/* ID Preview */}
                   <div className="space-y-1.5">
                     <Label className="text-xs font-semibold text-muted-foreground">ID Lead (Pratinjau)</Label>
-                    <div className="flex h-10 items-center rounded-xl border border-border/70 bg-muted/20 px-3.5 text-xs font-bold text-amber-500 dark:border-white/10">
+                    <div className="consultation-control consultation-accent flex h-11 items-center border px-3.5 text-xs font-bold tabular-nums">
                       {previewIdData?.consultation_id || previewIdData?.id || 'Generating...'}
                     </div>
                   </div>
