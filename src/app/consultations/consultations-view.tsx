@@ -308,7 +308,7 @@ export default function ConsultationsPage() {
   return (
     <div className="min-w-0 max-w-full space-y-5 overflow-x-clip sm:space-y-6">
       {/* Header section */}
-      <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+      <div className="min-w-0">
         <div className="min-w-0">
           <h1 className="break-words text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
             Daftar Konsultasi
@@ -317,148 +317,31 @@ export default function ConsultationsPage() {
             Kelola dan pantau seluruh data pipeline lead konsultasi klien secara real-time.
           </p>
         </div>
-        <div className="flex min-w-0 flex-col gap-2 w-full lg:w-auto lg:flex-row lg:items-center">
-          <Link
-            href="/consultations/create"
-            className="order-first lg:order-last inline-flex items-center justify-center h-10 lg:h-9 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-xs rounded-xl transition-all duration-200 shadow-[0_0_16px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)] hover:shadow-[0_0_24px_color-mix(in_srgb,var(--primary-theme)_45%,transparent)] gap-1.5 w-full lg:w-auto shrink-0"
-          >
-            <Plus className="h-4 w-4 mr-1.5" />
-            Lead Baru
-          </Link>
-
-          <div className="grid w-full grid-cols-3 gap-1.5 sm:gap-2 lg:flex lg:w-auto lg:items-center">
-            {/* CSV Import Dialog */}
-            <Dialog open={importOpen} onOpenChange={setImportOpen}>
-              <DialogTrigger
-                render={
-                  <Button variant="ghost" size="sm" className={cn(secondaryFileActionClass, 'w-full lg:w-auto')}>
-                    <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
-                    Import CSV
-                  </Button>
-                }
-              />
-              <DialogContent className="border-border bg-card text-foreground rounded-2xl shadow-2xl max-w-md dark:border-zinc-800/80 dark:bg-zinc-950/95 dark:backdrop-blur-xl">
-                <form onSubmit={handleImportSubmit}>
-                  <DialogHeader>
-                    <DialogTitle className="text-foreground font-bold text-lg">Import Konsultasi via CSV</DialogTitle>
-                    <DialogDescription className="text-muted-foreground text-xs mt-1">
-                      Unggah file CSV dengan kolom sesuai format template. Proses import dilakukan di latar belakang (queue).
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="py-4 space-y-4">
-                    <a
-                      href={isMounted ? buildExportUrl('/api/v1/consultations/import/template') : '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 transition-colors"
-                    >
-                      <Download className="h-3.5 w-3.5" />
-                      Download Template CSV
-                    </a>
-                    <div className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-2xl p-8 cursor-pointer transition-all duration-300 bg-muted/40 hover:bg-muted/60 relative group dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-950/80">
-                      <input
-                        type="file"
-                        accept=".csv"
-                        onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                        className="absolute inset-0 opacity-0 cursor-pointer"
-                      />
-                      <Upload className="h-8 w-8 text-muted-foreground/50 group-hover:text-amber-500 group-hover:scale-110 transition-all duration-350 mb-2" />
-                      <p className="text-xs font-semibold text-foreground/80">
-                        {importFile ? importFile.name : 'Pilih file atau seret file CSV ke sini'}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground/70 mt-1">Maksimal ukuran file 10MB</p>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setImportOpen(false)}
-                      className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl dark:hover:bg-zinc-800/50"
-                    >
-                      Batal
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={importMutation.isPending}
-                      className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold shadow-[0_0_15px_color-mix(in_srgb,var(--primary-theme)_20%,transparent)] rounded-xl"
-                    >
-                      {importMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Mengunggah...
-                        </>
-                      ) : (
-                        'Mulai Import'
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </DialogContent>
-            </Dialog>
-
-            {/* Export Buttons */}
-            <a
-              href={isMounted ? buildExportUrl('/api/v1/export/leads/excel', {
-                search: debouncedSearch || undefined,
-                status: statusFilter || undefined,
-                account: accountFilter || undefined,
-                month: monthFilter || undefined,
-                year: yearFilter || undefined,
-                start_date: startDate || undefined,
-                end_date: endDate || undefined,
-              }) : '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={secondaryFileActionClass}
-            >
-              <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
-              Excel
-            </a>
-            <a
-              href={isMounted ? buildExportUrl('/api/v1/export/leads/pdf', {
-                search: debouncedSearch || undefined,
-                status: statusFilter || undefined,
-                account: accountFilter || undefined,
-                month: monthFilter || undefined,
-                year: yearFilter || undefined,
-                start_date: startDate || undefined,
-                end_date: endDate || undefined,
-              }) : '#'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={secondaryFileActionClass}
-            >
-              <Download className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
-              PDF
-            </a>
-          </div>
-        </div>
       </div>
 
       {/* Filters */}
       <div className={cn('data-toolbar max-w-full px-3 py-3 sm:px-4', softActionSurfaceClass)}>
-        <div className="flex flex-col md:flex-row md:items-center gap-2">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
 
           {/* Search — full width on mobile, constrained on desktop */}
           <SearchField
-            containerClassName="w-full md:min-w-[180px] md:flex-1 md:max-w-[260px]"
+            containerClassName="w-full xl:min-w-[180px] xl:flex-1 xl:max-w-[260px]"
             pageSearch
             showShortcut
-            placeholder="Cari nama atau telepon..."
+            placeholder="Cari nama/telepon..."
             value={searchTerm}
             onValueChange={setSearchTerm}
             className={cn(
               filterControlSurfaceClass,
-              'h-10 border-[color:color-mix(in_srgb,var(--primary-theme)_34%,var(--border))] bg-transparent text-xs',
-              'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_48%,var(--border))]',
-              'focus-visible:border-[color:color-mix(in_srgb,var(--primary-theme)_68%,var(--border))] focus-visible:bg-transparent',
-              'focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_22%,transparent)]',
+              'h-10 border-[color:color-mix(in_srgb,var(--primary-theme)_18%,var(--border))] bg-transparent text-xs',
+              'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_38%,var(--border))]',
+              'focus-visible:border-[color:color-mix(in_srgb,var(--primary-theme)_60%,var(--border))] focus-visible:bg-transparent',
+              'focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_18%,transparent)]',
             )}
           />
 
           {/* Icons + Reset row — full width on mobile so ml-auto works */}
-          <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 md:w-auto md:flex-nowrap">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 xl:w-auto xl:flex-nowrap">
 
           <div className="hidden md:block h-5 w-px bg-border mr-0.5 dark:bg-zinc-800/60" />
 
@@ -726,6 +609,122 @@ export default function ConsultationsPage() {
           </div>
 
           </div>{/* end icons row */}
+          <div className="flex min-w-0 flex-col gap-2 w-full xl:ml-auto xl:w-auto xl:flex-row xl:items-center">
+            <div className="grid w-full grid-cols-3 gap-1.5 sm:gap-2 xl:flex xl:w-auto xl:items-center">
+              {/* CSV Import Dialog */}
+              <Dialog open={importOpen} onOpenChange={setImportOpen}>
+                <DialogTrigger
+                  render={
+                    <Button variant="ghost" size="sm" className={cn(secondaryFileActionClass, 'w-full xl:w-auto')}>
+                      <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
+                      Import CSV
+                    </Button>
+                  }
+                />
+                <DialogContent className="border-border bg-card text-foreground rounded-2xl shadow-2xl max-w-md dark:border-zinc-800/80 dark:bg-zinc-950/95 dark:backdrop-blur-xl">
+                  <form onSubmit={handleImportSubmit}>
+                    <DialogHeader>
+                      <DialogTitle className="text-foreground font-bold text-lg">Import Konsultasi via CSV</DialogTitle>
+                      <DialogDescription className="text-muted-foreground text-xs mt-1">
+                        Unggah file CSV dengan kolom sesuai format template. Proses import dilakukan di latar belakang (queue).
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                      <a
+                        href={isMounted ? buildExportUrl('/api/v1/consultations/import/template') : '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 transition-colors"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download Template CSV
+                      </a>
+                      <div className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-2xl p-8 cursor-pointer transition-all duration-300 bg-muted/40 hover:bg-muted/60 relative group dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-950/80">
+                        <input
+                          type="file"
+                          accept=".csv"
+                          onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                        <Upload className="h-8 w-8 text-muted-foreground/50 group-hover:text-amber-500 group-hover:scale-110 transition-all duration-350 mb-2" />
+                        <p className="text-xs font-semibold text-foreground/80">
+                          {importFile ? importFile.name : 'Pilih file atau seret file CSV ke sini'}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground/70 mt-1">Maksimal ukuran file 10MB</p>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setImportOpen(false)}
+                        className="text-muted-foreground hover:bg-muted hover:text-foreground rounded-xl dark:hover:bg-zinc-800/50"
+                      >
+                        Batal
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={importMutation.isPending}
+                        className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold shadow-[0_0_15px_color-mix(in_srgb,var(--primary-theme)_20%,transparent)] rounded-xl"
+                      >
+                        {importMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Mengunggah...
+                          </>
+                        ) : (
+                          'Mulai Import'
+                        )}
+                      </Button>
+                    </div>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Export Buttons */}
+              <a
+                href={isMounted ? buildExportUrl('/api/v1/export/leads/excel', {
+                  search: debouncedSearch || undefined,
+                  status: statusFilter || undefined,
+                  account: accountFilter || undefined,
+                  month: monthFilter || undefined,
+                  year: yearFilter || undefined,
+                  start_date: startDate || undefined,
+                  end_date: endDate || undefined,
+                }) : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={secondaryFileActionClass}
+              >
+                <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
+                Excel
+              </a>
+              <a
+                href={isMounted ? buildExportUrl('/api/v1/export/leads/pdf', {
+                  search: debouncedSearch || undefined,
+                  status: statusFilter || undefined,
+                  account: accountFilter || undefined,
+                  month: monthFilter || undefined,
+                  year: yearFilter || undefined,
+                  start_date: startDate || undefined,
+                  end_date: endDate || undefined,
+                }) : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={secondaryFileActionClass}
+              >
+                <Download className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
+                PDF
+              </a>
+            </div>
+            <Link
+              href="/consultations/create"
+              className="inline-flex items-center justify-center h-10 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-xs rounded-xl transition-all duration-200 shadow-[0_0_16px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)] hover:shadow-[0_0_24px_color-mix(in_srgb,var(--primary-theme)_45%,transparent)] gap-1.5 w-full xl:w-auto shrink-0"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Lead Baru
+            </Link>
+          </div>
         </div>{/* end flex-col */}
       </div>
 
@@ -793,7 +792,7 @@ export default function ConsultationsPage() {
                     onCheckedChange={toggleAllVisibleConsultations}
                     aria-label="Pilih semua data konsultasi pada halaman ini"
                     title="Pilih semua pada halaman ini"
-                    className="mx-auto size-[18px] rounded-md border-border/90 bg-background/50 data-checked:border-amber-500 data-checked:bg-amber-500 data-indeterminate:border-amber-500 data-indeterminate:bg-amber-500"
+                    className="mx-auto size-[18px] rounded-md border-[color:color-mix(in_srgb,var(--primary-theme)_48%,var(--border))] bg-background/55 hover:border-[color:color-mix(in_srgb,var(--primary-theme)_72%,var(--border))] data-checked:border-[color:var(--primary-theme)] data-checked:bg-[var(--primary-theme)] data-checked:text-zinc-950 data-indeterminate:border-[color:var(--primary-theme)] data-indeterminate:bg-[var(--primary-theme)] data-indeterminate:text-zinc-950"
                   />
                 </TableHead>
 
@@ -1040,9 +1039,9 @@ export default function ConsultationsPage() {
                     className={cn(
                       'border-b border-border/30 transition-all duration-150 group dark:border-zinc-700/30',
                       selectedConsultationIds.has(lead.id)
-                        ? 'bg-amber-500/[0.075] shadow-[inset_3px_0_0_rgba(245,158,11,0.8)] dark:bg-amber-500/[0.09]'
+                        ? 'bg-[color-mix(in_srgb,var(--primary-theme)_8%,transparent)] shadow-[inset_3px_0_0_color-mix(in_srgb,var(--primary-theme)_80%,transparent)] dark:bg-[color-mix(in_srgb,var(--primary-theme)_10%,transparent)]'
                         : idx % 2 !== 0 ? 'bg-muted/20 dark:bg-zinc-700/20' : 'bg-transparent dark:bg-zinc-800/10',
-                      'hover:bg-amber-500/[0.04] dark:hover:bg-amber-500/[0.06]'
+                      'hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,transparent)] dark:hover:bg-[color-mix(in_srgb,var(--primary-theme)_7%,transparent)]'
                     )}
                   >
                     {/* ID Lead — left border accent on hover */}
@@ -1052,12 +1051,12 @@ export default function ConsultationsPage() {
                         disabled={isBulkDeleting}
                         onCheckedChange={(checked) => toggleConsultationSelection(lead.id, checked)}
                         aria-label={`Pilih konsultasi ${lead.client_name}`}
-                        className="mx-auto size-[18px] rounded-md border-border/90 bg-background/50 data-checked:border-amber-500 data-checked:bg-amber-500"
+                        className="mx-auto size-[18px] rounded-md border-[color:color-mix(in_srgb,var(--primary-theme)_48%,var(--border))] bg-background/55 hover:border-[color:color-mix(in_srgb,var(--primary-theme)_72%,var(--border))] data-checked:border-[color:var(--primary-theme)] data-checked:bg-[var(--primary-theme)] data-checked:text-zinc-950"
                       />
                     </TableCell>
 
                     <TableCell className="py-3.5 px-5 transition-colors duration-150">
-                      <span className="font-mono text-[11px] font-medium text-muted-foreground group-hover:text-amber-500/80 transition-colors dark:text-zinc-400 dark:group-hover:text-amber-400/80">
+                      <span className="font-mono text-[11px] font-medium text-muted-foreground transition-colors group-hover:text-[color:color-mix(in_srgb,var(--primary-theme)_85%,var(--foreground))] dark:text-zinc-400">
                         {lead.consultation_id}
                       </span>
                     </TableCell>
@@ -1065,7 +1064,7 @@ export default function ConsultationsPage() {
                     {/* Klien */}
                     <TableCell className="py-3.5 px-5">
                       <div>
-                        <p className="text-[12.5px] font-semibold text-foreground group-hover:text-amber-600 transition-colors leading-tight dark:text-zinc-100 dark:group-hover:text-amber-300/90">
+                        <p className="text-[12.5px] font-semibold text-foreground transition-colors leading-tight group-hover:text-[color:color-mix(in_srgb,var(--primary-theme)_82%,var(--foreground))] dark:text-zinc-100">
                           {lead.client_name}
                         </p>
                         <p className="text-[10px] text-zinc-500 mt-0.5 font-mono">
@@ -1147,7 +1146,7 @@ export default function ConsultationsPage() {
                           title="Lihat detail"
                           className={cn(
                             buttonVariants({ size: "icon-xs", variant: "ghost" }),
-                            "h-9 w-9 rounded-xl border border-border/70 bg-background/35 text-sky-500 transition-[border-color,background-color,color,transform] duration-150 hover:border-sky-500/35 hover:bg-sky-500/10 hover:text-sky-400 focus-visible:ring-2 focus-visible:ring-sky-500/40 active:translate-y-px dark:border-slate-400/15 dark:bg-slate-900/35 dark:text-sky-400"
+                            "h-9 w-9 rounded-xl border border-black/30 bg-[color-mix(in_srgb,var(--primary-theme)_6%,var(--background))] text-[color:var(--primary-theme)] shadow-none transition-[border-color,background-color,color,transform] duration-150 hover:border-black/45 hover:bg-[color-mix(in_srgb,var(--primary-theme)_12%,var(--background))] focus-visible:ring-1 focus-visible:ring-black/30 active:translate-y-px dark:border-white/20 dark:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--background))] dark:hover:border-white/35 dark:focus-visible:ring-white/30"
                           )}
                         >
                           <Eye className="h-4 w-4" strokeWidth={2.25} />
@@ -1158,7 +1157,7 @@ export default function ConsultationsPage() {
                           title="Edit konsultasi"
                           className={cn(
                             buttonVariants({ size: "icon-xs", variant: "ghost" }),
-                            "h-9 w-9 rounded-xl border border-border/70 bg-background/35 text-amber-500 transition-[border-color,background-color,color,transform] duration-150 hover:border-amber-500/35 hover:bg-amber-500/10 hover:text-amber-400 focus-visible:ring-2 focus-visible:ring-amber-500/40 active:translate-y-px dark:border-slate-400/15 dark:bg-slate-900/35 dark:text-amber-400"
+                            "h-9 w-9 rounded-xl border border-black/30 bg-[color-mix(in_srgb,var(--primary-theme)_6%,var(--background))] text-[color:var(--primary-theme)] shadow-none transition-[border-color,background-color,color,transform] duration-150 hover:border-black/45 hover:bg-[color-mix(in_srgb,var(--primary-theme)_12%,var(--background))] focus-visible:ring-1 focus-visible:ring-black/30 active:translate-y-px dark:border-white/20 dark:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--background))] dark:hover:border-white/35 dark:focus-visible:ring-white/30"
                           )}
                         >
                           <Edit2 className="h-4 w-4" strokeWidth={2.25} />
@@ -1169,7 +1168,7 @@ export default function ConsultationsPage() {
                           onClick={() => handleDelete(lead.id)}
                           aria-label={`Hapus ${lead.client_name}`}
                           title="Hapus konsultasi"
-                          className="h-9 w-9 rounded-xl border border-border/70 bg-background/35 text-red-500/85 transition-[border-color,background-color,color,transform] duration-150 hover:border-red-500/35 hover:bg-red-500/10 hover:text-red-400 focus-visible:ring-2 focus-visible:ring-red-500/40 active:translate-y-px dark:border-slate-400/15 dark:bg-slate-900/35"
+                          className="h-9 w-9 rounded-xl border border-black/30 bg-red-500/[0.055] text-red-500/90 shadow-none transition-[border-color,background-color,color,transform] duration-150 hover:border-black/45 hover:bg-red-500/[0.12] hover:text-red-400 focus-visible:ring-1 focus-visible:ring-black/30 active:translate-y-px dark:border-white/20 dark:bg-red-500/[0.07] dark:hover:border-white/35 dark:focus-visible:ring-white/30"
                         >
                           <Trash2 className="h-4 w-4" strokeWidth={2.25} />
                         </Button>

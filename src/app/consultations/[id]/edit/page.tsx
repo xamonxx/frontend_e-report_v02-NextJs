@@ -268,13 +268,13 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1520px] space-y-6 pb-8">
+    <div className="consultation-page mx-auto w-full max-w-[1520px] space-y-6 pb-8">
       <div className="flex items-center gap-3">
         <Link
           href={`/consultations/${consultationId}`}
           className={cn(
             buttonVariants({ variant: 'ghost', size: 'icon' }),
-            'text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800'
+            'size-10 rounded-[10px] border border-[color-mix(in_srgb,var(--primary-theme)_18%,var(--border))] bg-card text-muted-foreground hover:border-[color-mix(in_srgb,var(--primary-theme)_42%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] hover:text-[var(--primary-theme)]'
           )}
         >
           <ArrowLeft className="h-4 w-4" />
@@ -289,7 +289,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
       <form onSubmit={handleSubmit}>
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-8 min-[1440px]:grid-cols-[minmax(0,1fr)_460px]">
           <div className="min-w-0 space-y-6">
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <Card className="consultation-card">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold text-foreground/90">Informasi Dasar Klien</CardTitle>
               </CardHeader>
@@ -336,7 +336,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                         id="cons-date"
                         type="button"
                         className={cn(
-                          "w-full h-9 justify-between text-left font-normal border border-border bg-background/60 hover:bg-background/80 dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/60 text-foreground/80 rounded-lg px-3 text-xs focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center",
+                          "consultation-control flex h-11 w-full items-center justify-between border px-3 text-left text-xs font-normal text-foreground/80 outline-none",
                           !consultationDate && "text-muted-foreground"
                         )}
                       >
@@ -366,7 +366,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
 
                   <div className="space-y-2">
                     <Label className="text-xs font-semibold text-muted-foreground">ID Lead</Label>
-                    <div className="h-9 px-3 rounded-lg border border-border bg-muted/20 text-xs font-bold text-amber-500 flex items-center dark:border-zinc-800 dark:bg-zinc-950/20">
+                    <div className="consultation-control consultation-accent flex h-11 items-center border px-3 text-xs font-bold tabular-nums">
                       {consultation.consultation_id}
                     </div>
                   </div>
@@ -441,7 +441,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
               </CardContent>
             </Card>
 
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <Card className="consultation-card">
               <CardHeader>
                 <CardTitle className="text-sm font-semibold text-foreground/90">Kebutuhan Produk & Interior</CardTitle>
                 <CardDescription className="text-[11px] text-muted-foreground/70">
@@ -461,7 +461,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
 
           <div className="min-w-0 space-y-4 xl:sticky xl:top-4">
             {isSuperAdmin && (
-              <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+              <Card className="consultation-card">
                 <CardHeader>
                   <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Pilih Akun *</CardTitle>
                 </CardHeader>
@@ -480,7 +480,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
               </Card>
             )}
 
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <Card className="consultation-card">
               <CardHeader>
                 <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Status Lead *</CardTitle>
               </CardHeader>
@@ -496,13 +496,13 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                       label: st.name
                     }))
                   ]}
-                  className="w-full h-8 rounded-lg border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                  className="h-11 w-full text-xs"
                 />
               </CardContent>
             </Card>
 
             {/* Kategori Kebutuhan — scrollable list (matches the create form) */}
-            <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
+            <Card className="consultation-card">
               <CardHeader className="pb-3">
                 <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider flex items-center gap-2">
                   <Tag className="h-3.5 w-3.5 text-amber-500" />

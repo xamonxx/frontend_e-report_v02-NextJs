@@ -6,22 +6,23 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  LayoutDashboard,
-  CalendarDays,
-  BarChart3,
+  LayoutGrid,
+  MessagesSquare,
+  ChartNoAxesCombined,
   Plus,
-  Building,
-  FileSpreadsheet,
-  Database,
+  Building2,
+  FileClock,
+  DatabaseZap,
   History,
-  Wrench,
-  Settings,
+  Bug,
+  SlidersHorizontal,
   LogOut,
   MoreHorizontal,
   ChevronRight,
   X,
-  ClipboardCheck,
-  ClipboardList,
+  MapPinned,
+  CalendarClock,
+  UsersRound,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/stores/authStore'
@@ -41,37 +42,37 @@ type NavItem = {
 // The four tabs that flank the centre (+) FAB. Identical for every role so the
 // bar never shifts shape between admin and super-admin.
 const PRIMARY_TABS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/consultations', label: 'Konsultasi', icon: CalendarDays },
-  { href: '/analytics', label: 'Analisa', icon: BarChart3 },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
+  { href: '/consultations', label: 'Konsultasi', icon: MessagesSquare },
+  { href: '/analytics', label: 'Analisa', icon: ChartNoAxesCombined },
 ]
 
 const SURVEY_TEAM_TABS: NavItem[] = [
-  { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
-  { href: '/settings', label: 'Pengaturan', icon: Settings },
+  { href: '/surveys', label: 'Survey', icon: MapPinned },
+  { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal },
 ]
 
 const MANAGER_SURVEY_TABS: NavItem[] = [
-  { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
-  { href: '/rekap-jadwal-surveyor', label: 'Rekap', icon: CalendarDays },
-  { href: '/survey-consumers', label: 'Data', icon: ClipboardList },
-  { href: '/settings', label: 'Pengaturan', icon: Settings },
+  { href: '/surveys', label: 'Survey', icon: MapPinned },
+  { href: '/rekap-jadwal-surveyor', label: 'Rekap', icon: CalendarClock },
+  { href: '/survey-consumers', label: 'Data', icon: UsersRound },
+  { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal },
 ]
 
 // Overflow items surfaced in the "More" sheet. Role gating mirrors the sidebar.
 const MORE_ITEMS: NavItem[] = [
-  { href: '/accounts', label: 'Akun', icon: Building, hint: 'Manajemen akun', superOnly: true },
-  { href: '/report-attendances', label: 'Absensi', icon: FileSpreadsheet, hint: 'Laporan absensi harian' },
+  { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', superOnly: true },
+  { href: '/report-attendances', label: 'Absensi', icon: FileClock, hint: 'Laporan absensi harian' },
 ]
 
 // Notch mask is no longer needed since we are using a floating glassmorphism pill layout.
 
 // Items grouped under "Pengaturan" inside the More sheet.
 const SETTINGS_ITEMS: NavItem[] = [
-  { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & referensi', superOnly: true },
+  { href: '/master-data', label: 'Master Data', icon: DatabaseZap, hint: 'Kategori, status & referensi', superOnly: true },
   { href: '/audit-logs', label: 'Audit Log', icon: History, hint: 'Log aktivitas sistem', superOnly: true },
-  { href: '/debug', label: 'Debug & Test', icon: Wrench, hint: 'Data dummy & pengujian', superOnly: true },
-  { href: '/settings', label: 'Pengaturan', icon: Settings, hint: 'Preferensi & akun' },
+  { href: '/debug', label: 'Debug & Test', icon: Bug, hint: 'Data dummy & pengujian', superOnly: true },
+  { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal, hint: 'Preferensi & akun' },
 ]
 
 export default function BottomNav() {
@@ -156,21 +157,31 @@ export default function BottomNav() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              className="absolute inset-x-0 bottom-0 rounded-t-[32px] border-t border-sky-200/60 bg-gradient-to-b from-sky-50/98 via-blue-50/98 to-cyan-50/98 dark:border-sky-300/10 dark:from-slate-800/98 dark:via-blue-950/98 dark:to-cyan-950/90 backdrop-blur-2xl shadow-[0_-12px_40px_rgba(0,0,0,0.22)] touch-none pb-6"
-              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
+              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[30px] border-t bg-[color-mix(in_srgb,var(--card)_88%,var(--primary-theme)_6%)] shadow-[0_-24px_70px_rgba(2,8,23,0.34),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl backdrop-saturate-150 touch-none pb-6 dark:bg-[color-mix(in_srgb,var(--card)_82%,var(--primary-theme)_8%)]"
+              style={{
+                paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)',
+                borderColor: `color-mix(in srgb, ${userThemeColor} 20%, var(--border))`,
+              }}
             >
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-70"
+                style={{
+                  background: `radial-gradient(circle at 50% -25%, ${userThemeColor}22, transparent 64%)`,
+                }}
+              />
               {/* Grab handle */}
               <div className="flex justify-center pt-3 pb-1">
-                <span className="h-1.5 w-14 rounded-full bg-muted-foreground/30" />
+                <span className="h-1.5 w-14 rounded-full bg-foreground/20 dark:bg-white/25" />
               </div>
 
-              <div className="flex items-center justify-between px-6 pb-3 pt-2">
-                <h2 className="text-sm font-extrabold tracking-tight text-foreground/90">
+              <div className="relative flex items-center justify-between px-6 pb-3 pt-2">
+                <h2 className="text-sm font-bold text-foreground/90">
                   Menu Lainnya
                 </h2>
                 <button
                   onClick={() => setMoreOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground/75 hover:text-foreground hover:bg-muted/40 transition-all duration-300 active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-muted-foreground/75 transition-[background-color,border-color,color,transform] duration-200 hover:border-border/70 hover:bg-background/45 hover:text-foreground active:scale-95"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -192,11 +203,14 @@ export default function BottomNav() {
               )}
 
               {/* Pengaturan group */}
-              {settingsItems.length > 0 && <div className="px-6">
+              {settingsItems.length > 0 && <div className="relative px-6">
                 <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
                   Pengaturan
                 </p>
-                <div className="overflow-hidden rounded-2xl border border-sky-200/60 bg-gradient-to-br from-white/70 to-cyan-100/40 dark:border-sky-200/[0.08] dark:from-white/[0.055] dark:to-cyan-400/[0.04] divide-y divide-sky-200/50 dark:divide-white/[0.05]">
+                <div
+                  className="overflow-hidden rounded-2xl border bg-background/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl divide-y divide-border/55"
+                  style={{ borderColor: `color-mix(in srgb, ${userThemeColor} 12%, var(--border))` }}
+                >
                   {settingsItems.map((item) => {
                     const Icon = item.icon
                     const active = pathname.startsWith(item.href)
@@ -205,12 +219,22 @@ export default function BottomNav() {
                         key={item.href}
                         href={item.href}
                         onTouchStart={() => handlePrefetch(item.href)}
-                        className="flex items-center gap-4 px-4 py-3.5 transition-all duration-300 hover:bg-muted/30 active:bg-muted/50"
+                        className="group flex items-center gap-4 px-4 py-3.5 transition-[background-color,transform] duration-200 hover:bg-background/55 active:translate-y-px"
+                        style={{
+                          background: active ? `color-mix(in srgb, ${userThemeColor} 10%, transparent)` : undefined,
+                        }}
                       >
-                        <Icon 
+                        <span
+                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-background/45 transition-colors"
+                          style={{
+                            borderColor: active ? `${userThemeColor}33` : 'color-mix(in srgb, var(--border) 72%, transparent)',
+                            color: active ? userThemeColor : 'var(--muted-foreground)',
+                          }}
+                        >
+                        <Icon
                           className="h-[18px] w-[18px] shrink-0 transition-colors"
-                          style={{ color: active ? userThemeColor : 'var(--muted-foreground)' }}
                         />
+                        </span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-semibold text-foreground/90">{item.label}</span>
                           {item.hint && (
@@ -229,7 +253,7 @@ export default function BottomNav() {
                 <button
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-rose-400/30 bg-gradient-to-r from-rose-50/90 to-pink-50/80 hover:from-rose-100 hover:to-pink-100 dark:border-rose-400/15 dark:from-rose-500/[0.12] dark:to-pink-500/[0.08] active:scale-[0.98] py-3 text-sm font-semibold text-rose-500 transition-all duration-300 cursor-pointer"
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-rose-500/25 bg-rose-500/[0.07] py-3 text-sm font-semibold text-rose-500 transition-[background-color,border-color,transform] duration-200 hover:border-rose-500/40 hover:bg-rose-500/[0.11] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 dark:border-rose-400/18 dark:bg-rose-400/[0.09] dark:text-rose-300"
                 >
                   <LogOut className="h-4 w-4" />
                   {logoutMutation.isPending ? 'Keluar...' : 'Keluar dari akun'}
@@ -506,31 +530,41 @@ function SheetTile({
       href={item.href}
       onTouchStart={() => onPrefetch(item.href)}
       className={cn(
-        'flex flex-col items-center justify-center gap-2.5 rounded-[20px] border px-4 py-4.5 transition-all duration-300 active:scale-[0.96] shadow-sm hover:shadow-md cursor-pointer outline-none focus:outline-none',
-        active 
-          ? 'border-transparent bg-gradient-to-br' 
-          : 'border-sky-200/60 dark:border-white/[0.06] bg-gradient-to-br from-white/70 to-cyan-50/60 dark:from-white/[0.055] dark:to-cyan-400/[0.04] hover:bg-sky-50 hover:border-sky-300 dark:hover:border-cyan-200/15'
+        'relative overflow-hidden flex flex-col items-center justify-center gap-2.5 rounded-[18px] border px-4 py-4.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,box-shadow,transform] duration-200 active:scale-[0.97] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_30%,transparent)]',
+        active
+          ? 'bg-background/58'
+          : 'bg-background/42 hover:bg-background/58'
       )}
       style={
         active 
-          ? { 
-              backgroundImage: `linear-gradient(135deg, ${themeColor}14, ${themeColor}08)`,
-              borderColor: `${themeColor}26`,
-            } 
-          : undefined
+          ? {
+              borderColor: `color-mix(in srgb, ${themeColor} 34%, var(--border))`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.10), 0 14px 28px ${themeColor}12`,
+            }
+          : { borderColor: 'color-mix(in srgb, var(--border) 72%, transparent)' }
       }
     >
+      {active && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-80"
+          style={{
+            background: `linear-gradient(135deg, ${themeColor}16, transparent 62%)`,
+          }}
+        />
+      )}
       <span
-        className="flex h-10 w-10 items-center justify-center rounded-xl transition-all duration-300"
+        className="relative flex h-10 w-10 items-center justify-center rounded-xl border transition-[background-color,border-color,color] duration-200"
         style={{
-          background: active ? `${themeColor}18` : 'color-mix(in srgb, var(--muted) 35%, transparent)',
+          borderColor: active ? `${themeColor}30` : 'transparent',
+          background: active ? `${themeColor}14` : 'color-mix(in srgb, var(--muted) 35%, transparent)',
           color: active ? themeColor : undefined,
         }}
       >
         <Icon className={cn('h-5 w-5', !active && 'text-muted-foreground/80')} />
       </span>
       <span
-        className="text-xs font-bold transition-colors select-none"
+        className="relative text-xs font-bold transition-colors select-none"
         style={{ color: active ? themeColor : 'var(--foreground)' }}
       >
         {item.label}

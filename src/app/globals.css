@@ -71,6 +71,7 @@
 
 :root {
   --primary-theme: #f59e0b;
+  --primary-theme-foreground: #07111f;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -219,6 +220,194 @@
   background: linear-gradient(135deg, var(--primary-theme) 0%, color-mix(in srgb, var(--primary-theme) 80%, white) 50%, color-mix(in srgb, var(--primary-theme) 80%, black) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+/* Consultation workspace: one visual contract for create, detail, and edit. */
+@layer components {
+  .dashboard-page {
+    --dashboard-border: var(--border);
+    --dashboard-filter-border: color-mix(in srgb, var(--foreground) 10%, var(--border));
+    --dashboard-surface: var(--card);
+    --dashboard-filter-surface: rgba(255, 255, 255, 0.8);
+  }
+
+  .dashboard-header {
+    border: 0;
+    background: transparent;
+    padding: 0.75rem 0 1rem;
+    box-shadow: none;
+  }
+
+  .dashboard-page [data-slot="card"] {
+    border: 1px solid var(--dashboard-border) !important;
+    border-radius: 1rem !important;
+    background: var(--dashboard-surface) !important;
+    box-shadow: 0 18px 40px -36px color-mix(in srgb, var(--foreground) 55%, transparent) !important;
+  }
+
+  .dashboard-metric {
+    transition: border-color 180ms ease, background-color 180ms ease, transform 180ms ease !important;
+  }
+
+  .dashboard-metric:hover {
+    border-color: color-mix(in srgb, var(--primary-theme) 40%, var(--border)) !important;
+    transform: translateY(-1px);
+  }
+
+  .dashboard-metric-feature {
+    background: var(--dashboard-surface) !important;
+  }
+
+  .dashboard-filter {
+    border-color: var(--dashboard-filter-border);
+    background: var(--dashboard-filter-surface) !important;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 14px 34px -30px color-mix(in srgb, var(--foreground) 48%, transparent);
+  }
+
+  .dashboard-panel [data-slot="card-header"] {
+    border-bottom: 1px solid color-mix(in srgb, var(--primary-theme) 10%, var(--border));
+    padding-bottom: 0.875rem;
+  }
+
+  .dark .dashboard-page {
+    --dashboard-border: rgba(39, 39, 42, 0.6);
+    --dashboard-filter-border: rgba(63, 63, 70, 0.6);
+    --dashboard-surface: #131b2e;
+    --dashboard-filter-surface: rgba(24, 24, 27, 0.4);
+  }
+
+  .notification-tab {
+    border-color: color-mix(in srgb, var(--foreground) 9%, var(--border)) !important;
+    background: color-mix(in srgb, var(--background) 58%, var(--card)) !important;
+  }
+
+  .notification-tab[data-active] {
+    border-color: color-mix(in srgb, var(--primary-theme) 62%, var(--border)) !important;
+    background: color-mix(in srgb, var(--primary-theme) 20%, var(--card)) !important;
+    color: var(--primary-theme) !important;
+  }
+
+  .notification-tab[data-active] svg {
+    color: var(--primary-theme);
+  }
+
+  .consultation-page {
+    --consultation-border: color-mix(in srgb, var(--primary-theme) 15%, var(--border));
+    --consultation-control-border: color-mix(in srgb, var(--primary-theme) 22%, var(--border));
+    --consultation-control-bg: color-mix(in srgb, var(--background) 86%, var(--card));
+  }
+
+  .consultation-card {
+    border: 1px solid var(--consultation-border) !important;
+    border-radius: 0.875rem !important;
+    background: var(--card) !important;
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, white 6%, transparent),
+      0 18px 42px -34px color-mix(in srgb, var(--foreground) 42%, transparent) !important;
+  }
+
+  .consultation-page [data-slot="card-header"] {
+    padding-inline: 1.25rem;
+  }
+
+  .consultation-page [data-slot="card-content"] {
+    padding-inline: 1.25rem;
+  }
+
+  .consultation-page :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    .consultation-control,
+    input[type="text"],
+    input[type="tel"],
+    input[type="datetime-local"]
+  ) {
+    min-height: 2.75rem;
+    border-color: var(--consultation-control-border);
+    border-radius: 0.625rem;
+    background: var(--consultation-control-bg) !important;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, white 4%, transparent);
+    color: var(--foreground);
+    transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .consultation-page :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    .consultation-control,
+    input[type="text"],
+    input[type="tel"],
+    input[type="datetime-local"]
+  ):hover:not(:disabled) {
+    border-color: color-mix(in srgb, var(--primary-theme) 38%, var(--border));
+  }
+
+  .consultation-page :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    .consultation-control,
+    input[type="text"],
+    input[type="tel"],
+    input[type="datetime-local"]
+  ):focus-visible {
+    border-color: color-mix(in srgb, var(--primary-theme) 72%, var(--border));
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-theme) 15%, transparent);
+  }
+
+  .consultation-page :is(input, textarea)::placeholder {
+    color: color-mix(in srgb, var(--muted-foreground) 72%, transparent);
+  }
+
+  .consultation-accent {
+    color: var(--primary-theme) !important;
+  }
+
+  .consultation-primary-action {
+    border-color: color-mix(in srgb, var(--primary-theme) 72%, var(--border)) !important;
+    background: var(--primary-theme) !important;
+    color: var(--primary-theme-foreground) !important;
+    box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--primary-theme) 72%, transparent);
+  }
+
+  .consultation-primary-action:hover {
+    background: color-mix(in srgb, var(--primary-theme) 88%, white) !important;
+  }
+
+  .consultation-secondary-action {
+    border: 1px solid #cbd5e1 !important;
+    background: #eef2f7 !important;
+    color: #334155 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .consultation-secondary-action:hover {
+    border-color: color-mix(in srgb, var(--primary-theme) 30%, var(--border)) !important;
+    background: color-mix(in srgb, var(--primary-theme) 8%, var(--muted)) !important;
+    color: var(--foreground) !important;
+  }
+
+  .dark .consultation-page {
+    --consultation-border: color-mix(in srgb, var(--primary-theme) 18%, #1e293b);
+    --consultation-control-border: color-mix(in srgb, var(--primary-theme) 14%, #475569);
+    --consultation-control-bg: color-mix(in srgb, var(--background) 52%, var(--card));
+  }
+
+  .dark .consultation-secondary-action {
+    border-color: #41516a !important;
+    background: #253149 !important;
+    color: #e2e8f0 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+
+  .dark .consultation-secondary-action:hover {
+    border-color: color-mix(in srgb, var(--primary-theme) 28%, #52627a) !important;
+    background: #2c3a53 !important;
+  }
 }
 
 /* Shared styling for dense operational tables and their toolbars. */
@@ -495,17 +684,17 @@ select option:checked {
   background-image:
     linear-gradient(to right, rgba(100, 116, 139, 0.10) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(100, 116, 139, 0.10) 1px, transparent 1px),
-    radial-gradient(circle at 50% 40%, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+    radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--primary-theme) 7%, transparent) 0%, transparent 68%);
   background-size: 32px 32px, 32px 32px, 100% 100%;
 }
 
 .dark .app-grid-bg {
-  /* Dark theme: deep navy base with brighter grid + violet glow. */
+  /* Dark theme: deep navy base with a restrained active-theme tint. */
   background-color: #020617;
   background-image:
-    linear-gradient(to right, rgba(71, 85, 105, 0.30) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(71, 85, 105, 0.30) 1px, transparent 1px),
-    radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.15) 0%, transparent 70%);
+    linear-gradient(to right, rgba(71, 85, 105, 0.38) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(71, 85, 105, 0.38) 1px, transparent 1px),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--primary-theme) 12%, transparent) 0%, transparent 66%);
   background-size: 32px 32px, 32px 32px, 100% 100%;
 }
 

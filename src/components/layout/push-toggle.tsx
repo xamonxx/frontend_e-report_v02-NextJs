@@ -60,18 +60,18 @@ export default function PushToggle() {
       disabled={loading || denied}
       title={denied ? 'Izin notifikasi diblokir di pengaturan browser' : 'Notifikasi ke perangkat (HP) via PWA'}
       className={cn(
-        'flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11px] font-semibold transition-colors disabled:opacity-60',
+        'flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-2.5 text-[10px] font-semibold transition-[border-color,background-color,color] duration-200 disabled:cursor-not-allowed disabled:opacity-55',
         subscribed
-          ? 'border-green-500/30 text-green-400 hover:bg-zinc-800'
-          : 'border-zinc-700 text-zinc-400 hover:text-amber-400 hover:bg-zinc-800'
+          ? 'border-emerald-500/25 bg-emerald-500/[0.08] text-emerald-600 hover:bg-emerald-500/[0.12] dark:text-emerald-400'
+          : 'border-[color-mix(in_srgb,var(--primary-theme)_18%,var(--border))] bg-muted/45 text-muted-foreground hover:border-[color-mix(in_srgb,var(--primary-theme)_38%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_7%,var(--card))] hover:text-[var(--primary-theme)]'
       )}
     >
       {loading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        <Loader2 className="size-3.5 animate-spin" />
       ) : subscribed ? (
-        <BellRing className="h-3.5 w-3.5" />
+        <BellRing className="size-3.5" />
       ) : (
-        <BellOff className="h-3.5 w-3.5" />
+        <BellOff className="size-3.5" />
       )}
       {denied ? 'Diblokir' : subscribed ? 'Aktif' : 'Aktifkan HP'}
     </button>

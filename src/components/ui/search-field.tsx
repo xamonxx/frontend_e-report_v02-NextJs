@@ -51,11 +51,11 @@ export function SearchField({
         onChange={(event) => onValueChange(event.target.value)}
         placeholder={placeholder}
         className={cn(
-          'w-full border-border/70 bg-background/65 text-foreground shadow-inner shadow-black/[0.025] outline-none placeholder:text-muted-foreground/55',
-          'transition-[border-color,background-color,box-shadow] duration-200 hover:border-border focus-visible:border-amber-500/55 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15',
-          'dark:border-slate-400/20 dark:bg-slate-950/45 dark:hover:border-slate-400/30 dark:focus-visible:bg-slate-950/70',
+          'w-full truncate border-[color:color-mix(in_srgb,var(--primary-theme)_18%,var(--border))] bg-background/65 text-foreground shadow-inner shadow-black/[0.025] outline-none placeholder:text-muted-foreground/55',
+          'transition-[border-color,background-color,box-shadow] duration-200 hover:border-[color:color-mix(in_srgb,var(--primary-theme)_38%,var(--border))] focus-visible:border-[color:color-mix(in_srgb,var(--primary-theme)_60%,var(--border))] focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_18%,transparent)]',
+          'dark:bg-slate-950/45 dark:focus-visible:bg-slate-950/70',
           sizeClasses[size],
-          hasTrailingAction && (showShortcut ? 'pr-11 sm:pr-[72px]' : 'pr-10'),
+          hasTrailingAction && (showShortcut ? 'pr-[88px] sm:pr-[96px]' : 'pr-10'),
           className,
         )}
       />
