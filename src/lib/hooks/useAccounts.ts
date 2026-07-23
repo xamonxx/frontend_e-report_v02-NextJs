@@ -32,7 +32,10 @@ export function useAccountsList(filters: {
   })
 }
 
-/** Daftar kategori akun unik (kolom description) untuk dropdown filter. */
+/**
+ * Daftar grup akun unik (kolom `description`) untuk dropdown filter.
+ * Nama endpoint/hook masih "categories" mengikuti API; di UI istilahnya "Grup".
+ */
 export function useAccountCategories() {
   return useQuery({
     queryKey: [...queryKeys.accounts.all, 'categories'],

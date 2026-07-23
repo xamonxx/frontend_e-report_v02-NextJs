@@ -113,7 +113,7 @@ export function PanduanPengisian({ isSuperAdmin, className }: Props) {
             menyebut provinsi dan kota, isi keduanya. Tidak perlu menebak-nebak yang belum jelas.
           </p>
           <p>
-            Bagian yang dikosongkan tercatat sebagai &ldquo;Belum ada konfirmasi&rdquo;, dan bisa dilengkapi kapan saja
+            Bagian yang dikosongkan tercatat sebagai &ldquo;Belum konfirmasi&rdquo;, dan bisa dilengkapi kapan saja
             setelah konsumen memberi kejelasan.
           </p>
           <p>
@@ -128,7 +128,7 @@ export function PanduanPengisian({ isSuperAdmin, className }: Props) {
     },
     {
       icon: Tag,
-      title: 'Kategori Kebutuhan - minimal satu',
+      title: 'Kategori Kebutuhan - boleh dikosongkan',
       body: (
         <>
           <p>
@@ -136,8 +136,8 @@ export function PanduanPengisian({ isSuperAdmin, className }: Props) {
             di atas daftar untuk menemukan kategori dengan cepat.
           </p>
           <p>
-            Belum tahu kebutuhannya? Pilih &ldquo;Belum ada konfirmasi&rdquo;. Jangan dibiarkan kosong, dan jangan asal
-            centang - data ini yang nanti dibaca di laporan.
+            Belum tahu kebutuhannya? Biarkan kosong - lead otomatis tercatat sebagai
+            &ldquo;Tidak konfirmasi&rdquo;. Jangan asal centang; data ini yang nanti dibaca di laporan.
           </p>
           <p>
             Bila memilih &ldquo;Lain-lain&rdquo;, jelaskan kebutuhannya di kolom Detail Proyek. Tanpa itu, lead belum bisa

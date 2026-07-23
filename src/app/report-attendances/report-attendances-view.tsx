@@ -6,15 +6,12 @@ import {
   useReportAttendances,
   useSubmitAttendance,
   useUpsertAttendanceBySuperAdmin,
-  AttendanceItem
 } from '@/lib/hooks/useReportAttendances'
-import { useUsersList } from '@/lib/hooks/useMasterData'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -36,7 +33,9 @@ import {
   Clock,
   Coffee,
   Check,
+  ClipboardX,
   Download,
+  Filter,
   Users,
   PhoneOff
 } from 'lucide-react'
@@ -65,9 +64,6 @@ export default function ReportAttendancesPage() {
 
   const submitPresenceMutation = useSubmitAttendance()
   const upsertPresenceMutation = useUpsertAttendanceBySuperAdmin()
-
-  const { data: usersResponse } = useUsersList({ page: 1 })
-  const usersList = usersResponse?.data || []
 
   const [moderationOpen, setModerationOpen] = useState(false)
   const [modAdminId, setModAdminId] = useState<number | null>(null)
@@ -149,24 +145,27 @@ export default function ReportAttendancesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-            <Clock className="h-6 w-6 text-amber-500" />
+    <div className="min-w-0 space-y-5 pb-8 sm:space-y-6">
+      <header className="flex flex-col gap-4 pb-1 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--primary-theme)]">Operasional - laporan harian</p>
+          <h1 className="flex items-center gap-2.5 text-2xl font-black tracking-tight text-foreground">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_10%,var(--card))] text-[var(--primary-theme)]">
+              <Clock className="size-[18px]" />
+            </span>
             Absensi Report Harian
           </h1>
-          <p className="text-xs text-muted-foreground">
+          <p className="mt-1 max-w-3xl text-xs leading-relaxed text-muted-foreground">
             Setiap admin wajib melaporkan status chat WhatsApp masuk harian. Super admin memantau rekapan kehadiran.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           <Popover>
             <PopoverTrigger
               type="button"
               className={cn(
-                "w-36 h-8 justify-between text-left font-normal border border-border bg-card hover:bg-muted/40 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:bg-zinc-800/40 text-foreground/80 rounded-lg px-2.5 text-xs focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center",
+                "flex h-10 min-w-0 flex-1 items-center justify-between rounded-lg border border-border/55 bg-card/70 px-3 text-left text-xs font-semibold text-foreground/80 transition-colors hover:border-border hover:bg-muted/40 focus:outline-hidden focus:ring-2 focus:ring-ring/25 sm:w-40 sm:flex-none",
                 !selectedDate && "text-muted-foreground/50"
               )}
             >
@@ -193,28 +192,28 @@ export default function ReportAttendancesPage() {
             </PopoverContent>
           </Popover>
           <Button
-            variant="ghost"
-            size="xs"
+            variant="outline"
+            size="icon"
             onClick={() => refetch()}
-            className="border border-border hover:bg-muted/40 dark:border-zinc-800 dark:hover:bg-zinc-800/40"
+            className="size-10 rounded-lg border-border/55 bg-card/70 hover:bg-muted/40"
           >
             <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground", isRefetching && "animate-spin")} />
           </Button>
         </div>
-      </div>
+      </header>
 
       {/* Admin Quick Report Action Area */}
       {!isSuperAdmin && (
-        <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
-          <CardHeader className="pb-3">
+        <Card className="gap-0 rounded-xl border-0 bg-card/75 py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
+          <CardHeader className="p-4 pb-3">
             <CardTitle className="text-sm font-semibold text-foreground/90">Kehadiran Laporan Hari Ini</CardTitle>
             <CardDescription className="text-xs text-muted-foreground/70">
               Absen sebelum jam operasional berakhir demi integritas pencatatan leads.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 pb-4">
             {currentUserRecord?.has_reported ? (
-              <div className="flex items-center gap-3 border border-green-500/20 bg-green-50 p-4 rounded-xl dark:bg-green-950/10">
+              <div className="flex items-center gap-3 rounded-lg bg-green-500/[0.07] p-4 ring-1 ring-green-500/20">
                 <CheckCircle className="h-8 w-8 text-green-600 shrink-0 dark:text-green-400" />
                 <div>
                   <p className="text-xs font-semibold text-foreground/90">
@@ -227,7 +226,7 @@ export default function ReportAttendancesPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="flex items-start gap-2.5 border border-amber-500/20 bg-amber-50 p-3.5 rounded-xl dark:bg-amber-950/10">
+                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/[0.07] p-3.5 ring-1 ring-amber-500/20">
                   <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-foreground/70 leading-relaxed">
                     Anda belum mengirimkan laporan harian untuk tanggal{' '}
@@ -246,7 +245,7 @@ export default function ReportAttendancesPage() {
                   <Button
                     onClick={() => handleAdminSubmit('ada_wa')}
                     disabled={submitPresenceMutation.isPending}
-                    className="flex flex-col h-20 items-center justify-center bg-muted/60 hover:bg-muted border border-border rounded-xl text-foreground focus:ring-1 focus:ring-amber-500/50 dark:bg-zinc-950/60 dark:hover:bg-zinc-800 dark:border-zinc-800 dark:text-zinc-200"
+                    className="flex h-20 flex-col items-center justify-center rounded-lg border-0 bg-muted/45 text-foreground ring-1 ring-border/45 transition-colors hover:bg-green-500/[0.08] hover:ring-green-500/25 focus:ring-2 focus:ring-green-500/30"
                   >
                     <Check className="h-5 w-5 text-green-600 mb-1 dark:text-green-400" />
                     <span className="text-xs font-bold">Ada Chat WA Masuk</span>
@@ -254,7 +253,7 @@ export default function ReportAttendancesPage() {
                   <Button
                     onClick={() => handleAdminSubmit('nol_wa')}
                     disabled={submitPresenceMutation.isPending}
-                    className="flex flex-col h-20 items-center justify-center bg-muted/60 hover:bg-muted border border-border rounded-xl text-foreground focus:ring-1 focus:ring-amber-500/50 dark:bg-zinc-950/60 dark:hover:bg-zinc-800 dark:border-zinc-800 dark:text-zinc-200"
+                    className="flex h-20 flex-col items-center justify-center rounded-lg border-0 bg-muted/45 text-foreground ring-1 ring-border/45 transition-colors hover:bg-amber-500/[0.08] hover:ring-amber-500/25 focus:ring-2 focus:ring-amber-500/30"
                   >
                     <AlertTriangle className="h-5 w-5 text-amber-500 mb-1 dark:text-amber-400" />
                     <span className="text-xs font-bold">0 Chat WA Masuk</span>
@@ -262,7 +261,7 @@ export default function ReportAttendancesPage() {
                   <Button
                     onClick={() => handleAdminSubmit('libur_susulan')}
                     disabled={submitPresenceMutation.isPending}
-                    className="flex flex-col h-20 items-center justify-center bg-muted/60 hover:bg-muted border border-border rounded-xl text-foreground focus:ring-1 focus:ring-amber-500/50 dark:bg-zinc-950/60 dark:hover:bg-zinc-800 dark:border-zinc-800 dark:text-zinc-200"
+                    className="flex h-20 flex-col items-center justify-center rounded-lg border-0 bg-muted/45 text-foreground ring-1 ring-border/45 transition-colors hover:bg-blue-500/[0.08] hover:ring-blue-500/25 focus:ring-2 focus:ring-blue-500/30"
                   >
                     <Coffee className="h-5 w-5 text-blue-600 mb-1 dark:text-blue-400" />
                     <span className="text-xs font-bold">Libur / Susulan</span>
@@ -279,7 +278,7 @@ export default function ReportAttendancesPage() {
         <>
           {/* Clickable KPI cards — these double as the category filter */}
           {statusCounts && (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            <section aria-label="Filter status absensi" className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-border/45 shadow-[0_16px_42px_-34px_rgba(2,8,23,0.72)] ring-1 ring-border/50 sm:grid-cols-3 lg:grid-cols-5">
               {[
                 { id: 'all', label: 'Total Admin', value: statusCounts.all, Icon: Users, chip: 'bg-amber-500/10', tint: 'text-amber-500', ring: 'border-amber-500/50 ring-amber-500/25', hover: 'hover:border-amber-500/40', bar: 'bg-amber-500', neutral: true },
                 { id: 'ada_wa', label: 'Ada WA', value: statusCounts.ada_wa, Icon: CheckCircle, chip: 'bg-green-500/10', tint: 'text-green-500', ring: 'border-green-500/50 ring-green-500/25', hover: 'hover:border-green-500/40', bar: 'bg-green-500' },
@@ -294,44 +293,50 @@ export default function ReportAttendancesPage() {
                     onClick={() => setSelectedStatus(s.id)}
                     aria-pressed={isActive}
                     className={cn(
-                      'group relative flex items-center gap-3 overflow-hidden rounded-2xl border bg-card p-3.5 text-left shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md focus:outline-none',
-                      isActive ? cn('ring-2 shadow-md', s.ring) : cn('border-border', s.hover)
+                       'group relative flex min-h-[78px] items-center gap-3 overflow-hidden bg-card/90 px-3.5 py-3 text-left outline-none transition-colors duration-200 hover:bg-muted/45 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40',
+                       isActive && 'bg-[color-mix(in_srgb,var(--primary-theme)_7%,var(--card))]'
                     )}
                   >
-                    <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110', s.chip)}>
+                    <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', s.chip)}>
                       <s.Icon className={cn('h-5 w-5', s.tint)} />
                     </span>
                     <span className="min-w-0">
-                      <span className={cn('block text-2xl font-extrabold leading-none tabular-nums', s.neutral ? 'text-foreground' : s.tint)}>
+                       <span className={cn('block text-xl font-black leading-none tabular-nums', s.neutral ? 'text-foreground' : s.tint)}>
                         {s.value}
                       </span>
                       <span className="mt-1 block truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                         {s.label}
                       </span>
                     </span>
-                    {isActive && <span className={cn('absolute inset-x-0 bottom-0 h-0.5', s.bar)} />}
+                    {isActive && <span className={cn('absolute inset-x-3 bottom-0 h-0.5 rounded-t-full', s.bar)} />}
                   </button>
                 )
               })}
-            </div>
+            </section>
           )}
 
           {/* Toolbar: active filter hint + exports */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-3 dark:border-zinc-800">
-            <p className="text-xs text-muted-foreground">
-              Menampilkan{' '}
-              <span className="font-semibold text-foreground">
-                {selectedStatus === 'all' ? 'semua admin' : `kategori "${getCategoryLabel(selectedStatus === 'belum_laporan' ? null : selectedStatus)}"`}
+          <div className="relative z-10 -mb-px flex flex-col gap-3 rounded-t-xl bg-card/75 px-3.5 py-3 ring-1 ring-border/50 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+            <div className="flex min-w-0 items-center gap-2.5">
+              <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_9%,var(--card))] text-[var(--primary-theme)]">
+                <Filter className="size-3.5" />
               </span>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Data ditampilkan</p>
+                <p className="truncate text-xs font-semibold text-foreground/90">
+                  {selectedStatus === 'all' ? 'Semua admin' : getCategoryLabel(selectedStatus === 'belum_laporan' ? null : selectedStatus)}
+                </p>
+              </div>
               {selectedStatus !== 'all' && (
                 <button
+                  type="button"
                   onClick={() => setSelectedStatus('all')}
-                  className="ml-2 font-semibold text-amber-600 hover:underline dark:text-amber-400"
+                  className="rounded-md bg-muted/55 px-2 py-1 text-[10px] font-bold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 >
-                  reset
+                  Reset
                 </button>
               )}
-            </p>
+            </div>
 
             <div className="flex items-center gap-2">
               {(['PC', 'NPP'] as const).map((group) => (
@@ -343,7 +348,7 @@ export default function ReportAttendancesPage() {
                   }) : '#'}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-2 text-xs font-semibold text-foreground/80 transition-all duration-300 hover:border-amber-500/40 hover:text-amber-600 dark:border-zinc-800 dark:text-zinc-300 dark:hover:text-amber-400"
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/55 bg-background/45 px-2.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_32%,var(--border))] hover:text-[var(--primary-theme)]"
                 >
                   <Download className="h-3.5 w-3.5" />
                   Export {group}
@@ -353,17 +358,17 @@ export default function ReportAttendancesPage() {
           </div>
 
           {/* Presence monitor list */}
-          <Card className="border-border bg-card shadow-sm overflow-hidden dark:border-zinc-800 dark:bg-zinc-900/40">
+          <Card className="gap-0 overflow-hidden rounded-b-xl rounded-t-none border-0 bg-card/75 py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-muted/20 border-b border-border dark:bg-zinc-950/20 dark:border-zinc-800">
-                    <TableRow className="border-border dark:border-zinc-800">
-                      <TableHead className="text-muted-foreground text-xs font-semibold">Nama Admin</TableHead>
-                      <TableHead className="text-muted-foreground text-xs font-semibold">Akun</TableHead>
-                      <TableHead className="text-muted-foreground text-xs font-semibold">Status Absen</TableHead>
-                      <TableHead className="text-muted-foreground text-xs font-semibold">Jam Laporan</TableHead>
-                      <TableHead className="text-muted-foreground text-xs font-semibold text-right">Moderasi</TableHead>
+                  <TableHeader className="border-b border-border/45 bg-muted/20">
+                    <TableRow className="border-0 hover:bg-transparent">
+                      <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Nama Admin</TableHead>
+                      <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Akun</TableHead>
+                      <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Status Absen</TableHead>
+                      <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Jam Laporan</TableHead>
+                      <TableHead className="h-11 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Moderasi</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -375,13 +380,26 @@ export default function ReportAttendancesPage() {
                       </TableRow>
                     ) : records.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-32 text-center text-muted-foreground text-xs font-medium">
-                          Tidak ditemukan rekapan absen untuk filter terpilih.
+                        <TableCell colSpan={5} className="h-56 p-0 text-center">
+                          <div className="flex flex-col items-center justify-center px-6 py-10">
+                            <span className="grid size-11 place-items-center rounded-xl bg-muted/45 text-muted-foreground">
+                              <ClipboardX className="size-5" />
+                            </span>
+                            <p className="mt-3 text-sm font-bold text-foreground/85">Data absensi tidak ditemukan</p>
+                            <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">
+                              Tidak ada laporan untuk tanggal dan kategori yang sedang dipilih.
+                            </p>
+                            {selectedStatus !== 'all' && (
+                              <button type="button" onClick={() => setSelectedStatus('all')} className="mt-3 rounded-lg bg-muted/55 px-3 py-1.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted">
+                                Tampilkan semua admin
+                              </button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ) : (
                       records.map((rec) => (
-                        <TableRow key={rec.admin_id} className="border-border/60 hover:bg-muted/10 dark:border-zinc-800/60 dark:hover:bg-zinc-800/10">
+                        <TableRow key={rec.admin_id} className="border-border/30 transition-colors odd:bg-background/[0.08] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))]">
                           <TableCell className="text-xs font-semibold text-foreground/90">
                             {rec.admin_name}
                           </TableCell>

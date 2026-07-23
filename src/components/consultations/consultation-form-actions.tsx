@@ -41,9 +41,11 @@ export function ConsultationFormActions({
             {selectedCount} kategori
           </span>
         ) : (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-[color-mix(in_srgb,var(--color-warning-500)_12%,transparent)] px-2.5 py-1 text-[11px] font-bold text-[color-mix(in_srgb,var(--color-warning-600)_70%,black)] dark:text-[color:var(--color-warning-500)]">
+          // Kategori tidak lagi wajib: backend mengisinya "Tidak konfirmasi".
+          // Strip ini sekadar memberi tahu, bukan menuntut.
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">
             <CircleAlert className="size-3.5" />
-            Pilih minimal 1
+            Kosong &rarr; Tidak konfirmasi
           </span>
         )}
       </div>

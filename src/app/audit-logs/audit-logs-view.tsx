@@ -25,7 +25,7 @@ import { format, parseISO } from 'date-fns'
 import {
   Search, Calendar, Loader2, ChevronLeft, ChevronRight,
   ShieldCheck, RefreshCw, Trash2, Clock, Users, Globe,
-  Activity, ArrowRightLeft, Cpu, FileText, User, UserCheck
+  Activity, ArrowRightLeft, Cpu, FileText, User, SlidersHorizontal
 } from 'lucide-react'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
@@ -96,6 +96,16 @@ export default function AuditLogsPage() {
 
   const auditLogs = response?.data || []
   const meta = response?.meta
+  const activeFilterCount = [searchTerm, actionFilter, userIdFilter, startDate, endDate].filter(Boolean).length
+
+  const resetFilters = () => {
+    setSearchTerm('')
+    setActionFilter('')
+    setUserIdFilter('')
+    setStartDate('')
+    setEndDate('')
+    setPage(1)
+  }
 
   const getActionBadgeColor = (action: string) => {
     switch (action) {
@@ -107,17 +117,30 @@ export default function AuditLogsPage() {
     }
   }
 
+  const getActionLabel = (action: string) => ({
+    created: 'Ditambahkan',
+    updated: 'Diubah',
+    deleted: 'Dihapus',
+    retrieved: 'Diakses',
+  }[action] || action)
+
   return (
-    <div className="space-y-6 py-4 sm:py-6">
+    <div className="min-w-0 space-y-5 pb-8 pt-3 sm:pt-5">
 
       {/* ── Header ─────────────────────────────────────────── */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2.5">
-            <ShieldCheck className="h-7 w-7 text-amber-500 shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase text-[var(--primary-theme)]">
+            <span className="h-1.5 w-1.5 bg-[var(--primary-theme)]" />
+            Keamanan sistem - histori aktivitas
+          </div>
+          <h1 className="flex items-center gap-3 text-2xl font-bold text-foreground sm:text-[28px]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_12%,transparent)] text-[var(--primary-theme)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_28%,transparent)]">
+              <ShieldCheck className="h-5 w-5" />
+            </span>
             Audit Log Aktivitas
           </h1>
-          <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+          <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
             Pantau seluruh aktivitas transaksi, login, penambahan data, dan perubahan log keamanan sistem.
           </p>
         </div>
@@ -127,7 +150,7 @@ export default function AuditLogsPage() {
             size="sm"
             onClick={handleClearLogs}
             disabled={clearLogsMutation.isPending}
-            className="font-bold rounded-xl h-9 px-4 border border-red-500/30 bg-red-500/90 text-white shadow-lg shadow-red-500/15 hover:bg-red-600 hover:shadow-red-600/20 transition-all duration-300 self-start sm:self-auto cursor-pointer"
+            className="h-10 self-start rounded-lg border border-red-500/35 bg-red-500/10 px-4 font-semibold text-red-600 shadow-none hover:bg-red-500/15 dark:text-red-400 sm:self-auto"
           >
             {clearLogsMutation.isPending ? (
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Membersihkan...</>
@@ -139,26 +162,26 @@ export default function AuditLogsPage() {
       </div>
 
       {/* ── Online Users Panel ──────────────────────────────── */}
-      <div className="glass-panel border border-border/50 shadow-md rounded-2xl dark:border-zinc-900/60 dark:shadow-none overflow-hidden">
+      <section className="overflow-hidden rounded-xl bg-card/75 ring-1 ring-border/60">
         {/* Header strip */}
-        <div className="flex items-center justify-between px-5 py-3 border-b border-border/40 dark:border-zinc-900/50 bg-muted/20 dark:bg-zinc-950/40">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/45 bg-muted/20 px-4 py-3.5 sm:px-5">
           <div className="flex items-center gap-2.5">
             {/* Pulsing indicator */}
             <div className="relative flex items-center justify-center h-4 w-4 shrink-0">
               <span className={cn(
-                'absolute inline-flex h-full w-full rounded-full opacity-60',
-                onlineCount > 0 ? 'bg-emerald-500 animate-ping' : 'bg-zinc-500',
+                'absolute inline-flex h-full w-full rounded-full opacity-20',
+                onlineCount > 0 ? 'bg-emerald-500' : 'bg-muted-foreground',
               )} />
               <span className={cn(
                 'relative inline-flex rounded-full h-2 w-2',
                 onlineCount > 0 ? 'bg-emerald-500' : 'bg-zinc-500',
               )} />
             </div>
-            <span className="text-xs font-bold text-foreground/80 tracking-tight">User Online Sekarang</span>
+            <span className="text-sm font-semibold text-foreground">User Online Sekarang</span>
             <Badge
               variant="outline"
               className={cn(
-                'text-[10px] font-black px-2.5 py-0 h-5 rounded-full border shadow-sm',
+                'h-5 rounded-md border px-2 text-[10px] font-bold shadow-none',
                 onlineCount > 0
                   ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400'
                   : 'bg-muted border-border text-muted-foreground',
@@ -168,8 +191,8 @@ export default function AuditLogsPage() {
             </Badge>
           </div>
           {lastUpdated && (
-            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/60 font-semibold">
-              <Clock className="h-3.5 w-3.5 text-muted-foreground/40" />
+            <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+              <Clock className="h-3.5 w-3.5" />
               <span>{lastUpdated.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
               <span className="opacity-50">· auto 30s</span>
             </div>
@@ -177,7 +200,7 @@ export default function AuditLogsPage() {
         </div>
 
         {/* User cards */}
-        <div className="px-5 py-4">
+        <div className="px-4 py-4 sm:px-5">
           {onlineUsers.length === 0 ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground/60 py-1 font-medium">
               <Users className="h-4 w-4 text-muted-foreground/40" />
@@ -195,15 +218,12 @@ export default function AuditLogsPage() {
                 return (
                   <div
                     key={u.id}
-                    className="flex items-center gap-3 px-3 py-1.5 rounded-xl border border-border/80 bg-background/40 hover:border-amber-500/30 hover:bg-amber-500/5 hover:scale-[1.01] transition-all duration-300 dark:border-zinc-900/80 dark:bg-zinc-950/20"
+                    className="flex items-center gap-3 rounded-lg bg-background/45 px-3 py-2 ring-1 ring-border/55 transition-colors hover:bg-muted/35"
                   >
                     {/* Avatar */}
                     <div className="relative shrink-0">
                       <div className={cn(
-                        'h-7 w-7 rounded-lg flex items-center justify-center text-[10px] font-black border shadow-sm',
-                        isSA
-                          ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-500'
-                          : 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400',
+                        'flex h-7 w-7 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_12%,transparent)] text-[10px] font-bold text-[var(--primary-theme)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_25%,transparent)]',
                       )}>
                         {u.name.charAt(0).toUpperCase()}
                       </div>
@@ -215,7 +235,7 @@ export default function AuditLogsPage() {
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className={cn(
                           'text-[9px] font-extrabold uppercase tracking-wider',
-                          isSA ? 'text-amber-600 dark:text-amber-500' : 'text-blue-600 dark:text-blue-400',
+                          isSA ? 'text-[var(--primary-theme)]' : 'text-muted-foreground',
                         )}>
                           {u.role_label}
                         </span>
@@ -228,11 +248,35 @@ export default function AuditLogsPage() {
             </div>
           )}
         </div>
-      </div>
+      </section>
 
       {/* ── Filters Card ────────────────────────────────────── */}
-      <div className="bg-card p-5 border border-border shadow-md rounded-2xl dark:bg-zinc-900 dark:border-zinc-800/60">
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-5">
+      <section className="rounded-xl bg-card/75 p-4 ring-1 ring-border/60 sm:p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_10%,transparent)] text-[var(--primary-theme)]">
+              <SlidersHorizontal className="h-4 w-4" />
+            </span>
+            <div>
+              <h2 className="text-sm font-semibold text-foreground">Filter Aktivitas</h2>
+              <p className="text-[11px] text-muted-foreground">Persempit log berdasarkan aksi, operator, atau waktu.</p>
+            </div>
+            {activeFilterCount > 0 && (
+              <Badge className="h-5 rounded-md bg-[var(--primary-theme)] px-2 text-[10px] text-white">
+                {activeFilterCount} aktif
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={resetFilters} disabled={activeFilterCount === 0} className="h-8 rounded-lg px-3 text-xs text-muted-foreground hover:bg-muted/60 hover:text-foreground">
+              Reset
+            </Button>
+            <Button variant="outline" size="icon" onClick={() => refetch()} className="h-8 w-8 rounded-lg border-border/60 bg-background/35" title="Muat ulang data">
+              <RefreshCw className={cn('h-3.5 w-3.5 text-muted-foreground', isRefetching && 'animate-spin')} />
+            </Button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           {/* Search */}
           <div className="space-y-1.5">
             <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Cari Aktivitas</Label>
@@ -242,7 +286,7 @@ export default function AuditLogsPage() {
                 placeholder="Cari deskripsi log..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-10 border-border bg-background/60 placeholder:text-muted-foreground/30 focus-visible:ring-amber-500/20 focus-visible:border-amber-500/50 text-xs text-foreground rounded-xl dark:border-zinc-900 dark:bg-zinc-950/60 dark:text-zinc-300"
+                className="h-10 rounded-lg border-border/60 bg-background/45 pl-9 text-xs text-foreground placeholder:text-muted-foreground/55 focus-visible:border-[var(--primary-theme)] focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_18%,transparent)]"
               />
             </div>
           </div>
@@ -251,7 +295,7 @@ export default function AuditLogsPage() {
           <div className="space-y-1.5">
             <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Jenis Aksi</Label>
             <Select value={actionFilter || 'all'} onValueChange={(v) => setActionFilter(v === 'all' ? '' : (v ?? ''))}>
-              <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs text-foreground dark:border-zinc-900 dark:bg-zinc-950/60">
+              <SelectTrigger className="h-10 rounded-lg border-border/60 bg-background/45 text-xs text-foreground">
                 <SelectValue placeholder="Semua Aksi" />
               </SelectTrigger>
               <SelectContent>
@@ -268,7 +312,7 @@ export default function AuditLogsPage() {
           <div className="space-y-1.5">
             <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider pl-1">Operator (User)</Label>
             <Select value={userIdFilter || 'all'} onValueChange={(v) => setUserIdFilter(v === 'all' ? '' : (v ?? ''))}>
-              <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs text-foreground dark:border-zinc-900 dark:bg-zinc-950/60">
+              <SelectTrigger className="h-10 rounded-lg border-border/60 bg-background/45 text-xs text-foreground">
                 <SelectValue placeholder="Semua User" />
               </SelectTrigger>
               <SelectContent>
@@ -287,7 +331,7 @@ export default function AuditLogsPage() {
               <PopoverTrigger
                 type="button"
                 className={cn(
-                  "w-full h-10 justify-between text-left font-normal border border-border bg-background/60 hover:bg-background/80 dark:border-zinc-900 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/60 text-foreground/80 rounded-xl px-3.5 text-xs focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center",
+                  "flex h-10 w-full items-center justify-between rounded-lg border border-border/60 bg-background/45 px-3.5 text-left text-xs font-normal text-foreground/80 hover:bg-muted/35 focus:outline-hidden focus:ring-1 focus:ring-[var(--primary-theme)]",
                   !startDate && "text-muted-foreground/50"
                 )}
               >
@@ -324,7 +368,7 @@ export default function AuditLogsPage() {
               <PopoverTrigger
                 type="button"
                 className={cn(
-                  "w-full h-10 justify-between text-left font-normal border border-border bg-background/60 hover:bg-background/80 dark:border-zinc-900 dark:bg-zinc-950/60 dark:hover:bg-zinc-900/60 text-foreground/80 rounded-xl px-3.5 text-xs focus:ring-1 focus:ring-amber-500/50 focus:outline-hidden flex items-center",
+                  "flex h-10 w-full items-center justify-between rounded-lg border border-border/60 bg-background/45 px-3.5 text-left text-xs font-normal text-foreground/80 hover:bg-muted/35 focus:outline-hidden focus:ring-1 focus:ring-[var(--primary-theme)]",
                   !endDate && "text-muted-foreground/50"
                 )}
               >
@@ -355,40 +399,23 @@ export default function AuditLogsPage() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-4 pt-3.5 border-t border-border/50 dark:border-zinc-900/50">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setSearchTerm('')
-              setActionFilter('')
-              setUserIdFilter('')
-              setStartDate('')
-              setEndDate('')
-              setPage(1)
-            }}
-            className="text-xs text-muted-foreground hover:text-foreground border border-border bg-background/40 hover:bg-muted/80 rounded-xl px-4 transition-all duration-300 h-9 cursor-pointer dark:border-zinc-900 dark:hover:bg-zinc-900/40"
-          >
-            Reset Filter
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => refetch()}
-            className="border border-border bg-background/40 hover:bg-muted/80 rounded-xl px-3 transition-all duration-300 h-9 cursor-pointer dark:border-zinc-900 dark:hover:bg-zinc-900/40"
-            title="Refresh Data"
-          >
-            <RefreshCw className={cn('h-4 w-4 text-muted-foreground', isRefetching && 'animate-spin')} />
-          </Button>
-        </div>
-      </div>
+      </section>
 
       {/* ── Audit Log Table ─────────────────────────────────── */}
-      <div className="glass-panel border border-border/50 shadow-md rounded-2xl overflow-hidden dark:border-zinc-900/60">
+      <section className="overflow-hidden rounded-xl bg-card/75 ring-1 ring-border/60">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/45 bg-muted/15 px-4 py-3 sm:px-5">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Riwayat Aktivitas</h2>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">Klik baris untuk melihat rincian perubahan.</p>
+          </div>
+          <span className="text-[11px] font-medium text-muted-foreground">
+            {meta?.total ?? auditLogs.length} catatan
+          </span>
+        </div>
         <div className="overflow-x-auto">
           <Table>
-            <TableHeader className="bg-muted/20 border-b border-border/50 dark:bg-zinc-950/40 dark:border-zinc-900/50">
-              <TableRow className="border-border hover:bg-transparent dark:border-zinc-900">
+            <TableHeader className="border-b border-border/45 bg-muted/25">
+              <TableRow className="border-border/40 hover:bg-transparent">
                 <TableHead className="w-[110px] text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pl-5">Aksi</TableHead>
                 <TableHead className="w-[180px] text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Operator (User)</TableHead>
                 <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Keterangan Aktivitas</TableHead>
@@ -401,7 +428,7 @@ export default function AuditLogsPage() {
                 <TableRow className="hover:bg-transparent">
                   <TableCell colSpan={5} className="h-36 text-center">
                     <div className="flex items-center justify-center gap-2.5 text-muted-foreground">
-                      <Loader2 className="h-5 w-5 animate-spin text-amber-500" />
+                      <Loader2 className="h-5 w-5 animate-spin text-[var(--primary-theme)]" />
                       <span className="text-xs font-bold">Memuat log aktivitas...</span>
                     </div>
                   </TableCell>
@@ -417,22 +444,22 @@ export default function AuditLogsPage() {
                   <TableRow
                     key={log.id}
                     onClick={() => setSelectedLog(log)}
-                    className="border-border/40 hover:bg-muted/30 hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] dark:hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] cursor-pointer transition-all duration-200 dark:border-zinc-900/40 dark:hover:bg-zinc-800/10"
+                    className="cursor-pointer border-border/35 odd:bg-background/10 transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_6%,transparent)] hover:shadow-[inset_2px_0_0_0_var(--primary-theme)]"
                   >
                     <TableCell className="pl-5 py-3">
                       <Badge
                         variant="outline"
                         className={cn(
-                          'text-[9px] rounded-md font-extrabold uppercase tracking-wider px-2 py-0.5 border shadow-sm',
+                          'rounded-md border px-2 py-0.5 text-[9px] font-bold uppercase shadow-none',
                           getActionBadgeColor(log.action),
                         )}
                       >
-                        {log.action}
+                        {getActionLabel(log.action)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-xs font-bold text-foreground/90 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="h-5.5 w-5.5 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-[9px] font-black border border-amber-500/25 shrink-0 dark:text-amber-500">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_10%,transparent)] text-[9px] font-bold text-[var(--primary-theme)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_22%,transparent)]">
                           {log.user_name ? log.user_name.charAt(0).toUpperCase() : 'S'}
                         </div>
                         <span className="truncate max-w-[130px]" title={log.user_name || 'System Auto'}>
@@ -440,7 +467,7 @@ export default function AuditLogsPage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs text-foreground/75 leading-relaxed max-w-md pr-4 py-3 font-medium">
+                    <TableCell className="max-w-md py-3 pr-4 text-xs font-medium leading-relaxed text-foreground/80">
                       {log.description}
                     </TableCell>
                     <TableCell className="py-3">
@@ -465,7 +492,7 @@ export default function AuditLogsPage() {
             </TableBody>
           </Table>
         </div>
-      </div>
+      </section>
 
       {/* ── Pagination ──────────────────────────────────────── */}
       {meta && meta.last_page > 1 && (
@@ -479,7 +506,7 @@ export default function AuditLogsPage() {
               size="sm"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="border-border bg-background/50 hover:bg-muted text-foreground/80 rounded-xl px-3 transition-all duration-300 h-8 text-xs cursor-pointer dark:border-zinc-900 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+              className="h-8 rounded-lg border-border/60 bg-card/60 px-3 text-xs text-foreground/80 hover:bg-muted"
             >
               <ChevronLeft className="h-4 w-4 mr-0.5" />
               Sebelumnya
@@ -492,7 +519,7 @@ export default function AuditLogsPage() {
               size="sm"
               disabled={page >= meta.last_page}
               onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-              className="border-border bg-background/50 hover:bg-muted text-foreground/80 rounded-xl px-3 transition-all duration-300 h-8 text-xs cursor-pointer dark:border-zinc-900 dark:bg-zinc-950 dark:hover:bg-zinc-900"
+              className="h-8 rounded-lg border-border/60 bg-card/60 px-3 text-xs text-foreground/80 hover:bg-muted"
             >
               Selanjutnya
               <ChevronRight className="h-4 w-4 ml-0.5" />
@@ -503,16 +530,16 @@ export default function AuditLogsPage() {
 
       {/* ── Detail Dialog ────────────────────────────────────── */}
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
-        <DialogContent className="border-border bg-card text-foreground sm:max-w-2xl rounded-2xl shadow-2xl p-0 overflow-hidden dark:border-zinc-900 dark:bg-zinc-950/95 dark:backdrop-blur-xl">
+        <DialogContent className="overflow-hidden rounded-xl border-border/60 bg-card p-0 text-foreground shadow-2xl sm:max-w-2xl">
           {selectedLog && (
             <div className="max-h-[85vh] overflow-y-auto p-5 space-y-5">
               <DialogHeader>
                 <div className="flex flex-wrap items-center gap-2">
-                  <DialogTitle className="text-foreground text-base font-black tracking-tight">
+                   <DialogTitle className="text-base font-bold text-foreground">
                     Detail Audit Log
                   </DialogTitle>
                   <Badge variant="outline" className={cn('text-[9px] rounded-md font-extrabold uppercase tracking-wider px-2 py-0.5 border shadow-sm', getActionBadgeColor(selectedLog.action))}>
-                    {selectedLog.action}
+                     {getActionLabel(selectedLog.action)}
                   </Badge>
                 </div>
                 <DialogDescription className="text-muted-foreground text-xs leading-relaxed pt-1">
@@ -520,22 +547,22 @@ export default function AuditLogsPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="grid gap-3.5 sm:grid-cols-2 text-xs">
-                <div className="border border-border/50 bg-muted/10 p-3 rounded-xl dark:border-zinc-900 dark:bg-zinc-950/30">
+              <div className="grid overflow-hidden rounded-lg bg-border/45 text-xs ring-1 ring-border/55 sm:grid-cols-2">
+                <div className="bg-background/45 p-3.5 sm:border-r sm:border-border/45">
                   <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
                     <User className="h-3 w-3" />
                     <span>Operator (User)</span>
                   </div>
                   <p className="text-foreground/90 font-black mt-1.5">{selectedLog.user_name || 'System Auto'}</p>
                 </div>
-                <div className="border border-border/50 bg-muted/10 p-3 rounded-xl dark:border-zinc-900 dark:bg-zinc-950/30">
+                <div className="border-t border-border/45 bg-background/45 p-3.5 sm:border-t-0">
                   <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
                     <Globe className="h-3 w-3" />
                     <span>IP Address</span>
                   </div>
                   <p className="text-foreground/90 font-black mt-1.5 font-mono">{selectedLog.ip_address || '—'}</p>
                 </div>
-                <div className="border border-border/50 bg-muted/10 p-3 rounded-xl sm:col-span-2 dark:border-zinc-900 dark:bg-zinc-950/30">
+                <div className="border-t border-border/45 bg-background/45 p-3.5 sm:col-span-2">
                   <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
                     <Calendar className="h-3 w-3" />
                     <span>Tanggal &amp; Waktu</span>
@@ -547,7 +574,7 @@ export default function AuditLogsPage() {
                     })}
                   </p>
                 </div>
-                <div className="border border-border/50 bg-muted/10 p-3 rounded-xl sm:col-span-2 dark:border-zinc-900 dark:bg-zinc-950/30">
+                <div className="border-t border-border/45 bg-background/45 p-3.5 sm:col-span-2">
                   <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
                     <FileText className="h-3 w-3" />
                     <span>Deskripsi Aktivitas</span>
@@ -555,7 +582,7 @@ export default function AuditLogsPage() {
                   <p className="text-foreground/80 font-bold mt-1.5 leading-relaxed">{selectedLog.description}</p>
                 </div>
                 {selectedLog.user_agent && (
-                  <div className="border border-border/50 bg-muted/10 p-3 rounded-xl sm:col-span-2 dark:border-zinc-900 dark:bg-zinc-950/30">
+                  <div className="border-t border-border/45 bg-background/45 p-3.5 sm:col-span-2">
                     <div className="flex items-center gap-1.5 text-[9px] font-bold text-muted-foreground/60 uppercase tracking-wider">
                       <Cpu className="h-3 w-3" />
                       <span>User Agent (Browser &amp; OS)</span>
@@ -568,14 +595,14 @@ export default function AuditLogsPage() {
               {selectedLog.action !== 'retrieved' && (
                 <div className="space-y-4 pt-3.5 border-t border-border/50 dark:border-zinc-900/50">
                   <h4 className="text-xs font-black text-muted-foreground uppercase tracking-wider pl-1 flex items-center gap-1.5">
-                    <Activity className="h-3.5 w-3.5 text-amber-500" />
+                    <Activity className="h-3.5 w-3.5 text-[var(--primary-theme)]" />
                     Rincian Perubahan Data
                   </h4>
 
                   {selectedLog.old_values && Object.keys(selectedLog.old_values).length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[9px] font-bold text-muted-foreground/75 uppercase tracking-wider pl-1">Data Sebelum Perubahan</p>
-                      <pre className="bg-muted/30 p-4 rounded-xl text-[10px] text-foreground/70 overflow-x-auto max-h-48 leading-relaxed font-mono border border-border/40 dark:bg-zinc-950 dark:text-zinc-400 dark:border-zinc-900/60">
+                      <pre className="max-h-48 overflow-x-auto rounded-lg bg-background/55 p-4 font-mono text-[10px] leading-relaxed text-foreground/70 ring-1 ring-border/50">
                         {JSON.stringify(selectedLog.old_values, null, 2)}
                       </pre>
                     </div>
@@ -584,7 +611,7 @@ export default function AuditLogsPage() {
                   {selectedLog.new_values && Object.keys(selectedLog.new_values).length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[9px] font-bold text-muted-foreground/75 uppercase tracking-wider pl-1">Data Sesudah Perubahan</p>
-                      <pre className="bg-muted/30 p-4 rounded-xl text-[10px] text-foreground/80 overflow-x-auto max-h-48 leading-relaxed font-mono border border-border/40 dark:bg-zinc-950 dark:text-zinc-300 dark:border-zinc-900/60">
+                      <pre className="max-h-48 overflow-x-auto rounded-lg bg-background/55 p-4 font-mono text-[10px] leading-relaxed text-foreground/80 ring-1 ring-border/50">
                         {JSON.stringify(selectedLog.new_values, null, 2)}
                       </pre>
                     </div>
@@ -593,13 +620,13 @@ export default function AuditLogsPage() {
                   {selectedLog.action === 'updated' && selectedLog.old_values && selectedLog.new_values && (
                     <div className="space-y-1.5">
                       <p className="text-[9px] font-bold text-muted-foreground/75 uppercase tracking-wider pl-1">Perbandingan Perubahan (Diff)</p>
-                      <div className="bg-muted/30 p-4 rounded-xl text-[10px] text-foreground/80 overflow-x-auto max-h-48 font-mono space-y-2 border border-border/40 dark:bg-zinc-950 dark:text-zinc-300 dark:border-zinc-900/60">
+                      <div className="max-h-48 space-y-2 overflow-x-auto rounded-lg bg-background/55 p-4 font-mono text-[10px] text-foreground/80 ring-1 ring-border/50">
                         {Object.entries(selectedLog.new_values).map(([key, newValue]) => {
                           const oldValue = selectedLog.old_values?.[key]
                           if (JSON.stringify(oldValue) === JSON.stringify(newValue)) return null
                           return (
                             <div key={key} className="break-words py-1.5 border-b border-border/30 last:border-0 dark:border-zinc-900/30 flex flex-wrap items-center gap-1.5 leading-relaxed">
-                              <span className="font-bold text-amber-600 dark:text-amber-500 mr-1">{key}</span>:
+                              <span className="mr-1 font-bold text-[var(--primary-theme)]">{key}</span>:
                               <span className="text-red-500 dark:text-red-400 bg-red-500/5 px-2 py-0.5 rounded border border-red-500/10 line-through tracking-tight">{oldValue === null ? 'null' : String(oldValue)}</span>
                               <ArrowRightLeft className="h-3 w-3 text-muted-foreground/40 mx-1" />
                               <span className="text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 px-2 py-0.5 rounded border border-emerald-500/10 font-bold tracking-tight">{newValue === null ? 'null' : String(newValue)}</span>
@@ -613,7 +640,7 @@ export default function AuditLogsPage() {
               )}
 
               <div className="flex justify-end pt-3.5 border-t border-border/50 dark:border-zinc-900/50">
-                <Button variant="ghost" size="sm" onClick={() => setSelectedLog(null)} className="text-xs text-muted-foreground hover:bg-muted dark:hover:bg-zinc-900 rounded-xl cursor-pointer">
+                <Button variant="ghost" size="sm" onClick={() => setSelectedLog(null)} className="rounded-lg text-xs text-muted-foreground hover:bg-muted">
                   Tutup
                 </Button>
               </div>

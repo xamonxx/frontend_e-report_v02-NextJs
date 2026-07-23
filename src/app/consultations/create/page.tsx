@@ -17,7 +17,7 @@ import { cn, formatApiError, formatPhoneInput, isPhoneValid, normalizeRegionName
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, User, MapPin, ClipboardList, Calendar as CalendarIcon } from 'lucide-react'
+import { ArrowLeft, User, MapPin, ClipboardList, Calendar as CalendarIcon, Send } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/stores/authStore'
@@ -110,6 +110,8 @@ export default function CreateConsultationPage() {
   }, [user, isSuperAdmin])
 
   const createMutation = useCreateConsultation()
+  const isRequestSurveyStatus =
+    (statuses?.find((s) => s.id === selectedStatus)?.name ?? '').trim().toLowerCase() === 'request survey'
   const requiresProductDetails = selectedNeeds.some(id => needs?.find(item => item.id === id)?.name.toLowerCase().includes('lain'))
   const filteredNeeds = needs?.filter((need) =>
     need.name.toLowerCase().includes(needsQuery.trim().toLowerCase()),
@@ -124,7 +126,8 @@ export default function CreateConsultationPage() {
     if (!phone.trim()) { toast.error('Nomor telepon / WhatsApp wajib diisi'); return }
     if (!selectedAccount) { toast.error('Akun wajib dipilih'); return }
     if (!selectedStatus) { toast.error('Status awal lead wajib dipilih'); return }
-    if (selectedNeeds.length === 0) { toast.error('Pilih minimal satu kategori kebutuhan'); return }
+    // Kategori kebutuhan boleh dikosongkan: backend mengisinya dengan
+    // "Tidak konfirmasi" agar lead tetap bisa dicatat lebih dulu.
     if (requiresProductDetails && productDetails.trim().length < 3) {
       toast.error('Detail kebutuhan wajib diisi ketika memilih kategori Lain-lain'); return
     }
@@ -133,7 +136,7 @@ export default function CreateConsultationPage() {
     }
 
     createMutation.mutate({
-      client_name: clientName,
+      client_name: clientName.trim() || 'Tidak ada nama',
       phone: phone || undefined,
       account_id: selectedAccount,
       status_category_id: selectedStatus,
@@ -146,7 +149,21 @@ export default function CreateConsultationPage() {
       district: selectedDistrict || undefined,
       notes: notes || undefined,
     } as any, {
-      onSuccess: () => { toast.success('Lead konsultasi baru berhasil didaftarkan!'); router.push('/consultations') },
+      onSuccess: (response: any) => {
+        toast.success('Lead konsultasi baru berhasil didaftarkan!')
+
+        // Lead langsung dibuat di tahap Request Survey: bawa admin ke halaman
+        // detailnya dengan form pengajuan terbuka, supaya tidak berhenti di
+        // situ tanpa diteruskan ke Manager Surveyor.
+        const newId = response?.data?.id
+
+        if (isRequestSurveyStatus && newId) {
+          router.push(`/consultations/${newId}?prompt_survey=1`)
+          return
+        }
+
+        router.push('/consultations')
+      },
       onError: (err: unknown) => { toast.error(formatApiError(err, 'Gagal mendaftarkan lead konsultasi.')) },
     })
   }
@@ -264,6 +281,19 @@ export default function CreateConsultationPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Form pengajuan survey butuh ID lead, jadi baru bisa dibuka
+                    setelah tersimpan. Beri tahu di sini supaya admin tidak
+                    mengira tahap pengajuannya hilang. */}
+                {isRequestSurveyStatus && (
+                  <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] p-3">
+                    <Send className="mt-0.5 size-3.5 shrink-0 text-amber-500" />
+                    <p className="text-[11px] leading-relaxed text-muted-foreground">
+                      Status <b className="text-foreground">Request Survey</b> dipilih. Begitu lead disimpan, form
+                      pengajuan survey terbuka otomatis supaya tanggal dan jamnya langsung terkirim ke Manager Surveyor.
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -282,7 +312,7 @@ export default function CreateConsultationPage() {
                     <Label htmlFor="client-name" className="text-xs font-semibold text-muted-foreground">Nama Klien</Label>
                     <Input
                       id="client-name"
-                      placeholder="Masukkan nama lengkap klien"
+                      placeholder="Kosongkan untuk default: Tidak ada nama"
                       value={clientName}
                       onChange={(e) => setClientName(e.target.value)}
                       className="h-10 rounded-xl border-border/70 bg-background/60 shadow-inner shadow-black/[0.03] focus-visible:border-amber-500/55 focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-white/10 dark:bg-zinc-950/60"
@@ -294,7 +324,7 @@ export default function CreateConsultationPage() {
                       id="client-phone"
                       placeholder="+62 812-3456-7890"
                       value={phone}
-                      onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+                      onChange={(e) => setPhone((current) => formatPhoneInput(e.target.value, current))}
                       inputMode="tel"
                       aria-invalid={phone.trim() !== '' && !isPhoneValid(phone)}
                       className={cn(
@@ -391,10 +421,12 @@ export default function CreateConsultationPage() {
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-foreground/80">
                   <span className="grid size-6 place-items-center rounded-lg bg-amber-500/10 text-[10px] font-black text-amber-500">03</span>
-                  Kategori Kebutuhan <span className="text-amber-500">*</span>
+                  Kategori Kebutuhan
                 </CardTitle>
-                {selectedNeeds.length > 0 && (
+                {selectedNeeds.length > 0 ? (
                   <p className="text-[10px] text-amber-500 font-semibold">{selectedNeeds.length} dipilih</p>
+                ) : (
+                  <p className="text-[10px] text-muted-foreground">Boleh dikosongkan — otomatis terisi &ldquo;Tidak konfirmasi&rdquo;</p>
                 )}
               </CardHeader>
               <CardContent className="p-0">

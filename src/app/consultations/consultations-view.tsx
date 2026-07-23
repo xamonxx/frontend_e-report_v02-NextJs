@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useConsultations, useDeleteConsultation, useImportConsultations } from '@/lib/hooks/useConsultations'
 import { useAccounts, useStatusCategories } from '@/lib/hooks/useMasterData'
+import { useNotificationCount } from '@/lib/hooks/useNotifications'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
@@ -36,12 +37,14 @@ import {
   ArrowUp,
   ArrowDown,
   ArrowUpDown,
+  MapPinned,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useDebounce } from 'use-debounce'
 import { useAuthStore } from '@/lib/stores/authStore'
-import { cn } from '@/lib/utils'
+import { cn, productCategoryNames } from '@/lib/utils'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { buildExportUrl } from '@/lib/api/client'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
@@ -101,6 +104,9 @@ export default function ConsultationsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
   const [statusFilter, setStatusFilter] = useState('')
+  // Filter lead yang sudah di tahap Request Survey tapi belum diajukan ke
+  // manager surveyor. Dibaca juga dari URL supaya notifikasi bisa menautkannya.
+  const [pendingSurveyOnly, setPendingSurveyOnly] = useState(false)
   const [accountFilter, setAccountFilter] = useState('')
   const [monthFilter, setMonthFilter] = useState('')
   const [yearFilter, setYearFilter] = useState('')
@@ -125,11 +131,19 @@ export default function ConsultationsPage() {
   // Reset to first page when search filters change
   useEffect(() => {
     setPage(1)
-  }, [debouncedSearch, statusFilter, accountFilter, monthFilter, yearFilter, startDate, endDate])
+  }, [debouncedSearch, statusFilter, accountFilter, monthFilter, yearFilter, startDate, endDate, pendingSurveyOnly])
 
   useEffect(() => {
     setSelectedConsultationIds(new Set())
-  }, [page, debouncedSearch, statusFilter, accountFilter, monthFilter, yearFilter, startDate, endDate])
+  }, [page, debouncedSearch, statusFilter, accountFilter, monthFilter, yearFilter, startDate, endDate, pendingSurveyOnly])
+
+  // Notifikasi pasca-import menautkan ke /consultations?pending_survey=1.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (new URLSearchParams(window.location.search).get('pending_survey') === '1') {
+      setPendingSurveyOnly(true)
+    }
+  }, [])
 
   // CSV Import states
   const [importOpen, setImportOpen] = useState(false)
@@ -149,9 +163,13 @@ export default function ConsultationsPage() {
     year: yearFilter,
     start_date: startDate,
     end_date: endDate,
+    pending_survey: pendingSurveyOnly ? 1 : undefined,
     page,
     per_page: 10,
   })
+
+  const { data: notificationCount } = useNotificationCount()
+  const pendingSurveyCount = notificationCount?.pending_survey_requests ?? 0
 
   const { data: statuses } = useStatusCategories()
   const { data: accounts } = useAccounts()
@@ -320,7 +338,7 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Filters */}
-      <div className={cn('data-toolbar max-w-full px-3 py-3 sm:px-4', softActionSurfaceClass)}>
+      <div className={cn('consultation-toolbar max-w-full px-3 py-3 sm:px-4', softActionSurfaceClass)}>
         <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
 
           {/* Search — full width on mobile, constrained on desktop */}
@@ -328,7 +346,7 @@ export default function ConsultationsPage() {
             containerClassName="w-full xl:min-w-[180px] xl:flex-1 xl:max-w-[260px]"
             pageSearch
             showShortcut
-            placeholder="Cari nama/telepon..."
+            placeholder="Cari nama, telepon, ID, atau akun..."
             value={searchTerm}
             onValueChange={setSearchTerm}
             className={cn(
@@ -344,6 +362,28 @@ export default function ConsultationsPage() {
           <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 xl:w-auto xl:flex-nowrap">
 
           <div className="hidden md:block h-5 w-px bg-border mr-0.5 dark:bg-zinc-800/60" />
+
+          {/* Lead sudah di tahap Request Survey tapi belum diajukan ke manager.
+              Hanya muncul bila memang ada, supaya tidak jadi hiasan mati. */}
+          {(pendingSurveyCount > 0 || pendingSurveyOnly) && (
+            <button
+              type="button"
+              onClick={() => setPendingSurveyOnly((v) => !v)}
+              title="Lead yang belum diajukan survey ke Manager Surveyor"
+              className={cn(
+                'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold transition-colors',
+                pendingSurveyOnly
+                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  : 'border-border text-muted-foreground hover:border-amber-500/40 hover:text-amber-600 dark:hover:text-amber-400',
+              )}
+            >
+              <MapPinned className="h-3.5 w-3.5" />
+              Belum diajukan
+              <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                {pendingSurveyCount}
+              </span>
+            </button>
+          )}
 
           {/* Status filter icon */}
           <Popover open={barStatusOpen} onOpenChange={setBarStatusOpen}>
@@ -1078,11 +1118,42 @@ export default function ConsultationsPage() {
                       <span className="text-[11px] text-muted-foreground truncate block dark:text-zinc-400">{lead.city || 'Luar Kota'}</span>
                     </TableCell>
 
-                    {/* Kebutuhan */}
+                    {/* Kebutuhan — sel dijaga ringkas; daftar lengkap lewat tooltip */}
                     <TableCell className="py-3.5 px-5">
-                      <span className="text-[11px] text-foreground/80 font-medium dark:text-zinc-300">
-                        {lead.needs_category?.name || '—'}
-                      </span>
+                      {(() => {
+                        const categories = productCategoryNames(lead)
+
+                        if (categories.length === 0) {
+                          return <span className="text-[11px] text-foreground/80 font-medium dark:text-zinc-300">—</span>
+                        }
+
+                        const summary = (
+                          <span className="inline-flex items-center gap-1.5 text-[11px] text-foreground/80 font-medium dark:text-zinc-300">
+                            <span className="truncate">{categories[0]}</span>
+                            {categories.length > 1 && (
+                              <span className="shrink-0 rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                                +{categories.length - 1}
+                              </span>
+                            )}
+                          </span>
+                        )
+
+                        // Satu kategori tidak perlu tooltip.
+                        if (categories.length === 1) {
+                          return summary
+                        }
+
+                        return (
+                          <Tooltip>
+                            <TooltipTrigger className="cursor-default text-left">{summary}</TooltipTrigger>
+                            <TooltipContent className="flex-col items-start gap-1">
+                              {categories.map((name) => (
+                                <span key={name}>{name}</span>
+                              ))}
+                            </TooltipContent>
+                          </Tooltip>
+                        )
+                      })()}
                     </TableCell>
 
                     {/* Tgl Konsul */}

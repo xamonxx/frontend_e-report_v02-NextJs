@@ -105,6 +105,9 @@ export default function AnalyticsPage() {
   const accountRanking = analytics?.accountRanking || []
   const adminRanking = analytics?.adminRanking || []
   const insights = analytics?.insights || []
+  const surveyorLeaderboard = analytics?.surveyorLeaderboard || []
+  const rescheduleStats = analytics?.rescheduleAnalytics || { total: 0, by_admin: 0, by_manager: 0, rescheduled_surveys: 0, rescheduled_deal_rate: 0 }
+  const backlog = analytics?.surveyBacklog || { total_pending: 0, oldest_days: 0, avg_wait_days: 0, buckets: [] }
   const funnel = analytics?.funnel || { leads: 0, surveys: 0, deals: 0, survey_rate: 0, deal_rate: 0, deal_from_survey_rate: 0 }
   const dataQuality = analytics?.dataQuality || {}
   const summaryStats = analytics?.summaryStats || {}
@@ -1138,6 +1141,157 @@ export default function AnalyticsPage() {
                   </CardContent>
                 </Card>
               )}
+            </div>
+
+            {/* ── Analitik Tim Survey ─────────────────────────────── */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="h-6 w-1 rounded-full bg-amber-500" />
+                <div>
+                  <h2 className="text-base font-bold text-foreground">Analitik Tim Survey</h2>
+                  <p className="text-[11px] text-muted-foreground">Kinerja surveyor, antrian, dan perubahan jadwal pada periode terpilih.</p>
+                </div>
+              </div>
+
+              {/* Leaderboard Surveyor */}
+              <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-900/60 dark:bg-zinc-950">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                    <Users className="h-4 w-4 text-amber-500" /> Leaderboard Surveyor
+                  </CardTitle>
+                  <CardDescription className="text-[11px] text-muted-foreground">
+                    Berdasarkan survey selesai pada periode ini
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 dark:border-zinc-900 dark:bg-zinc-950/20">
+                          <th className="py-3 px-5">Surveyor</th>
+                          <th className="py-3 px-2 text-right">Selesai</th>
+                          <th className="py-3 px-2 text-right">Durasi Rata²</th>
+                          <th className="py-3 px-2 text-right">Tepat Waktu</th>
+                          <th className="py-3 px-5 text-right">Deal-rate</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border/30 text-xs dark:divide-zinc-900/30">
+                        {surveyorLeaderboard.map((r: any, index: number) => (
+                          <tr key={r.surveyor_id} className="hover:bg-muted/30 transition-colors group dark:hover:bg-zinc-900/20">
+                            <td className="py-3 px-5 font-bold text-foreground/80 group-hover:text-foreground">
+                              <div className="flex items-center gap-2">
+                                <span className={cn(
+                                  'h-5 w-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0',
+                                  index === 0 ? 'bg-amber-500 text-zinc-950' : 'bg-muted text-muted-foreground border border-border dark:bg-zinc-900 dark:border-zinc-800'
+                                )}>
+                                  {index + 1}
+                                </span>
+                                {r.name}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2 text-right font-bold text-foreground/80">{r.completed}</td>
+                            <td className="py-3 px-2 text-right text-muted-foreground/80">
+                              {r.avg_duration_min != null ? `${Math.floor(r.avg_duration_min / 60)}j ${r.avg_duration_min % 60}m` : '-'}
+                            </td>
+                            <td className="py-3 px-2 text-right">
+                              {r.on_time_rate != null ? (
+                                <span className={cn('font-semibold', r.on_time_rate >= 80 ? 'text-emerald-500' : r.on_time_rate >= 50 ? 'text-amber-500' : 'text-rose-500')}>
+                                  {r.on_time_rate}%
+                                </span>
+                              ) : <span className="text-muted-foreground/50">-</span>}
+                            </td>
+                            <td className="py-3 px-5 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                <span className="text-[10px] text-muted-foreground/70">{r.deals} deal</span>
+                                <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden dark:bg-zinc-800">
+                                  <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, r.deal_rate)}%` }} />
+                                </div>
+                                <span className="font-bold text-emerald-500 w-10 text-right">{r.deal_rate}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {surveyorLeaderboard.length === 0 && (
+                          <tr>
+                            <td colSpan={5} className="py-10 text-center text-muted-foreground/50">Belum ada survey selesai pada periode ini</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                {/* Antrian / Backlog */}
+                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-amber-500" /> Antrian Survey
+                    </CardTitle>
+                    <CardDescription className="text-[11px] text-muted-foreground">
+                      Survey menunggu dijadwalkan (kondisi terkini)
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-black text-foreground leading-none">{backlog.total_pending}</span>
+                      <span className="text-[11px] text-muted-foreground mb-0.5">menunggu</span>
+                    </div>
+                    <div className="space-y-1.5">
+                      {backlog.buckets.map((b: any) => {
+                        const max = Math.max(1, ...backlog.buckets.map((x: any) => x.count))
+                        const color = b.label === '>3 hari' ? 'bg-rose-500' : b.label === '1-3 hari' ? 'bg-amber-500' : 'bg-blue-500'
+                        return (
+                          <div key={b.label} className="flex items-center gap-2">
+                            <span className="w-16 text-[10px] font-semibold text-muted-foreground shrink-0">{b.label}</span>
+                            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden dark:bg-zinc-800">
+                              <div className={cn('h-full rounded-full', color)} style={{ width: `${(b.count / max) * 100}%` }} />
+                            </div>
+                            <span className="w-6 text-right text-[11px] font-bold text-foreground/80">{b.count}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                    <div className="flex items-center justify-between border-t border-border/50 pt-2 text-[11px] text-muted-foreground dark:border-zinc-900">
+                      <span>Terlama: <b className={cn(backlog.oldest_days > 3 ? 'text-rose-500' : 'text-foreground/80')}>{backlog.oldest_days} hari</b></span>
+                      <span>Rata-rata tunggu: <b className="text-foreground/80">{backlog.avg_wait_days} hari</b></span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Reschedule */}
+                <Card className="min-w-0 border-border bg-card shadow-sm rounded-2xl dark:border-zinc-900/60 dark:bg-zinc-950">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4 text-amber-500" /> Perubahan Jadwal
+                    </CardTitle>
+                    <CardDescription className="text-[11px] text-muted-foreground">
+                      Reschedule pada periode ini & dampaknya
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex items-end gap-2">
+                      <span className="text-3xl font-black text-foreground leading-none">{rescheduleStats.total}</span>
+                      <span className="text-[11px] text-muted-foreground mb-0.5">kali reschedule</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded-xl border border-border/60 bg-muted/30 p-2.5 dark:border-zinc-900 dark:bg-zinc-950/30">
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Oleh Admin</p>
+                        <p className="text-lg font-bold text-cyan-500">{rescheduleStats.by_admin}</p>
+                      </div>
+                      <div className="rounded-xl border border-border/60 bg-muted/30 p-2.5 dark:border-zinc-900 dark:bg-zinc-950/30">
+                        <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Oleh Manager</p>
+                        <p className="text-lg font-bold text-blue-500">{rescheduleStats.by_manager}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-3 py-2">
+                      <span className="text-[11px] text-muted-foreground">Deal-rate setelah reschedule</span>
+                      <span className="text-sm font-bold text-emerald-500">{rescheduleStats.rescheduled_deal_rate}%</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </div>

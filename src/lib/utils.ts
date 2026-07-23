@@ -17,11 +17,41 @@ export function normalizeRegionName(input: string): string {
     .join(' ')
 }
 
-export const PENDING_CONFIRMATION_LABEL = 'Belum ada konfirmasi'
+/** Placeholder wilayah (provinsi/kota/kecamatan) yang belum diisi. */
+export const PENDING_CONFIRMATION_LABEL = 'Belum konfirmasi'
+
+/** Ejaan lama, masih ada pada data yang belum di-backfill. */
+export const PENDING_CONFIRMATION_LEGACY_LABEL = 'Belum ada konfirmasi'
+
+/** Kategori kebutuhan default ketika tidak ada yang dipilih. */
+export const PENDING_NEEDS_CATEGORY_LABEL = 'Tidak konfirmasi'
 
 export function isPendingConfirmation(value?: string | null): boolean {
   if (!value) return false
-  return value.trim().replace(/\s+/g, ' ').toLowerCase() === PENDING_CONFIRMATION_LABEL.toLowerCase()
+  const normalized = value.trim().replace(/\s+/g, ' ').toLowerCase()
+
+  return [PENDING_CONFIRMATION_LABEL, PENDING_CONFIRMATION_LEGACY_LABEL].some(
+    (label) => normalized === label.toLowerCase(),
+  )
+}
+
+/**
+ * Daftar nama kategori kebutuhan sebuah lead.
+ *
+ * Satu lead bisa punya banyak kategori (tabel pivot), tapi API juga masih
+ * mengirim FK tunggal `needs_category` untuk data lama. Urutan sumber:
+ * relasi jamak -> FK tunggal -> kosong.
+ */
+export function productCategoryNames(lead: {
+  needs_categories?: { id: number; name: string }[] | null
+  needs_category?: { id: number; name: string } | null
+}): string[] {
+  const many = lead.needs_categories
+  if (many && many.length > 0) {
+    return many.map((item) => item.name).filter(Boolean)
+  }
+
+  return lead.needs_category?.name ? [lead.needs_category.name] : []
 }
 
 /** Displays an API placeholder as an empty region field in create/edit forms. */
@@ -45,11 +75,26 @@ const DEFAULT_COUNTRY: CountryCode = "ID"
  *      "+6283134774955" → "+62 831 3477 4955"
  *      "+12133734253"   → "+1 213 373 4253"
  */
-export function formatPhoneInput(raw: string): string {
+export function formatPhoneInput(raw: string, previous?: string): string {
   if (!raw) return ''
   const hasPlus = raw.replace(/^\s+/, '').startsWith('+')
   // E.164 allows at most 15 digits — cap to stop runaway/garbage input.
-  const digits = raw.replace(/\D/g, '').slice(0, 15)
+  let digits = raw.replace(/\D/g, '').slice(0, 15)
+
+  // Backspace trap: AsYouType adds grouping characters — "(0323)" for a partial
+  // Indonesian area code, spaces and dashes elsewhere. Deleting one of those
+  // leaves the digits unchanged, so re-formatting puts it straight back and the
+  // caret never advances; the field becomes impossible to clear. When the value
+  // got shorter but the digits did not, the user deleted a separator, so drop
+  // the last digit instead — that is what they meant.
+  if (previous !== undefined && raw.length < previous.length) {
+    const previousHasPlus = previous.replace(/^\s+/, '').startsWith('+')
+    const deletedThePlus = previousHasPlus && !hasPlus
+    if (!deletedThePlus && digits === previous.replace(/\D/g, '')) {
+      digits = digits.slice(0, -1)
+    }
+  }
+
   if (!digits) return hasPlus ? '+' : ''
   const formatter = hasPlus ? new AsYouType() : new AsYouType(DEFAULT_COUNTRY)
   return formatter.input((hasPlus ? '+' : '') + digits)
