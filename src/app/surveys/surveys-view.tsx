@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, type CSSProperties } from 'react'
+import { useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { toast } from 'sonner'
 import {
@@ -11,11 +11,17 @@ import {
   UserCheck,
   ClipboardCheck,
   Loader2,
-  Inbox,
   Home,
   Package,
   RotateCcw,
   History,
+  XCircle,
+  FileText,
+  Calendar,
+  ChevronRight,
+  CheckCircle2,
+  Timer,
+  BarChart3,
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { isAdmin, isManagerSurveyor, isSurveyor as isSurveyorRole } from '@/lib/auth/roles'
@@ -48,23 +54,27 @@ import {
 } from '@/components/ui/dialog'
 import { cn, rawPhoneDigits } from '@/lib/utils'
 
-// â”€â”€ State metadata (istilah user: Request Survey / Masuk Survey) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-const STATE_META: Record<SurveyState, { label: string; color: string }> = {
-  requested: { label: 'Request Survey', color: '#f59e0b' },
-  scheduled: { label: 'Masuk Survey', color: '#3b82f6' },
-  in_progress: { label: 'Sedang Survey', color: '#8b5cf6' },
-  completed: { label: 'Selesai', color: '#10b981' },
-  cancelled: { label: 'Dibatalkan', color: '#71717a' },
+// ── State metadata ─────────────────────────────────────────────
+const STATE_META: Record<SurveyState, { label: string; color: string; icon: typeof Clock }> = {
+  requested:   { label: 'Request Survey',   color: '#f59e0b', icon: FileText },
+  scheduled:   { label: 'Terjadwal',        color: '#3b82f6', icon: Calendar },
+  in_progress: { label: 'Sedang Survey',    color: '#8b5cf6', icon: Timer },
+  completed:   { label: 'Selesai',          color: '#10b981', icon: CheckCircle2 },
+  cancelled:   { label: 'Dibatalkan',        color: '#71717a', icon: XCircle },
 }
 
-function StateChip({ state }: { state: SurveyState }) {
+function StateChip({ state, size = 'sm' }: { state: SurveyState; size?: 'sm' | 'md' }) {
   const meta = STATE_META[state]
+  const Icon = meta.icon
   return (
     <span
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
-      style={{ backgroundColor: `${meta.color}1f`, color: meta.color }}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-full font-bold uppercase tracking-wide',
+        size === 'md' ? 'px-3 py-1 text-xs' : 'px-2 py-0.5 text-[10px]'
+      )}
+      style={{ backgroundColor: `${meta.color}18`, color: meta.color }}
     >
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: meta.color }} />
+      <Icon className={size === 'md' ? 'size-3.5' : 'size-3'} />
       {meta.label}
     </span>
   )
@@ -81,19 +91,43 @@ function formatDateTime(value?: string | null): string {
   })
 }
 
+function formatDate(value?: string | null): string {
+  if (!value) return '-'
+  return new Date(value).toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
 function locationLine(s: Survey): string {
   const c = s.consultation
   if (!c) return '-'
   return [c.district, c.city, c.province].filter(Boolean).join(', ') || c.address || '-'
 }
 
+function InfoRow({ icon, label, value }: {
+  icon: React.ElementType
+  label: string
+  value: React.ReactNode
+}) {
+  const Icon = icon
+  return (
+    <span className="flex w-full min-w-0 items-start gap-1.5 text-xs text-muted-foreground">
+      <Icon className="mt-0.5 size-3.5 shrink-0 text-muted-foreground/50" />
+      {label ? <span className="text-muted-foreground/60 shrink-0">{label}</span> : null}
+      <span className="block min-w-0 flex-1 truncate text-foreground/80">{value}</span>
+    </span>
+  )
+}
+
+// ── MAIN PAGE ──────────────────────────────────────────────────
 export default function SurveysView() {
   const user = useAuthStore((s) => s.user)
   const surveyorMode = isSurveyorRole(user)
   const adminMode = isAdmin(user)
   const managerMode = isManagerSurveyor(user) || user?.role === 'super_admin'
 
-  // Tabs: surveyor hanya scheduled/completed; manager & super lihat semua.
   const tabs: { key: SurveyState; label: string; mobileLabel: string }[] = surveyorMode
     ? [
         { key: 'scheduled', label: 'Terjadwal', mobileLabel: 'Terjadwal' },
@@ -115,78 +149,115 @@ export default function SurveysView() {
       ]
 
   const [activeTab, setActiveTab] = useState<SurveyState>(tabs[0].key)
-
   const { data, isLoading, isFetching } = useSurveys({ state: activeTab, per_page: 50 })
   const surveys = data?.data ?? []
 
-  // Dialog state
   const [assignTarget, setAssignTarget] = useState<Survey | null>(null)
   const [adminRescheduleTarget, setAdminRescheduleTarget] = useState<Survey | null>(null)
   const [resultTarget, setResultTarget] = useState<Survey | null>(null)
   const [historyTarget, setHistoryTarget] = useState<Survey | null>(null)
+  const tabMeta = useMemo(() => STATE_META[activeTab], [activeTab])
 
   return (
-    <div className="min-w-0 space-y-4 sm:space-y-6">
-      {/* Header */}
-      <div className="flex flex-col gap-1">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20 sm:h-9 sm:w-9 sm:rounded-xl">
-            <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold leading-tight text-foreground sm:text-xl">Survey Lokasi</h1>
-            <p className="text-[11px] leading-relaxed text-muted-foreground/70 sm:text-xs">
-              {surveyorMode
-                ? 'Jadwal survey yang ditugaskan kepada Anda & pengisian hasil.'
-                : 'Antrian pengajuan survey, penjadwalan surveyor, dan hasil survey.'}
-            </p>
+    <div className="min-w-0 space-y-5 sm:space-y-6">
+      {/* ── HEADER ───────────────────────────────────────────── */}
+      <div className="relative min-w-0 overflow-hidden rounded-2xl border border-border/60 bg-gradient-to-br from-background via-card to-amber-500/5 px-4 py-4 shadow-sm sm:px-6 sm:py-5 dark:from-zinc-950 dark:via-zinc-900 dark:to-amber-950/10">
+        <div className="absolute -right-12 -top-12 size-40 rounded-full bg-amber-500/5 blur-3xl" />
+        <div className="relative flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-start gap-3">
+            <span className="mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-500 ring-1 ring-amber-500/20">
+              <MapPin className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                Survey Lokasi
+              </h1>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground/70">
+                {surveyorMode
+                  ? 'Jadwal survey yang ditugaskan & pengisian hasil.'
+                  : 'Antrian pengajuan, penjadwalan surveyor, dan hasil survey.'}
+              </p>
+            </div>
           </div>
+
+          {!isLoading && surveys.length > 0 && (
+            <div className="flex w-fit shrink-0 items-center gap-2 rounded-xl border border-border/50 bg-background/50 px-3 py-2 backdrop-blur-sm sm:gap-3 sm:px-4 sm:py-2.5 dark:bg-zinc-950/50">
+              <BarChart3 className="size-3.5 shrink-0 text-muted-foreground/60 sm:size-4" />
+              <span className="text-xs font-bold text-foreground sm:text-sm">{surveys.length}</span>
+              <span className="hidden text-xs text-muted-foreground/60 xs:inline sm:inline">survey</span>
+              <span className="mx-1 h-4 w-px bg-border sm:mx-1.5" />
+              <span
+                className="inline-flex items-center gap-1 text-[11px] font-semibold sm:gap-1.5 sm:text-xs"
+                style={{ color: tabMeta.color }}
+              >
+                <tabMeta.icon className="size-3 sm:size-3.5" />
+                <span className="hidden xs:inline">{tabMeta.label}</span>
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="grid w-full grid-cols-[repeat(var(--tab-count),minmax(0,1fr))] rounded-xl border border-border bg-card p-1 dark:border-zinc-800 dark:bg-zinc-900/40" style={{ '--tab-count': tabs.length } as CSSProperties}>
+      {/* ── TABS ────────────────────────────────────────────── */}
+      <nav
+        aria-label="Status survey"
+        className="mx-auto grid w-full max-w-4xl min-w-0 overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--primary-theme)_22%,var(--border))] bg-[color-mix(in_srgb,var(--card)_94%,var(--primary-theme)_6%)] p-1.5 shadow-[0_12px_32px_-24px_rgba(2,8,23,0.55),inset_0_1px_0_rgba(255,255,255,0.06)]"
+        style={{ gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
+      >
         {tabs.map((tab) => {
           const active = tab.key === activeTab
+          const meta = STATE_META[tab.key]
+          const Icon = meta.icon
           return (
             <button
               key={tab.key}
+              type="button"
               onClick={() => setActiveTab(tab.key)}
+              aria-pressed={active}
               className={cn(
-                'relative min-w-0 rounded-lg px-1 py-2 text-[10px] font-semibold transition-colors sm:px-3.5 sm:py-1.5 sm:text-xs',
-                active ? 'text-zinc-950' : 'text-muted-foreground hover:text-foreground'
+                'relative flex min-w-0 items-center justify-center rounded-lg px-1.5 py-2.5 text-[10px] font-semibold outline-none transition-[background-color,color] duration-200 focus-visible:ring-2 focus-visible:ring-[var(--primary-theme)] focus-visible:ring-offset-1 focus-visible:ring-offset-card sm:px-3 sm:text-xs',
+                active
+                  ? 'text-[var(--primary-theme-foreground)]'
+                  : 'text-muted-foreground hover:bg-background/45 hover:text-foreground'
               )}
             >
               {active && (
                 <motion.span
                   layoutId="survey-tab-pill"
-                  className="absolute inset-0 rounded-lg bg-amber-500"
-                  transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  className="absolute inset-0 rounded-lg bg-[var(--primary-theme)] shadow-[0_8px_20px_-12px_var(--primary-theme)]"
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
                 />
               )}
-              <span className="relative z-10 truncate sm:hidden">{tab.mobileLabel}</span>
-              <span className="relative z-10 hidden truncate sm:inline">{tab.label}</span>
+              <span className="relative z-10 flex min-w-0 items-center justify-center gap-1 sm:gap-1.5">
+                <Icon className={cn('size-3 shrink-0 sm:size-3.5', active ? 'text-[var(--primary-theme-foreground)]' : 'text-muted-foreground/60')} />
+                <span className="min-w-0 truncate sm:hidden">{tab.mobileLabel}</span>
+                <span className="hidden min-w-0 truncate sm:inline">{tab.label}</span>
+              </span>
             </button>
           )
         })}
-      </div>
+      </nav>
 
-      {/* List */}
+      {/* ── LIST ─────────────────────────────────────────────── */}
       {isLoading ? (
-        <div className="grid gap-3">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-28 w-full rounded-2xl bg-muted" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 w-full rounded-2xl bg-muted/60" />
           ))}
         </div>
       ) : surveys.length === 0 ? (
         <EmptyState state={activeTab} surveyorMode={surveyorMode} />
       ) : (
-        <div className={cn('grid gap-3 transition-opacity', isFetching && 'opacity-60')}>
-          {surveys.map((survey, idx) => (
+        <div
+          className={cn(
+            'grid min-w-0 grid-cols-1 gap-3 transition-opacity duration-200 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 xl:gap-4',
+            isFetching && 'pointer-events-none opacity-60'
+          )}
+        >
+          {surveys.map((survey) => (
             <SurveyCard
               key={survey.id}
               survey={survey}
-              index={idx}
               surveyorMode={surveyorMode}
               managerMode={managerMode}
               adminMode={adminMode}
@@ -199,7 +270,7 @@ export default function SurveysView() {
         </div>
       )}
 
-      {/* Dialogs */}
+      {/* ── DIALOGS ──────────────────────────────────────────── */}
       {assignTarget && (
         <AssignDialog survey={assignTarget} onClose={() => setAssignTarget(null)} />
       )}
@@ -216,10 +287,9 @@ export default function SurveysView() {
   )
 }
 
-// â”€â”€ Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SURVEY CARD ────────────────────────────────────────────────
 function SurveyCard({
   survey,
-  index,
   surveyorMode,
   managerMode,
   adminMode,
@@ -229,7 +299,6 @@ function SurveyCard({
   onHistory,
 }: {
   survey: Survey
-  index: number
   surveyorMode: boolean
   managerMode: boolean
   adminMode: boolean
@@ -250,165 +319,184 @@ function SurveyCard({
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: Math.min(index * 0.03, 0.2) }}
-    >
-      <Card className="border-border bg-card shadow-sm transition-colors hover:border-amber-500/30 dark:border-zinc-800 dark:bg-zinc-900/40">
-        <CardContent className="p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
+    <div className="min-w-0">
+      <Card className="group relative h-full min-w-0 overflow-hidden border-border/70 bg-card shadow-xs transition-[border-color,background-color] duration-200 hover:border-amber-500/25 dark:border-zinc-800 dark:bg-zinc-900/40 dark:hover:border-amber-500/20">
+        {/* Top accent bar */}
+        <div
+          className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl opacity-70 transition-opacity group-hover:opacity-100 sm:h-1"
+          style={{ backgroundColor: STATE_META[survey.state].color }}
+        />
+
+        <CardContent className="flex h-full flex-col gap-2 p-3 pt-4 sm:p-4 sm:pt-5">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5 sm:gap-2">
                 <h3 className="truncate text-sm font-bold text-foreground">
                   {c?.client_name ?? 'Lead'}
                 </h3>
-                <span className="rounded-md border border-border px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground dark:border-zinc-800">
+                <span className="shrink-0 rounded border border-border/60 px-1 py-0.5 font-mono text-[10px] text-muted-foreground dark:border-zinc-700">
                   {c?.consultation_id}
                 </span>
-                <StateChip state={survey.state} />
               </div>
-
-              <div className="grid gap-1.5 text-[11px] text-muted-foreground sm:grid-cols-2">
-                <span className="inline-flex items-center gap-1.5">
-                  <MapPin className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                  <span className="truncate">{locationLine(survey)}</span>
-                </span>
-                {c?.address && (
-                  <span className="inline-flex items-start gap-1.5 sm:col-span-2">
-                    <Home className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                    <span>{c.address}</span>
-                  </span>
-                )}
-                {c?.product_details && (
-                  <span className="inline-flex items-start gap-1.5 sm:col-span-2">
-                    <Package className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                    <span>{c.product_details}</span>
-                  </span>
-                )}
-                {c?.phone && (
-                  <a
-                    href={`https://wa.me/${phone}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 text-emerald-600 hover:underline dark:text-emerald-400"
-                  >
-                    <Phone className="h-3.5 w-3.5 shrink-0" />
-                    {c.phone}
-                  </a>
-                )}
-                {survey.state === 'requested' && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                    Diajukan {formatDateTime(survey.requested_at)}
-                    {survey.requester?.name ? ` - ${survey.requester.name}` : ''}
-                  </span>
-                )}
-                {(survey.state === 'scheduled' || survey.state === 'completed') && (
-                  <>
-                    <span className="inline-flex items-center gap-1.5">
-                      <CalendarClock className="h-3.5 w-3.5 shrink-0 text-blue-500" />
-                      Jadwal {formatDateTime(survey.scheduled_at)}
-                    </span>
-                    <span className="inline-flex items-center gap-1.5">
-                      <UserCheck className="h-3.5 w-3.5 shrink-0 text-muted-foreground/60" />
-                      {survey.surveyor?.name ?? 'Belum ditentukan'}
-                    </span>
-                  </>
-                )}
-                {survey.state === 'completed' && survey.result_status && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <ClipboardCheck className="h-3.5 w-3.5 shrink-0" style={{ color: survey.result_status.color }} />
-                    Hasil:{' '}
-                    <span
-                      className="rounded px-1.5 py-0.5 font-semibold"
-                      style={{ backgroundColor: `${survey.result_status.color}1f`, color: survey.result_status.color }}
-                    >
-                      {survey.result_status.name}
-                    </span>
-                  </span>
-                )}
-              </div>
-
-              {survey.location_notes && (
-                <p className="rounded-lg bg-muted/50 px-2.5 py-1.5 text-[11px] italic text-muted-foreground dark:bg-zinc-950/40">
-                  &quot;{survey.location_notes}&quot;
-                </p>
-              )}
             </div>
+            <StateChip state={survey.state} />
+          </div>
 
-            {/* Actions */}
-            <div className="flex shrink-0 items-center gap-2 sm:flex-col sm:items-end">
-              {managerMode && survey.state === 'requested' && (
-                <Button
-                  size="xs"
-                  onClick={onAssign}
-                  className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
-                >
-                  <UserCheck className="mr-1.5 h-3.5 w-3.5" />
-                  Jadwalkan
-                </Button>
-              )}
-              {managerMode && survey.state === 'scheduled' && (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={onAssign}
-                  className="border-border font-semibold dark:border-zinc-700"
-                >
-                  Ubah Jadwal
-                </Button>
-              )}
-              {adminMode && (survey.state === 'requested' || survey.state === 'scheduled') && (
-                <Button
-                  size="xs"
-                  variant="outline"
-                  onClick={onAdminReschedule}
-                  className="border-amber-500/40 font-semibold text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
-                >
-                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-                  Reschedule
-                </Button>
-              )}
-              {surveyorMode && survey.state === 'scheduled' && (
-                <Button
-                  size="xs"
-                  onClick={startSurvey}
-                  disabled={startMutation.isPending}
-                  className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
-                >
-                  {startMutation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Clock className="mr-1.5 h-3.5 w-3.5" />}
-                  Mulai Survey
-                </Button>
-              )}
-              {surveyorMode && survey.state === 'in_progress' && (
-                <Button
-                  size="xs"
-                  onClick={onResult}
-                  className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
-                >
-                  <ClipboardCheck className="mr-1.5 h-3.5 w-3.5" />
-                  Isi Hasil
-                </Button>
-              )}
-              <Button
-                size="xs"
-                variant="ghost"
-                onClick={onHistory}
-                className="font-semibold text-muted-foreground hover:text-foreground"
+          {/* Detail rows */}
+          <div className="min-w-0 flex-1 space-y-1">
+            <InfoRow icon={MapPin} label="" value={locationLine(survey)} />
+            {c?.address && <InfoRow icon={Home} label="" value={c.address} />}
+            {c?.product_details && <InfoRow icon={Package} label="" value={c.product_details} />}
+
+            {c?.phone && (
+              <a
+                href={`https://wa.me/${phone}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex max-w-full items-center gap-1.5 text-xs text-emerald-600 hover:underline dark:text-emerald-400"
               >
-                <History className="mr-1.5 h-3.5 w-3.5" />
-                Riwayat
-              </Button>
-            </div>
+                <Phone className="size-3.5 shrink-0 text-emerald-500/60" />
+                <span className="truncate">{c.phone}</span>
+              </a>
+            )}
+
+            {/* Status-specific meta */}
+            {survey.state === 'requested' && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="size-3 text-muted-foreground/50" />
+                  {formatDateTime(survey.requested_at)}
+                </span>
+                {survey.requester?.name && (
+                  <span>oleh {survey.requester.name}</span>
+                )}
+              </div>
+            )}
+
+            {(survey.state === 'scheduled' || survey.state === 'in_progress') && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                <span className="inline-flex items-center gap-1 font-medium text-blue-500">
+                  <CalendarClock className="size-3" />
+                  {formatDateTime(survey.scheduled_at)}
+                </span>
+                {survey.surveyor?.name && (
+                  <span className="inline-flex items-center gap-1">
+                    <UserCheck className="size-3 text-muted-foreground/50" />
+                    {survey.surveyor.name}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {survey.state === 'completed' && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                {survey.scheduled_at && (
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarClock className="size-3 text-blue-500/60" />
+                    {formatDate(survey.scheduled_at)}
+                  </span>
+                )}
+                {survey.surveyor?.name && (
+                  <span className="inline-flex items-center gap-1">
+                    <UserCheck className="size-3 text-muted-foreground/50" />
+                    {survey.surveyor.name}
+                  </span>
+                )}
+                {survey.result_status && (
+                  <span
+                    className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold"
+                    style={{ backgroundColor: `${survey.result_status.color}18`, color: survey.result_status.color }}
+                  >
+                    {survey.result_status.name}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Location notes */}
+          {survey.location_notes && (
+            <p className="mt-2 truncate rounded-lg bg-muted/40 px-2.5 py-1.5 text-[11px] italic text-muted-foreground dark:bg-zinc-950/40">
+              &ldquo;{survey.location_notes}&rdquo;
+            </p>
+          )}
+
+          {/* Actions */}
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 border-t border-border/40 pt-3 dark:border-zinc-800/40">
+            {managerMode && survey.state === 'requested' && (
+              <ActionButton icon={UserCheck} label="Jadwalkan" onClick={onAssign} primary />
+            )}
+            {managerMode && survey.state === 'scheduled' && (
+              <ActionButton icon={Calendar} label="Ubah Jadwal" onClick={onAssign} />
+            )}
+            {adminMode && (survey.state === 'requested' || survey.state === 'scheduled') && (
+              <ActionButton icon={RotateCcw} label="Reschedule" onClick={onAdminReschedule} warning />
+            )}
+            {surveyorMode && survey.state === 'scheduled' && (
+              <ActionButton
+                icon={Timer}
+                label={startMutation.isPending ? 'Memulai...' : 'Mulai Survey'}
+                onClick={startSurvey}
+                disabled={startMutation.isPending}
+                primary
+              />
+            )}
+            {surveyorMode && survey.state === 'in_progress' && (
+              <ActionButton icon={ClipboardCheck} label="Isi Hasil" onClick={onResult} primary />
+            )}
+            <ActionButton icon={History} label="Riwayat" onClick={onHistory} subtle />
           </div>
         </CardContent>
       </Card>
-    </motion.div>
+    </div>
   )
 }
 
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+  disabled,
+  primary,
+  warning,
+  subtle,
+}: {
+  icon: React.ElementType
+  label: string
+  onClick: () => void
+  disabled?: boolean
+  primary?: boolean
+  warning?: boolean
+  subtle?: boolean
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-all duration-150 active:translate-y-px',
+        primary &&
+          'bg-amber-500 text-zinc-950 hover:bg-amber-400 disabled:opacity-50',
+        warning &&
+          'border border-amber-500/30 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400',
+        subtle &&
+          'text-muted-foreground hover:bg-muted/60 hover:text-foreground',
+        !primary && !warning && !subtle &&
+          'border border-border/70 text-foreground/80 hover:bg-muted/60 dark:border-zinc-700'
+      )}
+    >
+      <Icon className="size-3.5" />
+      {label}
+    </button>
+  )
+}
+
+// ── EMPTY STATE ────────────────────────────────────────────────
 function EmptyState({ state, surveyorMode }: { state: SurveyState; surveyorMode: boolean }) {
+  const meta = STATE_META[state]
+  const Icon = meta.icon
   const messages: Record<SurveyState, string> = {
     requested: 'Belum ada pengajuan survey yang menunggu penjadwalan.',
     scheduled: surveyorMode
@@ -419,16 +507,25 @@ function EmptyState({ state, surveyorMode }: { state: SurveyState; surveyorMode:
     cancelled: 'Tidak ada survey dibatalkan.',
   }
   return (
-    <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border py-16 text-center dark:border-zinc-800">
-      <span className="flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground/60">
-        <Inbox className="h-6 w-6" />
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/80 py-20 text-center dark:border-zinc-800"
+    >
+      <span
+        className="flex size-14 items-center justify-center rounded-2xl"
+        style={{ backgroundColor: `${meta.color}15`, color: meta.color }}
+      >
+        <Icon className="size-7" />
       </span>
-      <p className="max-w-xs text-sm text-muted-foreground/70">{messages[state]}</p>
-    </div>
+      <p className="max-w-xs text-sm font-medium text-muted-foreground/70">
+        {messages[state]}
+      </p>
+    </motion.div>
   )
 }
 
-// â”€â”€ Assign dialog (manager) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SURVEY HISTORY DIALOG ──────────────────────────────────────
 function SurveyHistoryDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
   const { data, isLoading } = useSurveyHistory(survey.id)
   const activities = data?.data ?? []
@@ -437,9 +534,12 @@ function SurveyHistoryDialog({ survey, onClose }: { survey: Survey; onClose: () 
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Riwayat Survey</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <History className="size-4 text-amber-500" />
+            Riwayat Survey
+          </DialogTitle>
           <DialogDescription>
-            {survey.consultation?.client_name} - {survey.consultation?.consultation_id}
+            {survey.consultation?.client_name} &middot; {survey.consultation?.consultation_id}
           </DialogDescription>
         </DialogHeader>
 
@@ -488,7 +588,7 @@ function SurveyActivityRow({ activity, isLast }: { activity: SurveyActivity; isL
         {(activity.old_status || activity.new_status) && (
           <p className="mt-1 text-[11px] text-muted-foreground">
             {activity.old_status ? STATE_META[activity.old_status]?.label ?? activity.old_status : 'Awal'}
-            {' -> '}
+            <ChevronRight className="mx-1 inline size-3 align-middle text-muted-foreground/40" />
             {activity.new_status ? STATE_META[activity.new_status]?.label ?? activity.new_status : '-'}
           </p>
         )}
@@ -501,6 +601,7 @@ function SurveyActivityRow({ activity, isLast }: { activity: SurveyActivity; isL
   )
 }
 
+// ── ASSIGN DIALOG ──────────────────────────────────────────────
 function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
   const { data: surveyorsResp, isLoading } = useSurveyors()
   const surveyors = surveyorsResp?.data ?? []
@@ -547,15 +648,18 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{isReschedule ? 'Reschedule Survey' : 'Jadwalkan Survey'}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <UserCheck className="size-4 text-amber-500" />
+            {isReschedule ? 'Reschedule Survey' : 'Jadwalkan Survey'}
+          </DialogTitle>
           <DialogDescription>
-            {survey.consultation?.client_name} - {survey.consultation?.consultation_id}
+            {survey.consultation?.client_name} &middot; {survey.consultation?.consultation_id}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3.5 py-1">
+        <div className="space-y-4 py-1">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Surveyor</Label>
+            <Label className="text-xs font-semibold text-muted-foreground/80">Surveyor</Label>
             <CustomSelect
               value={surveyorId}
               onChange={setSurveyorId}
@@ -572,17 +676,17 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Tanggal & Jam Survey</Label>
+            <Label className="text-xs font-semibold text-muted-foreground/80">Tanggal & Jam Survey</Label>
             <Input
               type="datetime-local"
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
-              className="h-9 border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+              className="h-10 border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Catatan Lokasi (opsional)</Label>
+            <Label className="text-xs font-semibold text-muted-foreground/80">Catatan Lokasi (opsional)</Label>
             <Textarea
               value={locationNotes}
               onChange={(e) => setLocationNotes(e.target.value)}
@@ -593,7 +697,7 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
 
           {isReschedule && (
             <div className="space-y-1.5">
-              <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Catatan Reschedule (opsional)</Label>
+              <Label className="text-xs font-semibold text-muted-foreground/80">Catatan Reschedule (opsional)</Label>
               <Textarea
                 value={managerNotes}
                 onChange={(e) => setManagerNotes(e.target.value)}
@@ -614,7 +718,9 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
             disabled={assignMutation.isPending || rescheduleMutation.isPending}
             className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
           >
-            {assignMutation.isPending || rescheduleMutation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+            {assignMutation.isPending || rescheduleMutation.isPending ? (
+              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+            ) : null}
             {isReschedule ? 'Simpan Reschedule' : 'Tetapkan'}
           </Button>
         </div>
@@ -623,7 +729,7 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
   )
 }
 
-// â”€â”€ Result dialog (surveyor) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ADMIN RESCHEDULE DIALOG ────────────────────────────────────
 function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
   const rescheduleMutation = useRescheduleSurvey(survey.id)
   const suggested = survey.requested_date
@@ -651,23 +757,26 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Reschedule Survey</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <RotateCcw className="size-4 text-amber-500" />
+            Reschedule Survey
+          </DialogTitle>
           <DialogDescription>Usulan jadwal baru akan dikirim ke Manager Surveyor untuk divalidasi.</DialogDescription>
         </DialogHeader>
-        <div className="space-y-3.5 py-1">
+        <div className="space-y-4 py-1">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Usulan Tanggal & Jam</Label>
-            <Input type="datetime-local" value={requestedAt} onChange={(event) => setRequestedAt(event.target.value)} className="h-9 border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950" />
+            <Label className="text-xs font-semibold text-muted-foreground/80">Usulan Tanggal & Jam</Label>
+            <Input type="datetime-local" value={requestedAt} onChange={(event) => setRequestedAt(event.target.value)} className="h-10 border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Catatan untuk Manager (opsional)</Label>
+            <Label className="text-xs font-semibold text-muted-foreground/80">Catatan untuk Manager (opsional)</Label>
             <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alasan perubahan jadwal atau informasi dari klien..." className="min-h-[88px] border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950" />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-1">
           <Button variant="outline" size="sm" onClick={onClose} className="dark:border-zinc-700">Batal</Button>
           <Button size="sm" onClick={submit} disabled={rescheduleMutation.isPending} className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400">
-            {rescheduleMutation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="mr-1.5 h-3.5 w-3.5" />}
+            {rescheduleMutation.isPending ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <RotateCcw className="mr-1.5 size-3.5" />}
             Kirim Reschedule
           </Button>
         </div>
@@ -676,6 +785,7 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
   )
 }
 
+// ── RESULT DIALOG ──────────────────────────────────────────────
 function ResultDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
   const { data: statusesResp, isLoading } = useSurveyStatuses()
   const statuses = statusesResp?.data ?? []
@@ -702,15 +812,18 @@ function ResultDialog({ survey, onClose }: { survey: Survey; onClose: () => void
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Isi Hasil Survey</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <ClipboardCheck className="size-4 text-amber-500" />
+            Isi Hasil Survey
+          </DialogTitle>
           <DialogDescription>
-            {survey.consultation?.client_name} - {survey.consultation?.consultation_id}
+            {survey.consultation?.client_name} &middot; {survey.consultation?.consultation_id}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3.5 py-1">
+        <div className="space-y-4 py-1">
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Status Hasil</Label>
+            <Label className="text-xs font-semibold text-muted-foreground/80">Status Hasil</Label>
             <CustomSelect
               value={statusId}
               onChange={setStatusId}
@@ -721,7 +834,7 @@ function ResultDialog({ survey, onClose }: { survey: Survey; onClose: () => void
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold uppercase text-muted-foreground/70">Catatan Hasil</Label>
+            <Label className="text-xs font-semibold text-muted-foreground/80">Catatan Hasil</Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -741,7 +854,7 @@ function ResultDialog({ survey, onClose }: { survey: Survey; onClose: () => void
             disabled={resultMutation.isPending}
             className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
           >
-            {resultMutation.isPending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : null}
+            {resultMutation.isPending ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
             Simpan Hasil
           </Button>
         </div>
@@ -750,7 +863,7 @@ function ResultDialog({ survey, onClose }: { survey: Survey; onClose: () => void
   )
 }
 
-// datetime string â†’ value for <input type="datetime-local">
+// ── HELPERS ────────────────────────────────────────────────────
 function toLocalInput(value: string): string {
   const d = new Date(value)
   const pad = (n: number) => String(n).padStart(2, '0')

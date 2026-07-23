@@ -2,18 +2,29 @@
 
 import { useState, type ComponentType } from 'react'
 import Link from 'next/link'
+import { toast } from 'sonner'
 import {
+  ArrowRight,
   Bell,
   BellDot,
   CalendarClock,
-  Check,
+  CheckCircle2,
   ClipboardCheck,
+  FileText,
   Inbox,
   Loader2,
+  MapPin,
   MessageSquareText,
+  RotateCcw,
+  Timer,
+  Trash2,
+  UserRound,
+  XCircle,
 } from 'lucide-react'
 
 import {
+  useClearNotifications,
+  useDeleteSurveyNotification,
   useMarkNoteRead,
   useMarkReminderRead,
   useMarkSurveyRead,
@@ -25,7 +36,9 @@ import { Button, buttonVariants } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 import { cn } from '@/lib/utils'
+import type { SurveyNotification } from '@/types'
 
 import PushToggle from './push-toggle'
 
@@ -54,20 +67,210 @@ const tabClassName = cn(
   'data-active:shadow-[0_6px_16px_-12px_color-mix(in_srgb,var(--primary-theme)_70%,transparent),inset_0_-2px_0_var(--primary-theme),inset_0_1px_0_rgba(255,255,255,0.06)]',
 )
 
+const surveyNotificationMeta: Record<string, {
+  icon: ComponentType<{ className?: string }>
+  label: string
+  tone: string
+}> = {
+  request_created: {
+    icon: FileText,
+    label: 'Permintaan baru',
+    tone: 'border-amber-500/25 bg-amber-500/10 text-amber-500',
+  },
+  scheduled: {
+    icon: CalendarClock,
+    label: 'Terjadwal',
+    tone: 'border-blue-500/25 bg-blue-500/10 text-blue-500',
+  },
+  rescheduled_by_admin: {
+    icon: RotateCcw,
+    label: 'Jadwal berubah',
+    tone: 'border-amber-500/25 bg-amber-500/10 text-amber-500',
+  },
+  rescheduled_by_manager: {
+    icon: RotateCcw,
+    label: 'Jadwal berubah',
+    tone: 'border-amber-500/25 bg-amber-500/10 text-amber-500',
+  },
+  started: {
+    icon: Timer,
+    label: 'Berlangsung',
+    tone: 'border-violet-500/25 bg-violet-500/10 text-violet-500',
+  },
+  completed: {
+    icon: CheckCircle2,
+    label: 'Selesai',
+    tone: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500',
+  },
+  cancelled: {
+    icon: XCircle,
+    label: 'Dibatalkan',
+    tone: 'border-red-500/25 bg-red-500/10 text-red-500',
+  },
+}
+
+function SurveyNotificationItem({
+  notification,
+  onOpen,
+  onRead,
+  onDelete,
+  isDeleting,
+}: {
+  notification: SurveyNotification
+  onOpen: () => void
+  onRead: (id: number) => void
+  onDelete: (id: number) => void
+  isDeleting: boolean
+}) {
+  const meta = surveyNotificationMeta[notification.type] ?? {
+    icon: BellDot,
+    label: 'Pembaruan',
+    tone: 'border-[color-mix(in_srgb,var(--primary-theme)_24%,var(--border))] bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] text-[var(--primary-theme)]',
+  }
+  const Icon = meta.icon
+
+  return (
+    <div
+      className={cn(
+        'group relative border-b border-border/55 transition-colors duration-200 last:border-b-0 hover:bg-background/45',
+        !notification.is_read && 'bg-[color-mix(in_srgb,var(--primary-theme)_6%,var(--card))]',
+      )}
+    >
+      {!notification.is_read && (
+        <span className="absolute inset-y-3 left-0 w-0.5 rounded-r-full bg-[var(--primary-theme)]" aria-label="Belum dibaca" />
+      )}
+
+      <Link
+        href={notification.survey_url || '/surveys'}
+        onClick={() => {
+          if (!notification.is_read) onRead(notification.id)
+          onOpen()
+        }}
+        className="block px-3.5 py-3.5 pr-11 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--primary-theme)]"
+        title={`Buka ${notification.title}`}
+      >
+        <div className="flex min-w-0 items-start gap-2.5">
+          <span className={cn('grid size-9 shrink-0 place-items-center rounded-[10px] border', meta.tone)}>
+            <Icon className="size-4" />
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center justify-between gap-2">
+              <span className={cn('rounded-md border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em]', meta.tone)}>
+                {meta.label}
+              </span>
+              <time className="shrink-0 text-[10px] text-muted-foreground/70">
+                {notification.created_human || 'Baru saja'}
+              </time>
+            </div>
+
+            <h4 className="mt-2 truncate text-xs font-bold text-foreground/95">
+              {notification.title}
+            </h4>
+
+            <div className="mt-1.5 space-y-1">
+            <div className="flex min-w-0 items-center gap-1.5 text-[11px]">
+              <UserRound className="size-3 shrink-0 text-muted-foreground/60" />
+              <span className="min-w-0 truncate font-semibold text-foreground/80">
+                {notification.client_name || 'Konsumen'}
+              </span>
+              {notification.consultation_code && (
+                <span className="shrink-0 rounded border border-border/70 px-1 font-mono text-[9px] text-muted-foreground">
+                  {notification.consultation_code}
+                </span>
+              )}
+            </div>
+
+            {notification.location && (
+              <div className="flex min-w-0 items-center gap-1.5 text-[11px] text-muted-foreground">
+                <MapPin className="size-3 shrink-0 text-muted-foreground/60" />
+                <span className="truncate">{notification.location}</span>
+              </div>
+            )}
+
+            {(notification.schedule_label || notification.surveyor_name) && (
+              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+                {notification.schedule_label && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <CalendarClock className="size-3 shrink-0 text-muted-foreground/60" />
+                    {notification.schedule_label}
+                  </span>
+                )}
+                {notification.surveyor_name && (
+                  <span className="inline-flex min-w-0 items-center gap-1.5">
+                    <UserRound className="size-3 shrink-0 text-muted-foreground/60" />
+                    <span className="truncate">{notification.surveyor_name}</span>
+                  </span>
+                )}
+              </div>
+            )}
+            </div>
+
+            <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+              {notification.message}
+            </p>
+
+            <span className="mt-2 inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--primary-theme)] opacity-80 transition-opacity group-hover:opacity-100">
+              Buka survey
+              <ArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-0.5" />
+            </span>
+          </div>
+        </div>
+      </Link>
+
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        disabled={isDeleting}
+        onClick={() => onDelete(notification.id)}
+        className="absolute bottom-3 right-2.5 size-7 rounded-lg text-muted-foreground opacity-100 hover:bg-red-500/10 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100"
+        title="Hapus notifikasi"
+        aria-label={`Hapus notifikasi ${notification.title}`}
+      >
+        {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+      </Button>
+    </div>
+  )
+}
+
 export default function NotificationCenter() {
   const [open, setOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('surveys')
+  const confirm = useConfirm()
   const { data: count } = useNotificationCount()
   const { data: summary, isLoading } = useNotificationSummary(open)
   const markNoteRead = useMarkNoteRead()
   const markReminderRead = useMarkReminderRead()
   const markSurveyRead = useMarkSurveyRead()
+  const deleteSurveyNotification = useDeleteSurveyNotification()
+  const clearNotifications = useClearNotifications()
 
   const surveyUnread = summary?.surveys?.filter((item) => !item.is_read).length ?? count?.unread_surveys ?? 0
   const noteUnread = summary?.unread_notes ?? count?.unread_notes ?? 0
   const reminderUnread = summary?.upcoming_reminders ?? count?.upcoming_reminders ?? 0
   const totalUnread = surveyUnread + noteUnread + reminderUnread
+  const hasNotifications = Boolean(
+    summary?.surveys?.length || summary?.notes?.length || summary?.reminders?.length
+  )
   const TriggerIcon = totalUnread > 0 ? BellDot : Bell
+
+  const clearAll = async () => {
+    const accepted = await confirm({
+      title: 'Bersihkan semua notifikasi?',
+      description: 'Semua notifikasi akan dihilangkan dari panel. Data konsultasi, catatan, dan jadwal tetap aman.',
+      actionLabel: 'Bersihkan semua',
+      variant: 'destructive',
+    })
+    if (!accepted) return
+
+    try {
+      const result = await clearNotifications.mutateAsync()
+      toast.success(`${result.cleared} notifikasi dibersihkan`)
+    } catch {
+      toast.error('Gagal membersihkan notifikasi')
+    }
+  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -106,7 +309,21 @@ export default function NotificationCenter() {
               </p>
             </div>
           </div>
-          <PushToggle />
+          <div className="flex shrink-0 items-center gap-1.5">
+            <PushToggle />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={!hasNotifications || clearNotifications.isPending}
+              onClick={clearAll}
+              className="h-8 gap-1.5 rounded-lg border border-border/70 px-2 text-[10px] font-semibold text-muted-foreground hover:border-red-500/25 hover:bg-red-500/10 hover:text-red-500 disabled:opacity-40"
+              title="Bersihkan semua notifikasi"
+            >
+              {clearNotifications.isPending ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
+              <span className="hidden sm:inline">Bersihkan</span>
+            </Button>
+          </div>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full gap-0">
@@ -166,8 +383,8 @@ export default function NotificationCenter() {
                           ) : (
                             <div className="flex min-w-0 flex-1 items-start gap-2.5">{inner}</div>
                           )}
-                          <Button variant="ghost" size="icon" onClick={(event) => { event.stopPropagation(); markNoteRead.mutate(note.id) }} className="size-7 shrink-0 rounded-lg text-muted-foreground opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 sm:opacity-0 sm:group-hover:opacity-100" title="Tandai telah dibaca" aria-label="Tandai catatan telah dibaca">
-                            <Check className="size-3.5" />
+                          <Button variant="ghost" size="icon" onClick={(event) => { event.stopPropagation(); markNoteRead.mutate(note.id) }} className="size-7 shrink-0 rounded-lg text-muted-foreground opacity-100 hover:bg-red-500/10 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100" title="Hapus dari notifikasi" aria-label="Hapus catatan dari notifikasi">
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </div>
@@ -187,21 +404,16 @@ export default function NotificationCenter() {
               ) : !summary?.surveys?.length ? (
                 <EmptyState icon={Inbox} title="Belum ada notifikasi survey" description="Penugasan dan perubahan survey akan muncul di sini." />
               ) : (
-                <div className="divide-y divide-border/60">
+                <div>
                   {summary.surveys.map((notification) => (
-                    <button
+                    <SurveyNotificationItem
                       key={notification.id}
-                      type="button"
-                      onClick={() => !notification.is_read && markSurveyRead.mutate(notification.id)}
-                      className={cn(
-                        'w-full px-3.5 py-3 text-left transition-colors hover:bg-muted/45',
-                        !notification.is_read && 'bg-[color-mix(in_srgb,var(--primary-theme)_6%,var(--card))]',
-                      )}
-                    >
-                      <p className="text-xs font-semibold text-foreground/90">{notification.title}</p>
-                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{notification.message}</p>
-                      <p className="mt-1.5 text-[10px] text-muted-foreground/70">{notification.created_human}</p>
-                    </button>
+                      notification={notification}
+                      onRead={(id) => markSurveyRead.mutate(id)}
+                      onDelete={(id) => deleteSurveyNotification.mutate(id)}
+                      isDeleting={deleteSurveyNotification.isPending && deleteSurveyNotification.variables === notification.id}
+                      onOpen={() => setOpen(false)}
+                    />
                   ))}
                 </div>
               )}
@@ -250,8 +462,8 @@ export default function NotificationCenter() {
                           ) : (
                             <div className="flex min-w-0 flex-1 items-start gap-2.5">{inner}</div>
                           )}
-                          <Button variant="ghost" size="icon" onClick={(event) => { event.stopPropagation(); markReminderRead.mutate(reminder.id) }} className="size-7 shrink-0 rounded-lg text-muted-foreground opacity-100 hover:bg-emerald-500/10 hover:text-emerald-500 sm:opacity-0 sm:group-hover:opacity-100" title="Tandai selesai" aria-label="Tandai pengingat selesai">
-                            <Check className="size-3.5" />
+                          <Button variant="ghost" size="icon" onClick={(event) => { event.stopPropagation(); markReminderRead.mutate(reminder.id) }} className="size-7 shrink-0 rounded-lg text-muted-foreground opacity-100 hover:bg-red-500/10 hover:text-red-500 sm:opacity-0 sm:group-hover:opacity-100" title="Hapus dari notifikasi" aria-label="Hapus reminder dari notifikasi">
+                            <Trash2 className="size-3.5" />
                           </Button>
                         </div>
                       </div>

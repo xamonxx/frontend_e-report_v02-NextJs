@@ -25,13 +25,89 @@ import {
   UserCheck,
   ChevronLeft,
   ChevronRight,
+  SearchX,
   X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
 import { buildExportUrl } from '@/lib/api/client'
 import { useConfirm } from '@/components/ui/confirm-dialog'
+import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+
+/** Ringkasan progress target satu akun, dipakai tabel maupun kartu mobile. */
+function accountProgress(acc: AccountItem) {
+  const total = acc.consultations_count || 0
+  const target = acc.target_leads || 0
+  return {
+    total,
+    target,
+    percent: target > 0 ? Math.min(100, Math.round((total / target) * 100)) : 0,
+  }
+}
+
+function ProgressBar({ percent, label }: { percent: number; label: string }) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-[10px] font-semibold">
+        <span className="text-muted-foreground">{label}</span>
+        <span className={cn(percent >= 100 ? 'text-emerald-500' : 'text-amber-500')}>{percent}%</span>
+      </div>
+      <div
+        className="h-2 overflow-hidden rounded-full bg-muted dark:bg-zinc-950"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+      >
+        <div
+          className={cn('h-full rounded-full transition-[width] duration-500', percent >= 100 ? 'bg-emerald-500' : 'bg-amber-500')}
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+    </div>
+  )
+}
+
+function AccountLogo({ acc, className }: { acc: AccountItem; className?: string }) {
+  return (
+    <div className={cn('flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted dark:border-zinc-700 dark:bg-zinc-900', className)}>
+      {acc.logo_path ? (
+        <img src={buildExportUrl(`/storage/${acc.logo_path}`)} alt={acc.name} className="h-full w-full object-cover" />
+      ) : (
+        <Building className="h-5 w-5 text-muted-foreground/50" />
+      )}
+    </div>
+  )
+}
+
+function GroupBadge({ value }: { value?: string | null }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 shadow-sm dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
+      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.65)]" />
+      {value || 'Umum'}
+    </span>
+  )
+}
+
+function AdminBadges({ acc }: { acc: AccountItem }) {
+  if (!acc.admins || acc.admins.length === 0) {
+    return <span className="text-[10px] italic text-muted-foreground/60">Belum ada admin</span>
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {acc.admins.map((adm) => (
+        <span
+          key={adm.id}
+          className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-cyan-700 shadow-sm dark:border-cyan-400/25 dark:bg-cyan-400/10 dark:text-cyan-300"
+        >
+          <UserCheck className="h-3 w-3" />
+          {adm.name}
+        </span>
+      ))}
+    </div>
+  )
+}
 
 export default function AccountsPage() {
   const confirm = useConfirm()
@@ -57,6 +133,12 @@ export default function AccountsPage() {
   })
   const accounts = response?.data || []
   const meta = response?.meta
+  const hasActiveFilter = debouncedSearch.trim() !== '' || category !== ''
+
+  const clearFilters = () => {
+    setSearchTerm('')
+    setCategory('')
+  }
 
   // Mutations
   const createMutation = useCreateAccount()
@@ -162,15 +244,26 @@ export default function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2.5">
-            <Building className="h-6 w-6 text-amber-500" />
-            Kelola Akun / Interior
-          </h1>
-          <p className="text-xs text-muted-foreground">
-            Daftar akun interior yang terdaftar di sistem. Super admin dapat menambah, mengedit, atau menghapus akun.
-          </p>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="grid size-11 shrink-0 place-items-center rounded-2xl border border-amber-500/25 bg-amber-500/10 text-amber-500">
+            <Building className="h-5 w-5" />
+          </span>
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Kelola Akun / Interior</h1>
+              {/* Jumlah dinaikkan ke header supaya skala data terbaca tanpa
+                  harus turun ke bar paginasi di bawah tabel. */}
+              {!isLoading && meta && meta.total > 0 && (
+                <span className="rounded-full border border-border/70 bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground dark:border-zinc-800 dark:bg-zinc-900">
+                  {meta.total} akun
+                </span>
+              )}
+            </div>
+            <p className="mt-0.5 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              Daftar akun interior yang terdaftar di sistem. Super admin dapat menambah, mengedit, atau menghapus akun.
+            </p>
+          </div>
         </div>
 
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -206,7 +299,7 @@ export default function AccountsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="acc-desc" className="text-xs font-semibold text-muted-foreground">Kategori / Tagline</Label>
+                  <Label htmlFor="acc-desc" className="text-xs font-semibold text-muted-foreground">Grup / Tagline</Label>
                   <Input
                     id="acc-desc"
                     placeholder="Contoh: PC, NPP"
@@ -233,7 +326,7 @@ export default function AccountsPage() {
                   <Label className="text-xs font-semibold text-muted-foreground block">Logo Akun</Label>
                   <div className="flex flex-col gap-2">
                     {editAccount?.logo_path && !removeLogo && (
-                      <div className="flex items-center gap-2 border border-border bg-muted/20 p-2 rounded-xl dark:border-zinc-800 dark:bg-zinc-950/40">
+                      <div className="flex items-center gap-2 border border-border bg-muted p-2 rounded-xl dark:border-zinc-800 dark:bg-zinc-950">
                         <Building className="h-6 w-6 text-muted-foreground/50" />
                         <span className="text-[10px] text-muted-foreground truncate flex-1">Logo terunggah aktif</span>
                         <Button
@@ -247,7 +340,7 @@ export default function AccountsPage() {
                         </Button>
                       </div>
                     )}
-                    <div className="flex items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-xl p-4 cursor-pointer bg-muted/20 relative dark:border-zinc-800 dark:bg-zinc-950/40">
+                    <div className="flex items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-xl p-4 cursor-pointer bg-muted relative dark:border-zinc-800 dark:bg-zinc-950">
                       <input
                         type="file"
                         accept="image/*"
@@ -291,18 +384,19 @@ export default function AccountsPage() {
         </Dialog>
       </div>
 
-      {/* Search + Category Filter */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      {/* Toolbar: pencarian + filter grup, dibungkus kartu supaya tidak
+          mengambang lepas dari daftar yang dikendalikannya. */}
+      <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card p-3 shadow-sm sm:flex-row sm:items-center dark:border-zinc-800 dark:bg-zinc-900">
         <div className="relative w-full sm:max-w-md">
           <Search className={cn(
             "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50 transition-colors",
             searchTerm && "text-amber-500"
           )} />
           <Input
-            placeholder="Cari nama akun, kategori, atau admin..."
+            placeholder="Cari nama akun, grup, atau admin..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-amber-500/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60 dark:focus-visible:bg-zinc-900"
+            className="h-11 rounded-xl border-border/60 bg-muted pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-amber-500/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900 dark:focus-visible:bg-zinc-900"
           />
           {searchTerm && (
             <button
@@ -320,19 +414,19 @@ export default function AccountsPage() {
           <CustomSelect
             value={category}
             onChange={setCategory}
-            placeholder="Semua Kategori"
+            placeholder="Semua Grup"
             options={[
-              { value: '', label: 'Semua Kategori' },
+              { value: '', label: 'Semua Grup' },
               ...(categoryOptions || []).map((cat) => ({ value: cat, label: cat })),
             ]}
-            className="h-11 w-full sm:w-56 rounded-xl border border-border/60 bg-muted/40 px-3 text-sm text-foreground focus:outline-none focus-visible:border-amber-500/50 focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60"
+            className="h-11 w-full sm:w-56 rounded-xl border border-border/60 bg-muted px-3 text-sm text-foreground focus:outline-none focus-visible:border-amber-500/50 focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900"
           />
           {category && (
             <button
               type="button"
               onClick={() => setCategory('')}
               className="grid size-8 shrink-0 place-items-center rounded-md text-muted-foreground/60 transition-colors hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800 cursor-pointer"
-              title="Bersihkan filter kategori"
+              title="Bersihkan filter grup"
             >
               <X className="size-3.5" />
             </button>
@@ -340,21 +434,112 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      {/* Accounts table */}
+      {/* Daftar akun */}
       {isLoading ? (
-        <div className="flex h-48 items-center justify-center">
-          <Loader2 className="h-6 w-6 animate-spin text-amber-500" />
+        // Skeleton menyerupai bentuk tabel, bukan spinner kosong: tinggi
+        // halaman tidak melompat saat data akhirnya masuk.
+        <div className="overflow-hidden rounded-2xl border border-border bg-card dark:border-zinc-700/60 dark:bg-zinc-800">
+          <div className="border-b border-border bg-muted px-5 py-3.5 dark:border-zinc-700/60 dark:bg-zinc-800">
+            <Skeleton className="h-3 w-40" />
+          </div>
+          <div className="divide-y divide-border dark:divide-white/10">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={index} className="flex items-center gap-3 px-5 py-4">
+                <Skeleton className="size-10 shrink-0 rounded-xl" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-3.5 w-52 max-w-full" />
+                  <Skeleton className="h-2.5 w-24" />
+                </div>
+                <Skeleton className="hidden h-2 w-40 rounded-full sm:block" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : accounts.length === 0 ? (
-        <p className="text-xs text-muted-foreground/70 text-center py-12">Tidak ada akun terdaftar.</p>
+        // Dua kondisi kosong yang berbeda: belum punya data sama sekali, atau
+        // filter yang tidak menemukan apa pun. Jalan keluarnya juga berbeda.
+        <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 bg-card px-6 py-16 text-center dark:border-zinc-800 dark:bg-zinc-900">
+          <span className="grid size-14 place-items-center rounded-2xl border border-border/70 bg-muted text-muted-foreground/60 dark:border-zinc-800 dark:bg-zinc-900">
+            {hasActiveFilter ? <SearchX className="h-6 w-6" /> : <Building className="h-6 w-6" />}
+          </span>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-foreground">
+              {hasActiveFilter ? 'Tidak ada akun yang cocok' : 'Belum ada akun terdaftar'}
+            </p>
+            <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
+              {hasActiveFilter
+                ? 'Coba kata kunci lain atau lepas filter grup yang sedang aktif.'
+                : 'Akun mewakili tiap unit interior. Buat satu akun dulu supaya lead dan target bisa dicatat per unit.'}
+            </p>
+          </div>
+          {hasActiveFilter ? (
+            <Button variant="outline" size="sm" onClick={clearFilters} className="rounded-xl">
+              <X className="mr-1.5 h-3.5 w-3.5" />
+              Bersihkan filter
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={handleOpenCreate}
+              className="rounded-xl bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Buat Akun Pertama
+            </Button>
+          )}
+        </div>
       ) : (
-        <div className="relative max-w-full overflow-hidden rounded-2xl border border-border bg-card/50 shadow-2xl backdrop-blur-sm dark:border-zinc-700/60 dark:bg-zinc-800/40">
+        <>
+        {/* Kartu untuk layar sempit: tabel min-w 980px memaksa geser
+            horizontal di ponsel, praktis tidak terbaca. */}
+        <div className="space-y-3 lg:hidden">
+          {accounts.map((acc) => {
+            const { total, target, percent } = accountProgress(acc)
+            return (
+              <div key={acc.id} className="space-y-3 rounded-2xl border border-border bg-card p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex items-start gap-3">
+                  <AccountLogo acc={acc} className="h-11 w-11" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-semibold text-foreground">{acc.name}</p>
+                    <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">ID #{acc.id}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Button size="icon-xs" variant="ghost" onClick={() => handleOpenEdit(acc)} aria-label={`Edit ${acc.name}`} className="h-8 w-8 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-zinc-800">
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button size="icon-xs" variant="ghost" onClick={() => handleDelete(acc.id)} aria-label={`Hapus ${acc.name}`} className="h-8 w-8 rounded-lg text-muted-foreground/70 hover:bg-red-500/10 hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </div>
+
+                <GroupBadge value={acc.description} />
+
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">Total Leads</p>
+                    <p className="font-semibold text-foreground/90">{total}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">Deal</p>
+                    <p className="font-bold text-amber-500">{acc.deals_count || 0}</p>
+                  </div>
+                </div>
+
+                <ProgressBar percent={percent} label={target > 0 ? `${total} / ${target}` : 'Target belum diatur'} />
+                <AdminBadges acc={acc} />
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="relative hidden max-w-full overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:block dark:border-zinc-700/60 dark:bg-zinc-800">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left text-xs">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  {['Akun / Interior', 'Kategori', 'Total Leads', 'Deal', 'Progress Target', 'Admin', 'Aksi'].map((heading) => (
-                    <th key={heading} className="whitespace-nowrap border-b border-border bg-muted/60 px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:border-zinc-700/60 dark:bg-zinc-800/80 dark:text-zinc-300">
+                  {['Akun / Interior', 'Grup', 'Total Leads', 'Deal', 'Progress Target', 'Admin', 'Aksi'].map((heading) => (
+                    <th key={heading} className="whitespace-nowrap border-b border-border bg-muted px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-zinc-300">
                       {heading}
                     </th>
                   ))}
@@ -362,27 +547,13 @@ export default function AccountsPage() {
               </thead>
               <tbody className="divide-y divide-slate-300/65 dark:divide-white/10">
                 {accounts.map((acc) => {
-                  const totalLeads = acc.consultations_count || 0
-                  const targetLeads = acc.target_leads || 0
-                  const progress = targetLeads > 0
-                    ? Math.min(100, Math.round((totalLeads / targetLeads) * 100))
-                    : 0
+                  const { total, target, percent } = accountProgress(acc)
 
                   return (
                     <tr key={acc.id} className="group border-b border-border border-l-2 border-transparent odd:bg-card even:bg-muted/[0.18] transition-colors hover:border-l-amber-500/60 hover:bg-amber-500/[0.06] dark:border-zinc-800">
                       <td className="px-5 py-3.5 align-middle">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted dark:border-zinc-700 dark:bg-zinc-900">
-                            {acc.logo_path ? (
-                              <img
-                                src={buildExportUrl(`/storage/${acc.logo_path}`)}
-                                alt={acc.name}
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <Building className="h-5 w-5 text-muted-foreground/50" />
-                            )}
-                          </div>
+                          <AccountLogo acc={acc} className="h-10 w-10" />
                           <div className="min-w-0">
                             <p className="max-w-[220px] truncate font-semibold text-foreground">{acc.name}</p>
                             <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">ID #{acc.id}</p>
@@ -390,35 +561,15 @@ export default function AccountsPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 align-middle">
-                        <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 shadow-sm dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
-                          <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.65)]" />
-                          {acc.description || 'Umum'}
-                        </span>
+                        <GroupBadge value={acc.description} />
                       </td>
-                      <td className="px-5 py-3.5 align-middle font-semibold text-foreground/90">{totalLeads}</td>
+                      <td className="px-5 py-3.5 align-middle font-semibold text-foreground/90">{total}</td>
                       <td className="px-5 py-3.5 align-middle font-bold text-amber-500">{acc.deals_count || 0}</td>
                       <td className="w-[250px] px-5 py-3.5 align-middle">
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-[10px] font-semibold">
-                            <span className="text-muted-foreground">{targetLeads > 0 ? `${totalLeads} / ${targetLeads}` : 'Target belum diatur'}</span>
-                            <span className={cn(progress >= 100 ? 'text-emerald-500' : 'text-amber-500', targetLeads === 0 && 'text-muted-foreground')}>{progress}%</span>
-                          </div>
-                          <div className="h-2 overflow-hidden rounded-full bg-muted dark:bg-zinc-950" role="progressbar" aria-label={`Progress target ${acc.name}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
-                            <div className={cn('h-full rounded-full transition-[width] duration-500', progress >= 100 ? 'bg-emerald-500' : 'bg-amber-500')} style={{ width: `${progress}%` }} />
-                          </div>
-                        </div>
+                        <ProgressBar percent={percent} label={target > 0 ? `${total} / ${target}` : 'Target belum diatur'} />
                       </td>
-                      <td className="px-5 py-3.5 align-middle">
-                        {acc.admins && acc.admins.length > 0 ? (
-                          <div className="flex max-w-[220px] flex-wrap gap-1">
-                            {acc.admins.map((adm) => (
-                              <span key={adm.id} className="inline-flex items-center gap-1.5 rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-cyan-700 shadow-sm dark:border-cyan-400/25 dark:bg-cyan-400/10 dark:text-cyan-300">
-                                <UserCheck className="h-3 w-3" />
-                                {adm.name}
-                              </span>
-                            ))}
-                          </div>
-                        ) : <span className="text-[10px] italic text-muted-foreground/60">Belum ada admin</span>}
+                      <td className="max-w-[240px] px-5 py-3.5 align-middle">
+                        <AdminBadges acc={acc} />
                       </td>
                       <td className="px-5 py-3.5 align-middle">
                         <div className="flex items-center gap-1">
@@ -437,20 +588,24 @@ export default function AccountsPage() {
             </table>
           </div>
         </div>
+        </>
       )}
 
-      {meta && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card/60 px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900/50">
+      {/* Bar paginasi hanya muncul kalau memang ada yang bisa dipaginasi.
+          Sebelumnya tetap tampil saat kosong dengan tombol mati dan teks
+          "Menampilkan 0 dari 0 akun. Halaman 1 dari 1". */}
+      {meta && meta.total > 0 && (
+        <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-[10px] text-muted-foreground/70">
             Menampilkan <span className="font-semibold text-muted-foreground">{accounts.length}</span> dari <span className="font-semibold text-muted-foreground">{meta.total}</span> akun.
           </p>
-          <nav aria-label="Pagination akun" className="flex items-center justify-between gap-2 sm:justify-end">
+          <nav aria-label="Pagination akun" className={cn('flex items-center justify-between gap-2 sm:justify-end', meta.last_page <= 1 && 'hidden')}>
             <Button
               variant="outline"
               size="xs"
               disabled={meta.current_page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:text-zinc-300"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               Sebelumnya
@@ -463,7 +618,7 @@ export default function AccountsPage() {
               size="xs"
               disabled={meta.current_page >= meta.last_page}
               onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:cursor-not-allowed disabled:opacity-40 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-800 dark:text-zinc-300"
             >
               Selanjutnya
               <ChevronRight className="h-3.5 w-3.5 ml-0.5" />

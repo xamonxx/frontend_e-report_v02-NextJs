@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import {
   useConsultation,
   useUpdateConsultationStatus,
@@ -11,6 +11,7 @@ import {
   useMarkReminderDone
 } from '@/lib/hooks/useConsultations'
 import { useStatusCategories } from '@/lib/hooks/useMasterData'
+import SurveyRequestCard from '@/components/consultations/survey-request-card'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -35,7 +36,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import { cn, rawPhoneDigits } from '@/lib/utils'
+import { cn, rawPhoneDigits, productCategoryNames } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 
@@ -63,6 +64,20 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
   const [noteBody, setNoteBody] = useState('')
   const [reminderMessage, setReminderMessage] = useState('')
   const [reminderDate, setReminderDate] = useState('')
+  // Dinaikkan tiap status berpindah ke Request Survey; kartu survey memakainya
+  // sebagai pemicu membuka form pengajuan secara otomatis.
+  const [surveyPromptSignal, setSurveyPromptSignal] = useState(0)
+
+  // Datang dari halaman create dengan status Request Survey: buka formnya
+  // sekali begitu data lead selesai dimuat.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (new URLSearchParams(window.location.search).get('prompt_survey') !== '1') return
+
+    setSurveyPromptSignal((value) => value + 1)
+    // Bersihkan query supaya refresh halaman tidak membuka modal lagi.
+    window.history.replaceState({}, '', window.location.pathname)
+  }, [])
 
   if (isLoading) {
     return <DetailPageSkeleton />
@@ -86,11 +101,25 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
     )
   }
 
+  const surveyStageName = 'request survey'
+  const isAtSurveyStage =
+    (consultation.status_category?.name ?? '').trim().toLowerCase() === surveyStageName
+
   const handleStatusChange = (statusIdStr: string) => {
     const statusId = parseInt(statusIdStr, 10)
+    const nextStatus = statuses?.find((s) => s.id === statusId)
+    const movesToSurveyStage =
+      (nextStatus?.name ?? '').trim().toLowerCase() === surveyStageName
+
     updateStatusMutation.mutate(statusId, {
       onSuccess: () => {
         toast.success('Status lead berhasil diperbarui')
+
+        // Baru masuk tahap survey dan belum pernah diajukan: langsung tawarkan
+        // formnya supaya lead tidak menggantung tanpa diteruskan ke manager.
+        if (movesToSurveyStage && !consultation.active_survey) {
+          setSurveyPromptSignal((value) => value + 1)
+        }
       },
       onError: (err: any) => {
         toast.error(err.message || 'Gagal memperbarui status')
@@ -306,14 +335,31 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                   </div>
                 </div>
 
-                {/* Kategori Kebutuhan */}
+                {/* Kategori Kebutuhan — satu lead bisa punya beberapa kategori */}
                 <div className="flex items-start gap-3">
                   <Tag className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Kategori Kebutuhan</p>
-                    <p className="text-xs text-foreground/80 font-medium">
-                      {consultation.needs_category?.name || 'Kebutuhan Umum'}
-                    </p>
+                    {(() => {
+                      const categories = productCategoryNames(consultation)
+
+                      if (categories.length === 0) {
+                        return <p className="text-xs text-foreground/80 font-medium">Kebutuhan Umum</p>
+                      }
+
+                      return (
+                        <div className="mt-1 flex flex-wrap gap-1.5">
+                          {categories.map((name) => (
+                            <span
+                              key={name}
+                              className="inline-flex items-center rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-0.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400"
+                            >
+                              {name}
+                            </span>
+                          ))}
+                        </div>
+                      )
+                    })()}
                   </div>
                 </div>
 
@@ -396,6 +442,12 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
               </div>
             </CardContent>
           </Card>
+
+          <SurveyRequestCard
+            consultation={consultation}
+            isAtSurveyStage={isAtSurveyStage}
+            autoOpenSignal={surveyPromptSignal}
+          />
         </div>
 
         {/* Timeline Notes log & Reminder Schedule */}

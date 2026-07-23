@@ -325,6 +325,11 @@
     input[type="datetime-local"]
   ) {
     min-height: 2.75rem;
+    /* Lebar/gaya border ikut disetel di sini. Tanpa ini kontrol yang bukan
+       <input> - trigger popover tanggal misalnya - hanya dapat border-color
+       sementara border-width-nya tetap 0, jadi kelihatan tanpa garis. */
+    border-width: 1px;
+    border-style: solid;
     border-color: var(--consultation-control-border);
     border-radius: 0.625rem;
     background: var(--consultation-control-bg) !important;
@@ -365,6 +370,154 @@
 
   .consultation-accent {
     color: var(--primary-theme) !important;
+  }
+
+  .consultation-toolbar {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--primary-theme) 18%, #cbd5e1) !important;
+    border-radius: 1rem;
+    background:
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--primary-theme) 8%, #ffffff) 0%,
+        #f7fdff 42%,
+        color-mix(in srgb, #ecfeff 84%, var(--primary-theme)) 100%
+      ) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 18px 42px -36px color-mix(in srgb, var(--primary-theme) 34%, transparent);
+    backdrop-filter: blur(14px);
+  }
+
+  .consultation-toolbar::before {
+    position: absolute;
+    top: 0;
+    right: 1.25rem;
+    left: 1.25rem;
+    height: 1px;
+    pointer-events: none;
+    content: "";
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--primary-theme) 34%, transparent),
+      transparent
+    );
+  }
+
+  .consultation-toolbar::after {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    content: "";
+    background: radial-gradient(
+      circle at 12% 0%,
+      color-mix(in srgb, var(--primary-theme) 7%, transparent),
+      transparent 34%
+    );
+  }
+
+  .consultation-toolbar > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .consultation-toolbar :is(button, a, [role="button"], input) {
+    border-color: color-mix(in srgb, var(--primary-theme) 16%, #cbd5e1) !important;
+    background:
+      linear-gradient(135deg,
+        rgba(255, 255, 255, 0.92),
+        color-mix(in srgb, var(--primary-theme) 8%, #f8fafc)
+      ) !important;
+    color: #0f172a;
+  }
+
+  .consultation-toolbar :is(button, a, [role="button"]):hover {
+    border-color: color-mix(in srgb, var(--primary-theme) 32%, #94a3b8) !important;
+    background:
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--primary-theme) 14%, #ffffff),
+        color-mix(in srgb, var(--primary-theme) 8%, #ecfeff)
+      ) !important;
+  }
+
+  .consultation-toolbar svg {
+    color: color-mix(in srgb, var(--primary-theme) 86%, #0284c7);
+  }
+
+  .consultation-toolbar a[href="/consultations/create"] {
+    border-color: color-mix(in srgb, var(--primary-theme) 82%, transparent) !important;
+    background: var(--primary-theme) !important;
+    color: var(--primary-theme-foreground) !important;
+    box-shadow: 0 12px 28px -16px color-mix(in srgb, var(--primary-theme) 82%, transparent);
+  }
+
+  .consultation-toolbar a[href="/consultations/create"]:hover {
+    border-color: color-mix(in srgb, var(--primary-theme) 92%, white) !important;
+    background: color-mix(in srgb, var(--primary-theme) 86%, white) !important;
+    color: #020617 !important;
+    box-shadow: 0 14px 30px -15px color-mix(in srgb, var(--primary-theme) 72%, transparent);
+    filter: brightness(1.04);
+    transform: translateY(-1px);
+  }
+
+  .consultation-toolbar a[href="/consultations/create"] svg {
+    color: currentColor;
+  }
+
+  .dark .consultation-toolbar {
+    border-color: rgba(51, 65, 85, 0.58) !important;
+    border-top-color: rgba(51, 65, 85, 0.38) !important;
+    background:
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--primary-theme) 4%, #0f172a) 0%,
+        #101827 48%,
+        #07111f 100%
+      ) !important;
+    box-shadow: none !important;
+  }
+
+  .dark .consultation-toolbar::before {
+    opacity: 0;
+  }
+
+  .dark .consultation-toolbar::after {
+    background: radial-gradient(
+      circle at 12% 0%,
+      color-mix(in srgb, var(--primary-theme) 3%, transparent),
+      transparent 34%
+    );
+  }
+
+  .dark .consultation-toolbar :is(button, a, [role="button"], input) {
+    border-color: color-mix(in srgb, var(--primary-theme) 8%, var(--border)) !important;
+    background:
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--primary-theme) 4%, var(--card)) 0%,
+        color-mix(in srgb, var(--primary-theme) 2%, var(--background)) 100%
+      ) !important;
+    color: var(--foreground);
+  }
+
+  .dark .consultation-toolbar :is(button, a, [role="button"]):hover {
+    border-color: color-mix(in srgb, var(--primary-theme) 26%, var(--border)) !important;
+    background:
+      linear-gradient(135deg,
+        color-mix(in srgb, var(--primary-theme) 14%, var(--card)) 0%,
+        color-mix(in srgb, var(--primary-theme) 5%, var(--background)) 100%
+      ) !important;
+  }
+
+  .dark .consultation-toolbar a[href="/consultations/create"] {
+    border-color: color-mix(in srgb, var(--primary-theme) 82%, transparent) !important;
+    background: var(--primary-theme) !important;
+    color: var(--primary-theme-foreground) !important;
+  }
+
+  .dark .consultation-toolbar a[href="/consultations/create"]:hover {
+    border-color: color-mix(in srgb, var(--primary-theme) 72%, #0f172a) !important;
+    background: color-mix(in srgb, var(--primary-theme) 88%, #0f172a) !important;
+    color: #020617 !important;
   }
 
   .consultation-primary-action {
@@ -741,10 +894,21 @@ select option:checked {
   }
 }
 
-/* Shimmer sweep for login CTA */
-@keyframes login-shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
+/* Keep browser autofill aligned with the login glass surface. */
+.login-field:-webkit-autofill,
+.login-field:-webkit-autofill:hover,
+.login-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: #0f172a;
+  -webkit-box-shadow: 0 0 0 1000px rgba(255, 255, 255, 0.78) inset;
+  caret-color: #0f172a;
+}
+
+.dark .login-field:-webkit-autofill,
+.dark .login-field:-webkit-autofill:hover,
+.dark .login-field:-webkit-autofill:focus {
+  -webkit-text-fill-color: #f8fafc;
+  -webkit-box-shadow: 0 0 0 1000px #26354c inset;
+  caret-color: #f8fafc;
 }
 
 /* ═══════════════════════════════════════════════════════

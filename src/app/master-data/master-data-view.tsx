@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { Reorder, useDragControls } from 'framer-motion'
+import { motion, Reorder, useDragControls } from 'framer-motion'
 import type { StatusCategory, SurveyStatusItem } from '@/types'
 import {
   useCategoriesList,
@@ -481,39 +481,45 @@ export default function MasterDataPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-4 sm:space-y-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="min-w-0 space-y-5 pb-8">
+      <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl sm:text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
-            <Settings className="h-5 w-5 sm:h-7 sm:w-7 text-amber-500 shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.3)] hover:rotate-45 transition-transform duration-500" />
+          <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase text-[var(--primary-theme)]">
+            <span className="h-1.5 w-1.5 bg-[var(--primary-theme)]" />
+            Pengaturan sistem - data referensi
+          </div>
+          <h1 className="flex items-center gap-3 text-2xl font-bold text-foreground sm:text-[28px]">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_12%,transparent)] text-[var(--primary-theme)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_28%,transparent)]">
+              <Settings className="h-5 w-5" />
+            </span>
             Konfigurasi Master Data
           </h1>
-          <p className="text-[11px] sm:text-xs text-muted-foreground mt-1 leading-relaxed">
+          <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
             Halaman pengaturan sistem untuk kebutuhan produk interior, pipeline status deal, dan pendaftaran user operator.
           </p>
         </div>
 
         <div className="flex w-full sm:w-auto gap-2">
           {activeTab === 'categories' && (
-            <Button onClick={handleOpenCatCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+            <Button onClick={handleOpenCatCreate} size="sm" className="h-10 w-full rounded-lg bg-[var(--primary-theme)] px-4 font-semibold text-white shadow-none hover:brightness-110 sm:w-auto">
               <Plus className="h-4 w-4 mr-1.5" />
               Kategori Baru
             </Button>
           )}
           {activeTab === 'statuses' && (
-            <Button onClick={handleOpenStatCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+            <Button onClick={handleOpenStatCreate} size="sm" className="h-10 w-full rounded-lg bg-[var(--primary-theme)] px-4 font-semibold text-white shadow-none hover:brightness-110 sm:w-auto">
               <Plus className="h-4 w-4 mr-1.5" />
               Status Baru
             </Button>
           )}
           {activeTab === 'survey-statuses' && (
-            <Button onClick={handleOpenSurveyStatCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+            <Button onClick={handleOpenSurveyStatCreate} size="sm" className="h-10 w-full rounded-lg bg-[var(--primary-theme)] px-4 font-semibold text-white shadow-none hover:brightness-110 sm:w-auto">
               <Plus className="h-4 w-4 mr-1.5" />
               Status Survey Baru
             </Button>
           )}
           {activeTab === 'users' && (
-            <Button onClick={handleOpenUserCreate} size="sm" className="w-full sm:w-auto bg-amber-500 text-zinc-950 hover:bg-amber-400 font-bold rounded-xl h-9 px-3 sm:px-4 shadow-lg shadow-amber-500/10 dark:shadow-amber-500/5 hover:scale-[1.01] transition-all cursor-pointer">
+            <Button onClick={handleOpenUserCreate} size="sm" className="h-10 w-full rounded-lg bg-[var(--primary-theme)] px-4 font-semibold text-white shadow-none hover:brightness-110 sm:w-auto">
               <Plus className="h-4 w-4 mr-1.5" />
               User Baru
             </Button>
@@ -522,55 +528,49 @@ export default function MasterDataPage() {
       </div>
 
       {/* Tabs navigation */}
-      <div className="grid w-full grid-cols-4 gap-1 rounded-xl glass-panel border border-border/40 p-1 dark:border-zinc-800/60 dark:shadow-none sm:inline-flex sm:w-auto sm:gap-1.5 sm:rounded-2xl sm:p-1.5">
-        <button
-          onClick={() => setActiveTab('categories')}
-          className={cn(
-            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
-            activeTab === 'categories'
-              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
-          )}
-        >
-          <Tag className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'categories' && "scale-110")} />
-          <span className="truncate sm:hidden">Kategori</span><span className="hidden sm:inline">Kategori Kebutuhan</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('statuses')}
-          className={cn(
-            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
-            activeTab === 'statuses'
-              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
-          )}
-        >
-          <Kanban className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'statuses' && "scale-110")} />
-          <span className="truncate sm:hidden">Pipeline</span><span className="hidden sm:inline">Status Pipeline</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('survey-statuses')}
-          className={cn(
-            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
-            activeTab === 'survey-statuses'
-              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
-          )}
-        >
-          <ClipboardCheck className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'survey-statuses' && "scale-110")} />
-          <span className="truncate sm:hidden">Survey</span><span className="hidden sm:inline">Status Hasil Survey</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('users')}
-          className={cn(
-            "min-w-0 px-1 py-2 text-[10px] font-bold rounded-lg transition-all duration-300 flex items-center justify-center gap-1 cursor-pointer select-none sm:px-4 sm:py-2.5 sm:text-xs sm:rounded-xl sm:gap-2",
-            activeTab === 'users'
-              ? "bg-amber-500 text-zinc-950 shadow-md shadow-amber-500/10 dark:shadow-amber-500/5 hover:bg-amber-400"
-              : "text-muted-foreground hover:text-foreground hover:bg-muted/60 dark:hover:bg-zinc-800/40"
-          )}
-        >
-          <Users className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300 sm:h-4 sm:w-4", activeTab === 'users' && "scale-110")} />
-          <span className="truncate sm:hidden">User</span><span className="hidden sm:inline">Akun Pengguna Admin</span>
-        </button>
+      <div role="tablist" aria-label="Kelompok master data" className="grid w-full grid-cols-4 gap-1 overflow-hidden rounded-xl border border-white/10 bg-card/45 p-1 shadow-sm backdrop-blur-2xl backdrop-saturate-150 ring-1 ring-border/35 lg:w-fit">
+        {([
+          { key: 'categories', label: 'Kategori Kebutuhan', mobileLabel: 'Kategori', icon: Tag },
+          { key: 'statuses', label: 'Status Pipeline', mobileLabel: 'Pipeline', icon: Kanban },
+          { key: 'survey-statuses', label: 'Status Hasil Survey', mobileLabel: 'Survey', icon: ClipboardCheck },
+          { key: 'users', label: 'Akun Pengguna Admin', mobileLabel: 'User', icon: Users },
+        ] as const).map((tab) => {
+          const active = activeTab === tab.key
+          const Icon = tab.icon
+
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'relative flex min-w-0 select-none items-center justify-center rounded-lg px-1 py-2.5 text-[10px] font-semibold transition-colors duration-150 active:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-theme)] sm:px-4 sm:text-xs',
+                active ? 'text-[var(--primary-theme)]' : 'text-muted-foreground hover:bg-muted/45 hover:text-foreground'
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId="master-data-active-tab"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.85 }}
+                  className="pointer-events-none absolute inset-0 rounded-lg border border-white/15 bg-[color-mix(in_srgb,var(--primary-theme)_16%,transparent)] shadow-[inset_0_1px_0_rgba(255,255,255,0.16),inset_0_-1px_0_rgba(255,255,255,0.04),0_8px_22px_-16px_var(--primary-theme)] backdrop-blur-lg backdrop-saturate-150 ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_30%,transparent)]"
+                />
+              )}
+              <span className="relative z-10 flex min-w-0 items-center justify-center gap-1 sm:gap-2">
+                <motion.span
+                  animate={{ y: active ? -1 : 0, scale: active ? 1.04 : 1 }}
+                  transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.85 }}
+                  className="flex shrink-0 items-center justify-center"
+                >
+                  <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                </motion.span>
+                <span className="min-w-0 truncate sm:hidden">{tab.mobileLabel}</span>
+                <span className="hidden min-w-0 truncate sm:inline">{tab.label}</span>
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       {/* ── Categories Tab ───────────────────────────────────────── */}
@@ -780,17 +780,18 @@ export default function MasterDataPage() {
       )}
 
       {activeTab === 'users' && (
-        <div className="space-y-4">
-          <div className="relative w-full max-w-md">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-sm">
             <Search className={cn(
               "pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/50 transition-colors",
-              userSearch && "text-amber-500"
+              userSearch && "text-[var(--primary-theme)]"
             )} />
             <Input
               placeholder="Cari user admin..."
               value={userSearch}
               onChange={(e) => setUserSearch(e.target.value)}
-              className="h-11 rounded-xl border-border/60 bg-muted/40 pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/50 focus-visible:border-amber-500/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900/60 dark:focus-visible:bg-zinc-900"
+              className="h-10 rounded-lg border-border/60 bg-card/65 pl-10 pr-10 text-sm shadow-none placeholder:text-muted-foreground/55 focus-visible:border-[var(--primary-theme)] focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_18%,transparent)]"
             />
             {userSearch && (
               <button
@@ -803,17 +804,22 @@ export default function MasterDataPage() {
               </button>
             )}
           </div>
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Users className="h-3.5 w-3.5 text-[var(--primary-theme)]" />
+              <span><strong className="font-semibold text-foreground">{userResponse?.meta?.total ?? userResponse?.data?.length ?? 0}</strong> pengguna terdaftar</span>
+            </div>
+          </div>
 
-          <Card className="glass-panel border border-border/50 shadow-md rounded-2xl dark:border-zinc-900/60 dark:shadow-none overflow-hidden">
+          <Card className="overflow-hidden rounded-xl border-0 bg-card/75 py-0 shadow-none ring-1 ring-border/60">
             <CardContent className="p-0">
               <div className="overflow-x-auto scrollbar-thin">
-                <Table>
-                <TableHeader className="bg-muted/20 border-b border-border/40 dark:bg-zinc-950/40 dark:border-zinc-900/50">
-                  <TableRow className="border-border hover:bg-transparent dark:border-zinc-900">
+                <Table className="min-w-[760px]">
+                <TableHeader className="border-b border-border/45 bg-muted/25">
+                  <TableRow className="border-border/40 hover:bg-transparent">
                     <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pl-5">Nama Lengkap</TableHead>
                     <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Email</TableHead>
                     <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Role</TableHead>
-                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Tautan Akun</TableHead>
+                    <TableHead className="hidden py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground lg:table-cell">Tautan Akun</TableHead>
                     <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pr-5 w-[150px] text-right">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -821,7 +827,7 @@ export default function MasterDataPage() {
                   {userLoading ? (
                     <TableRow>
                       <TableCell colSpan={5} className="h-24 text-center">
-                        <Loader2 className="h-5 w-5 animate-spin text-amber-500 mx-auto" />
+                        <Loader2 className="mx-auto h-5 w-5 animate-spin text-[var(--primary-theme)]" />
                       </TableCell>
                     </TableRow>
                   ) : userResponse?.data?.length === 0 ? (
@@ -832,10 +838,10 @@ export default function MasterDataPage() {
                     </TableRow>
                   ) : (
                     userResponse?.data?.map((usr) => (
-                      <TableRow key={usr.id} className="border-border/40 hover:bg-muted/30 hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] dark:hover:shadow-[inset_3px_0_0_0_var(--primary-theme)] transition-all duration-200 dark:border-zinc-900/40 dark:hover:bg-zinc-800/10">
-                        <TableCell className="text-xs font-bold text-foreground/90 py-3.5 pl-5">
+                      <TableRow key={usr.id} className="border-border/35 odd:bg-background/10 transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_6%,transparent)] hover:shadow-[inset_2px_0_0_0_var(--primary-theme)]">
+                        <TableCell className="py-3 pl-5 text-xs font-semibold text-foreground/90">
                           <div className="flex items-center gap-2">
-                            <div className="h-5.5 w-5.5 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center text-[9px] font-black border border-amber-500/25 shrink-0 dark:text-amber-500">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_11%,transparent)] text-[10px] font-bold text-[var(--primary-theme)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_25%,transparent)]">
                               {usr.name.charAt(0).toUpperCase()}
                             </div>
                             <span className="truncate max-w-[130px]">{usr.name}</span>
@@ -848,7 +854,7 @@ export default function MasterDataPage() {
                           <Badge
                             variant="outline"
                             className={cn(
-                              "text-[9px] rounded-lg font-bold uppercase",
+                              "rounded-md px-2 py-0.5 text-[9px] font-bold uppercase shadow-none",
                               usr.role === 'super_admin'
                                 ? "border-amber-500/20 text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20"
                                 : usr.role === 'admin'
@@ -869,17 +875,17 @@ export default function MasterDataPage() {
                               : usr.role}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground py-3.5 font-semibold">
+                        <TableCell className="hidden py-3 text-xs font-medium text-muted-foreground lg:table-cell">
                           {usr.account?.name || '-'}
                         </TableCell>
                         <TableCell className="text-right pr-5 py-3.5">
-                          <div className="flex justify-end gap-1.5">
+                          <div className="flex justify-end gap-1">
                             <Button
                               size="icon-xs"
                               variant="ghost"
                               onClick={() => handleOpenResetPass(usr.id)}
                               title="Reset Password"
-                              className="text-muted-foreground hover:text-amber-500 hover:bg-muted dark:hover:bg-zinc-800"
+                              className="rounded-md bg-background/35 text-muted-foreground ring-1 ring-border/50 hover:bg-[color-mix(in_srgb,var(--primary-theme)_10%,transparent)] hover:text-[var(--primary-theme)]"
                             >
                               <Key className="h-3.5 w-3.5" />
                             </Button>
@@ -887,7 +893,8 @@ export default function MasterDataPage() {
                               size="icon-xs"
                               variant="ghost"
                               onClick={() => handleOpenUserEdit(usr)}
-                              className="text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                              title="Edit pengguna"
+                              className="rounded-md bg-background/35 text-muted-foreground ring-1 ring-border/50 hover:bg-muted hover:text-foreground"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                             </Button>
@@ -895,7 +902,8 @@ export default function MasterDataPage() {
                               size="icon-xs"
                               variant="ghost"
                               onClick={() => handleDeleteUser(usr.id)}
-                              className="text-muted-foreground/70 hover:text-red-500 hover:bg-muted dark:hover:bg-zinc-800"
+                              title="Hapus pengguna"
+                              className="rounded-md bg-background/35 text-muted-foreground/70 ring-1 ring-border/50 hover:bg-red-500/10 hover:text-red-500"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
                             </Button>
@@ -915,12 +923,14 @@ export default function MasterDataPage() {
       {/* ── Dialog Modals ────────────────────────────────────────── */}
       <Dialog open={openModal} onOpenChange={setOpenModal}>
         <DialogContent className={cn(
-          "border-border bg-card text-foreground dark:border-zinc-800 dark:bg-zinc-900",
-          modalType === 'user' ? "max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1rem)] max-w-3xl overflow-y-auto p-0 sm:w-full" : "max-w-sm"
+          "border-border/60 bg-card text-foreground",
+          modalType === 'user'
+            ? "max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] overflow-x-hidden overflow-y-auto rounded-xl p-0 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.18),0_2px_4px_-2px_rgba(0,0,0,0.16)] sm:max-w-2xl"
+            : "max-w-sm rounded-xl"
         )}>
           <form onSubmit={handleFormSubmit} className={cn("space-y-4", modalType === 'user' && "min-w-0")}>
-            <DialogHeader className={cn(modalType === 'user' && "border-b border-amber-500/15 bg-amber-500/[0.035] px-5 py-5 pr-12 sm:px-6")}>
-              <DialogTitle className="text-foreground">
+            <DialogHeader className={cn(modalType === 'user' && "border-b border-border/50 bg-muted/15 px-5 py-5 pr-12 sm:px-6")}>
+              <DialogTitle className="text-base font-bold text-foreground sm:text-lg">
                 {modalType === 'cat' && (editingId ? 'Edit Kategori Kebutuhan' : 'Kategori Kebutuhan Baru')}
                 {modalType === 'stat' && (editingId ? 'Edit Status Pipeline' : 'Status Pipeline Baru')}
                 {modalType === 'survey-stat' && (editingId ? 'Edit Status Hasil Survey' : 'Status Hasil Survey Baru')}
@@ -932,7 +942,7 @@ export default function MasterDataPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className={cn("space-y-3 py-2", modalType === 'user' && "space-y-5 px-5 pb-5 sm:px-6 sm:pb-6")}>
+            <div className={cn("space-y-3 py-2", modalType === 'user' && "space-y-6 px-5 pb-5 sm:px-6 sm:pb-6")}>
               {/* Category form */}
               {modalType === 'cat' && (
                 <div className="space-y-1.5">
@@ -999,10 +1009,10 @@ export default function MasterDataPage() {
               {/* User Account CRUD form */}
               {modalType === 'user' && (
                 <div className="space-y-5">
-                  <section className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      <Users className="h-3.5 w-3.5" />
-                      Identitas
+                  <section className="space-y-3.5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_11%,transparent)] text-[var(--primary-theme)]"><Users className="h-3.5 w-3.5" /></span>
+                      <div><h3 className="text-xs font-bold uppercase text-foreground">Identitas</h3><p className="text-[10px] text-muted-foreground">Informasi dasar untuk mengenali pengguna.</p></div>
                     </div>
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <div className="space-y-1.5">
@@ -1012,7 +1022,7 @@ export default function MasterDataPage() {
                       placeholder="Nama asli user..."
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                       className="h-10 rounded-lg border-border/60 bg-background/50 text-sm text-foreground focus-visible:border-[var(--primary-theme)] focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_18%,transparent)]"
                     />
                   </div>
 
@@ -1024,17 +1034,17 @@ export default function MasterDataPage() {
                       placeholder="operator@putrainterior.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300"
+                       className="h-10 rounded-lg border-border/60 bg-background/50 text-sm text-foreground focus-visible:border-[var(--primary-theme)] focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_18%,transparent)]"
                     />
                   </div>
                     </div>
                   </section>
 
                   {!editingId && (
-                    <section className="space-y-3 border-t border-border/60 pt-4 dark:border-zinc-800">
-                      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                        <Lock className="h-3.5 w-3.5" />
-                        Keamanan
+                    <section className="space-y-3.5 border-t border-border/50 pt-5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_11%,transparent)] text-[var(--primary-theme)]"><Lock className="h-3.5 w-3.5" /></span>
+                        <div><h3 className="text-xs font-bold uppercase text-foreground">Keamanan</h3><p className="text-[10px] text-muted-foreground">Gunakan minimal delapan karakter.</p></div>
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       {/* Password field */}
@@ -1048,7 +1058,7 @@ export default function MasterDataPage() {
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             className={cn(
-                              "pr-10 border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300",
+                              "h-10 rounded-lg border-border/60 bg-background/50 pr-10 text-sm text-foreground focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_18%,transparent)]",
                               password.length > 0 && password.length < 8 && "border-amber-500/60 focus-visible:ring-amber-500/40"
                             )}
                           />
@@ -1081,7 +1091,7 @@ export default function MasterDataPage() {
                             value={passwordConfirm}
                             onChange={(e) => setPasswordConfirm(e.target.value)}
                             className={cn(
-                              "pr-10 border-border bg-background text-xs text-foreground/80 focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300",
+                              "h-10 rounded-lg border-border/60 bg-background/50 pr-10 text-sm text-foreground focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_18%,transparent)]",
                               passwordConfirm.length > 0 && password !== passwordConfirm && "border-red-500/60 focus-visible:ring-red-500/40",
                               passwordConfirm.length > 0 && password === passwordConfirm && "border-emerald-500/60 focus-visible:ring-emerald-500/40"
                             )}
@@ -1114,10 +1124,10 @@ export default function MasterDataPage() {
                     </section>
                   )}
 
-                  <section className="space-y-3 border-t border-border/60 pt-4 dark:border-zinc-800">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      <ShieldCheck className="h-3.5 w-3.5" />
-                      Cakupan Akses
+                  <section className="space-y-3.5 border-t border-border/50 pt-5">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_11%,transparent)] text-[var(--primary-theme)]"><ShieldCheck className="h-3.5 w-3.5" /></span>
+                      <div><h3 className="text-xs font-bold uppercase text-foreground">Cakupan Akses</h3><p className="text-[10px] text-muted-foreground">Tentukan role dan akun yang dapat dikelola.</p></div>
                     </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div className="space-y-1.5">
@@ -1126,7 +1136,7 @@ export default function MasterDataPage() {
                         value={role}
                         onValueChange={(v) => setRole(v as any)}
                       >
-                        <SelectTrigger id="usr-role" className="h-8 rounded-lg border-border bg-background text-xs text-foreground focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950">
+                        <SelectTrigger id="usr-role" className="h-10 rounded-lg border-border/60 bg-background/50 text-sm text-foreground focus:ring-1 focus:ring-[var(--primary-theme)]">
                           <SelectValue placeholder="Pilih Role" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1149,7 +1159,7 @@ export default function MasterDataPage() {
                           placeholder="Cari/Pilih Akun..."
                           onlyChangeOnSelect
                           clearOnFocus
-                          className="h-8 rounded-lg border-border bg-background text-xs text-foreground focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+                          className="h-10 rounded-lg border-border/60 bg-background/50 text-sm text-foreground focus:border-[var(--primary-theme)] focus:ring-1 focus:ring-[var(--primary-theme)]"
                         />
                       </div>
                     )}
@@ -1187,14 +1197,14 @@ export default function MasterDataPage() {
             </div>
 
             <div className={cn(
-              "flex justify-end gap-2 border-t border-border/80 pt-4 dark:border-zinc-800/80",
-              modalType === 'user' && "sticky bottom-0 -mx-5 bg-card/95 px-5 pb-5 pt-4 backdrop-blur sm:-mx-6 sm:px-6 sm:pb-6 dark:bg-zinc-900/95"
+              "flex justify-end gap-2 border-t border-border/60 pt-4",
+              modalType === 'user' && "sticky bottom-0 bg-card/95 px-5 pb-5 pt-4 backdrop-blur-md sm:px-6 sm:pb-6"
             )}>
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => setOpenModal(false)}
-                className="text-muted-foreground hover:bg-muted text-xs dark:hover:bg-zinc-800"
+                className="h-9 rounded-lg bg-muted/35 px-4 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
                 Batal
               </Button>
@@ -1211,7 +1221,7 @@ export default function MasterDataPage() {
                   updateUserMutation.isPending ||
                   resetUserPass.isPending
                 }
-                className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold text-xs"
+                className="h-9 rounded-lg bg-[var(--primary-theme)] px-5 text-xs font-semibold text-white shadow-none hover:brightness-110"
               >
                 {createCat.isPending ||
                 updateCatMutation.isPending ||

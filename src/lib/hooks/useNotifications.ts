@@ -77,6 +77,9 @@ export function useNotificationCount() {
     queryKey: queryKeys.notifications.count(),
     queryFn: () => api.get<NotificationCount>('/notifications'),
     refetchInterval: isActive ? 30000 : 120000, // 30s active, 2m idle
+    // Gratis: hanya berjalan saat user kembali ke tab, tidak menambah polling
+    // latar. Ini yang membuat angka terasa segar tanpa menaikkan koneksi DB.
+    refetchOnWindowFocus: true,
   })
 }
 
@@ -93,6 +96,7 @@ export function useNotificationSummary(enabled = true) {
     queryFn: () => api.get<NotificationSummary>('/notifications/summary'),
     enabled,
     refetchInterval: interval,
+    refetchOnWindowFocus: enabled,
   })
 }
 
@@ -123,6 +127,24 @@ export function useMarkSurveyRead() {
   return useMutation({
     mutationFn: (notificationId: number) =>
       api.patch<{ success: boolean }>(`/notifications/surveys/${notificationId}/read`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+  })
+}
+
+export function useDeleteSurveyNotification() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (notificationId: number) =>
+      api.delete<{ success: boolean }>(`/notifications/surveys/${notificationId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+  })
+}
+
+export function useClearNotifications() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.delete<{ success: boolean; cleared: number }>('/notifications/clear'),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
   })
 }

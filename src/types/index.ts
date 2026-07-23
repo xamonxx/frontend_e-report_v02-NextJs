@@ -163,6 +163,8 @@ export type Consultation = {
   status_category: { id: number; name: string; css_class: string } | null
   needs_category: { id: number; name: string } | null
   needs_categories?: { id: number; name: string }[]
+  /** Survey yang sedang berjalan; null bila lead belum pernah diajukan. */
+  active_survey?: Survey | null
   creator: { id: number; name: string } | null
   timeline_notes?: { id: number; body: string; created_at: string; user?: { id: number; name: string } }[]
   reminders?: { id: number; message: string; remind_at: string; is_read: boolean; user?: { id: number; name: string } }[]
@@ -178,6 +180,8 @@ export type ConsultationFilters = {
   year?: string | number
   sort?: string
   dir?: 'asc' | 'desc'
+  /** Hanya lead tahap Request Survey yang belum diajukan ke manager. */
+  pending_survey?: 1
   page?: number
   per_page?: number
 }
@@ -248,6 +252,8 @@ export type NotificationCount = {
   unread_notes: number
   upcoming_reminders: number
   unread_surveys?: number
+  /** Lead sudah berstatus Request Survey tapi belum diajukan ke manager. */
+  pending_survey_requests?: number
   total: number
   timestamp: string
 }
@@ -265,6 +271,14 @@ export type SurveyNotification = {
   message: string
   is_read: boolean
   created_human?: string
+  survey_id?: number | null
+  survey_url?: string | null
+  state?: SurveyState | null
+  client_name?: string | null
+  consultation_code?: string | null
+  location?: string | null
+  schedule_label?: string | null
+  surveyor_name?: string | null
 }
 
 export type NoteNotification = {

@@ -201,10 +201,8 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
       toast.error('Status awal lead wajib dipilih')
       return
     }
-    if (selectedNeeds.length === 0) {
-      toast.error('Pilih minimal satu kategori kebutuhan')
-      return
-    }
+    // Kategori kebutuhan boleh dikosongkan: backend mengisinya dengan
+    // "Tidak konfirmasi".
     if (requiresProductDetails && productDetails.trim().length < 3) {
       toast.error('Detail kebutuhan wajib diisi ketika memilih kategori Lain-lain')
       return
@@ -215,7 +213,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
     }
 
     const payload = {
-      client_name: clientName,
+      client_name: clientName.trim() || 'Tidak ada nama',
       phone: phone || undefined,
       account_id: selectedAccount,
       status_category_id: selectedStatus,
@@ -232,7 +230,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
     updateMutation.mutate(payload as any, {
       onSuccess: () => {
         toast.success('Data lead konsultasi berhasil diperbarui!')
-        router.push(`/consultations/${consultationId}`)
+        router.push('/consultations')
       },
       onError: (err: unknown) => {
         toast.error(formatApiError(err, 'Gagal memperbarui lead konsultasi.'))
@@ -271,7 +269,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
     <div className="consultation-page mx-auto w-full max-w-[1520px] space-y-6 pb-8">
       <div className="flex items-center gap-3">
         <Link
-          href={`/consultations/${consultationId}`}
+          href="/consultations"
           className={cn(
             buttonVariants({ variant: 'ghost', size: 'icon' }),
             'size-10 rounded-[10px] border border-[color-mix(in_srgb,var(--primary-theme)_18%,var(--border))] bg-card text-muted-foreground hover:border-[color-mix(in_srgb,var(--primary-theme)_42%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] hover:text-[var(--primary-theme)]'
@@ -312,7 +310,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                       id="client-phone"
                       placeholder="+62 812-3456-7890"
                       value={phone}
-                      onChange={(e) => setPhone(formatPhoneInput(e.target.value))}
+                      onChange={(e) => setPhone((current) => formatPhoneInput(e.target.value, current))}
                       inputMode="tel"
                       aria-invalid={phone.trim() !== '' && !isPhoneValid(phone)}
                       className={cn(
@@ -544,7 +542,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
             </Card>
 
             <ConsultationFormActions
-              cancelHref={`/consultations/${consultationId}`}
+              cancelHref="/consultations"
               isPending={updateMutation.isPending}
               pendingLabel="Menyimpan Perubahan..."
               selectedCount={selectedNeeds.length}

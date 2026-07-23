@@ -4,7 +4,23 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as zod from 'zod'
 import { useLogin } from '@/lib/hooks/useAuth'
-import { Loader2, Eye, EyeOff, AlertCircle, KeyRound, Send, X, User, AtSign, MessageSquare } from 'lucide-react'
+import {
+  Loader2,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  KeyRound,
+  Send,
+  X,
+  User,
+  AtSign,
+  MessageSquare,
+  ShieldCheck,
+  ClipboardCheck,
+  MapPinned,
+  FileBarChart,
+  LogIn,
+} from 'lucide-react'
 import Logo from '@/components/brand/logo'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -32,23 +48,23 @@ const forgotSchema = zod.object({
 type ForgotFormValues = zod.infer<typeof forgotSchema>
 
 const cardVariants = {
-  hidden: { opacity: 0, y: 40, scale: 0.96 },
+  hidden: { opacity: 0, y: 18, scale: 0.985 },
   visible: {
     opacity: 1,
     y: 0,
     scale: 1,
-    transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+    transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
   },
 }
 
 const containerVariants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.35 } },
+  visible: { transition: { staggerChildren: 0 } },
 }
 
 const itemVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] } },
+  hidden: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0 },
 }
 
 export default function LoginPage() {
@@ -57,7 +73,7 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isShaking, setIsShaking] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
-  const [blockedUntil, setBlockedUntil] = useState<number | null>(null)
+  const [, setBlockedUntil] = useState<number | null>(null)
   const [forgotOpen, setForgotOpen] = useState(false)
 
   const {
@@ -100,7 +116,7 @@ export default function LoginPage() {
   }
 
   useEffect(() => {
-    // Reset to default primary theme orange on login page mount
+    // Keep login aligned with the default application accent.
     const root = document.documentElement
     root.style.setProperty('--primary-theme', '#f59e0b')
   }, [])
@@ -146,7 +162,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8 sm:px-6">
 
       {/* Animated background */}
       <LoginBackground />
@@ -156,54 +172,66 @@ export default function LoginPage() {
 
       {/* Login card */}
       <motion.div
-        className={cn('relative w-full max-w-[420px] z-10', isShaking && 'animate-shake')}
+        className={cn('relative z-10 w-full max-w-[980px]', isShaking && 'animate-shake')}
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
         {/* Outer ambient glow ring */}
-        <div className="absolute -inset-[1.5px] rounded-[28px] opacity-70 dark:opacity-50">
-          <div className="absolute inset-0 rounded-[28px] bg-gradient-to-br from-amber-400/20 via-transparent to-indigo-500/15 blur-[3px] dark:from-amber-500/25 dark:to-violet-500/15" />
-        </div>
-
         {/* Card surface — Solid sleek design for performance */}
-        <div className="relative rounded-[26px] border border-zinc-200 bg-white shadow-2xl shadow-black/[0.06] overflow-hidden dark:border-zinc-800 dark:bg-[#12121a] dark:shadow-black/60">
+        <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/65 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.25)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.16] dark:bg-slate-900/70 dark:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.55)]">
 
-          {/* Top amber hairline */}
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent dark:via-amber-500/50" />
-
+          {/* Theme hairline */}
           {/* Inner top reflection (light mode only) */}
-          <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/50 to-transparent pointer-events-none dark:from-white/[0.015]" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-white/20 to-transparent dark:from-white/[0.035]" />
 
           {/* Bottom hairline */}
-          <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-black/[0.04] to-transparent dark:via-white/[0.03]" />
+          <div className="absolute inset-x-0 bottom-0 h-px bg-border/60" />
+
+          <div className="grid min-h-[600px] min-w-0 lg:grid-cols-[1.04fr_0.96fr]">
+            <aside className="relative hidden overflow-hidden border-r border-slate-900/10 bg-slate-950/[0.035] px-12 py-12 text-slate-950 lg:flex lg:flex-col lg:justify-between dark:border-white/[0.08] dark:bg-black/15 dark:text-white">
+              <div className="absolute inset-0 opacity-[0.14] dark:opacity-[0.16]" style={{ backgroundImage: 'linear-gradient(rgba(245,158,11,.18) 1px, transparent 1px), linear-gradient(90deg,rgba(245,158,11,.18) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
+              <div className="relative">
+                <div className="relative mb-10 flex h-16 w-16 items-center justify-center overflow-hidden rounded-[18px] border border-amber-400/30 bg-amber-400/10 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.9)] backdrop-blur-md">
+                  <div className="absolute inset-x-2 top-0 h-px bg-white/70" />
+                  <Logo className="relative h-12 w-12 text-amber-500 drop-shadow-[0_6px_12px_rgba(245,158,11,0.25)]" />
+                </div>
+                <p className="text-[11px] font-bold uppercase text-amber-600 dark:text-amber-400">Putra Corporation</p>
+                {/* Yang konkret dinaikkan jadi headline; sub-headline dulu
+                    lebih jelas daripada judulnya sendiri. */}
+                <h1 className="mt-4 max-w-sm text-3xl font-bold leading-tight">Konsultasi, survey, dan laporan dalam satu alur.</h1>
+                <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600 dark:text-slate-400">Dari lead masuk sampai rekap dikirim, tercatat di satu tempat dan bisa ditelusuri kapan saja.</p>
+              </div>
+              <div className="relative space-y-3 border-t border-slate-900/10 pt-6 text-xs text-slate-600 dark:border-white/[0.08] dark:text-slate-400">
+                {/* "Data operasional terpusat" dibuang: mengulang "satu tempat"
+                    di sub-headline. Diganti hal yang belum disebut di layar. */}
+                <div className="flex items-center gap-3"><ClipboardCheck className="h-4 w-4 text-amber-500" />Riwayat lead tidak tercecer</div>
+                <div className="flex items-center gap-3"><MapPinned className="h-4 w-4 text-amber-500" />Jadwal surveyor tanpa bentrok</div>
+                <div className="flex items-center gap-3"><FileBarChart className="h-4 w-4 text-amber-500" />Rekap siap dibagikan</div>
+              </div>
+            </aside>
 
           <motion.div
-            className="relative px-8 pt-9 pb-8"
+            className="relative min-w-0 flex flex-col justify-center px-6 py-8 sm:px-10 lg:px-12"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            {/* Logo and heading */}
-            <motion.div className="mb-8 text-center" variants={itemVariants}>
-              <div className="mb-5 flex justify-center">
-                <div className="relative">
-                  {/* Glow behind icon */}
-                  <div className="absolute inset-0 rounded-2xl bg-amber-500/25 blur-xl dark:bg-amber-500/30" />
-                  <motion.div
-                    className="relative flex h-[60px] w-[60px] items-center justify-center rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/18 to-amber-600/8 dark:border-amber-500/20 dark:from-amber-500/15 dark:to-amber-600/5"
-                    whileHover={{ scale: 1.05, rotate: 2 }}
-                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
-                  >
-                    <Logo className="h-14 w-14 text-amber-500 drop-shadow-[0_0_10px_rgba(245,158,11,0.55)]" />
-                  </motion.div>
+            <motion.div className="mb-7" variants={itemVariants}>
+              <div className="mb-5 flex lg:hidden">
+                <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-[0_10px_24px_-16px_rgba(245,158,11,0.9)] backdrop-blur-md">
+                  <div className="absolute inset-x-2 top-0 h-px bg-white/70" />
+                  <Logo className="relative h-11 w-11 text-[var(--primary-theme)]" />
                 </div>
               </div>
-              <h1 className="text-[22px] font-black uppercase tracking-widest text-amber-500 leading-tight">
+              <p className="text-[10px] font-bold uppercase text-[var(--primary-theme)] lg:hidden">
                 Putra Corporation
-              </h1>
-              <p className="mt-2 text-[12px] text-zinc-500 dark:text-zinc-500">
-                Masuk untuk mengakses sistem E-Report
+              </p>
+              <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-slate-50">
+                Selamat datang kembali
+              </h2>
+              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                Masuk untuk mengelola laporan dan aktivitas tim.
               </p>
             </motion.div>
 
@@ -226,7 +254,7 @@ export default function LoginPage() {
                         </svg>
                       </div>
                       <div className="flex-1 space-y-1">
-                        <div className="font-bold">🔒 Akun Anda Diblokir Sementara</div>
+                        <div className="font-bold">Akun Anda Diblokir Sementara</div>
                         <div className="text-xs font-medium opacity-90">Terlalu banyak percobaan login gagal. Silakan coba lagi dalam 15 menit atau hubungi administrator.</div>
                       </div>
                     </div>
@@ -255,28 +283,30 @@ export default function LoginPage() {
 
               {/* Email */}
               <motion.div variants={itemVariants} className="space-y-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                   Email
                 </label>
-                <input
-                  type="email"
-                  autoComplete="email"
-                  placeholder="admin@putracorporation.com"
-                  {...register('email')}
-                  className={cn(
-                    'w-full rounded-xl border px-4 py-3 text-sm outline-none transition-all duration-200',
-                    'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
-                    'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
-                    errors.email
-                      ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
-                      : [
-                          'border-zinc-200/80 hover:border-zinc-300',
-                          'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
-                          'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
-                          'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
-                        ]
-                  )}
-                />
+                <div className="group relative">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-[var(--primary-theme)] transition-colors group-focus-within:text-amber-300">
+                    <AtSign aria-hidden="true" strokeWidth={2.5} className="h-5 w-5" />
+                  </span>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    // Alat internal yang dibuka tiap hari: kursor langsung siap
+                    // di field pertama, tidak perlu klik dulu.
+                    autoFocus
+                    placeholder="nama@perusahaan.com"
+                    {...register('email')}
+                    className={cn(
+                      'login-field h-12 w-full rounded-lg border py-3 pl-11 pr-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200',
+                      'bg-white/80 text-slate-900 placeholder:text-slate-500 backdrop-blur-md dark:bg-[#26354c] dark:text-white dark:placeholder:text-slate-300',
+                      errors.email
+                        ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
+                        : 'border-slate-900/10 hover:border-amber-500/40 focus:border-[var(--primary-theme)] focus:ring-2 focus:ring-amber-500/20 dark:border-white/[0.12] dark:hover:border-amber-400/40'
+                    )}
+                  />
+                </div>
                 {errors.email && (
                   <p className="text-[11px] text-red-500 dark:text-red-400 pl-1">{errors.email.message}</p>
                 )}
@@ -284,26 +314,26 @@ export default function LoginPage() {
 
               {/* Password */}
               <motion.div variants={itemVariants} className="space-y-1.5">
-                <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                   Password
                 </label>
-                <div className="relative">
+                <div className="group relative">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-[var(--primary-theme)] transition-colors group-focus-within:text-amber-300">
+                    <KeyRound aria-hidden="true" strokeWidth={2.5} className="h-5 w-5" />
+                  </span>
                   <input
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    placeholder="••••••••"
+                    placeholder="Masukkan password"
                     {...register('password')}
                     className={cn(
-                      'w-full rounded-xl border px-4 py-3 pr-11 text-sm outline-none transition-all duration-200',
-                      'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
-                      'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
+                      'login-field h-12 w-full rounded-lg border py-3 pl-11 pr-11 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200',
+                      'bg-white/80 text-slate-900 placeholder:text-slate-500 backdrop-blur-md dark:bg-[#26354c] dark:text-white dark:placeholder:text-slate-300',
                       errors.password
                         ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
                         : [
-                            'border-zinc-200/80 hover:border-zinc-300',
-                            'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
-                            'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
-                            'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
+                            'border-slate-900/10 hover:border-amber-500/40 focus:border-[var(--primary-theme)] focus:ring-2 focus:ring-amber-500/20',
+                            'dark:border-white/[0.12] dark:hover:border-amber-400/40',
                           ]
                     )}
                   />
@@ -311,9 +341,10 @@ export default function LoginPage() {
                     type="button"
                     tabIndex={-1}
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:text-zinc-600 dark:hover:text-zinc-400 transition-colors cursor-pointer"
+                    aria-label={showPassword ? 'Sembunyikan password' : 'Tampilkan password'}
+                    className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-amber-500/10 hover:text-amber-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 dark:text-slate-300 dark:hover:text-amber-400"
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? <EyeOff aria-hidden="true" className="h-4 w-4" /> : <Eye aria-hidden="true" className="h-4 w-4" />}
                   </button>
                 </div>
                 {errors.password && (
@@ -322,19 +353,19 @@ export default function LoginPage() {
               </motion.div>
 
               {/* Remember + Forgot */}
-              <motion.div variants={itemVariants} className="flex items-center justify-between pt-0.5">
+              <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
                 <label className="flex cursor-pointer items-center gap-2.5 select-none">
                   <input
                     type="checkbox"
                     {...register('remember')}
-                    className="h-4 w-4 cursor-pointer rounded border-zinc-300 bg-white accent-amber-500 dark:border-zinc-700 dark:bg-zinc-900"
+                    className="h-4 w-4 cursor-pointer rounded border-slate-400 bg-white accent-amber-500 focus-visible:ring-2 focus-visible:ring-amber-500/40 dark:border-slate-600 dark:bg-slate-900"
                   />
-                  <span className="text-xs text-zinc-500 dark:text-zinc-500">Ingat perangkat saya</span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400">Ingat perangkat saya</span>
                 </label>
                 <button
                   type="button"
                   onClick={() => setForgotOpen(true)}
-                  className="text-xs font-medium text-amber-600 hover:text-amber-500 dark:text-amber-500/70 dark:hover:text-amber-400 transition-colors cursor-pointer"
+                  className="cursor-pointer rounded-md text-xs font-semibold text-amber-700 transition-colors hover:text-amber-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 dark:text-amber-400 dark:hover:text-amber-300"
                 >
                   Lupa password?
                 </button>
@@ -346,33 +377,22 @@ export default function LoginPage() {
                   type="submit"
                   disabled={loginMutation.isPending}
                   className={cn(
-                    'relative w-full overflow-hidden rounded-xl px-4 py-3 text-sm font-bold text-zinc-950 cursor-pointer',
-                    'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600',
-                    'shadow-md shadow-amber-500/20 dark:shadow-amber-500/15',
-                    'transition-all duration-250',
-                    'hover:shadow-lg hover:shadow-amber-500/30',
+                    'relative h-12 w-full cursor-pointer rounded-lg bg-[var(--primary-theme)] px-4 text-sm font-bold text-slate-950',
+                    'shadow-[0_10px_24px_-14px_rgba(245,158,11,0.95)] transition-[filter,transform,box-shadow] duration-200',
+                    'hover:brightness-105 hover:shadow-[0_14px_30px_-15px_rgba(245,158,11,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
                     'active:scale-[0.985]',
                     'disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-md'
                   )}
-                  whileHover={{ scale: 1.015 }}
                   whileTap={{ scale: 0.985 }}
                 >
-                  {/* Shimmer sweep */}
-                  {!loginMutation.isPending && (
-                    <motion.span
-                      className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/22 to-transparent"
-                      animate={{ x: ['-100%', '220%'] }}
-                      transition={{ duration: 2, repeat: Infinity, repeatDelay: 2.5, ease: 'easeInOut' }}
-                    />
-                  )}
                   <span className="relative flex items-center justify-center gap-2">
                     {loginMutation.isPending ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Mengautentikasi...
+                        Sedang masuk...
                       </>
                     ) : (
-                      'Masuk'
+                      <><LogIn aria-hidden="true" strokeWidth={2.25} className="h-4 w-4 shrink-0" />Masuk ke E-Report</>
                     )}
                   </span>
                 </motion.button>
@@ -380,13 +400,19 @@ export default function LoginPage() {
             </form>
 
             {/* Footer */}
-            <motion.p
-              variants={itemVariants}
-              className="mt-7 text-center text-[10px] text-zinc-400/60 dark:text-zinc-600"
-            >
-              © {new Date().getFullYear()} Putra Corporation · E-Report System
-            </motion.p>
+            <motion.div variants={itemVariants} className="mt-7 text-center">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                Akses aman untuk pengguna terdaftar
+              </div>
+              {/* Kontras: slate-400/slate-600 sebelumnya hanya ~2.1:1 di dark mode
+                  (WCAG AA butuh 4.5:1 untuk teks sekecil ini). */}
+              <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                &copy; {new Date().getFullYear()} Putra Corporation &middot; E-Report
+              </p>
+            </motion.div>
           </motion.div>
+          </div>
         </div>
       </motion.div>
 
@@ -403,7 +429,7 @@ export default function LoginPage() {
           >
             {/* Backdrop */}
             <div
-              className="absolute inset-0 bg-zinc-950/55 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/45 backdrop-blur-md"
               onClick={closeForgot}
             />
 
@@ -412,77 +438,65 @@ export default function LoginPage() {
               role="dialog"
               aria-modal="true"
               aria-labelledby="forgot-title"
-              className="relative w-full max-w-[440px] rounded-[26px] p-px bg-gradient-to-b from-amber-400/60 via-amber-500/15 to-white/10 shadow-2xl shadow-black/40 dark:from-amber-400/50 dark:via-amber-500/10 dark:to-white/[0.06] dark:shadow-black/70"
+              className="relative w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/70 bg-white/75 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.28)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.16] dark:bg-slate-900/75 dark:shadow-black/60"
               initial={{ opacity: 0, y: 24, scale: 0.96 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 16, scale: 0.97 }}
               transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
             >
-              {/* Inner surface (sits inside the 1px gradient border frame) */}
-              <div className="relative overflow-hidden rounded-[25px] bg-white dark:bg-[#0e0e16]">
-              {/* Ambient amber gradient wash + top glow */}
-              <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-b from-amber-500/[0.09] via-transparent to-transparent" />
-              <div aria-hidden className="pointer-events-none absolute -top-28 left-1/2 h-56 w-80 -translate-x-1/2 rounded-full bg-amber-500/25 blur-[80px] dark:bg-amber-500/20" />
-
-              {/* Top amber hairline */}
-              <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/70 to-transparent dark:via-amber-500/60" />
+              <div className="relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-px bg-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]" />
 
               {/* Close */}
               <button
                 type="button"
                 onClick={closeForgot}
                 aria-label="Tutup"
-                className="absolute right-4 top-4 z-10 flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:text-zinc-500 dark:hover:bg-white/[0.06] dark:hover:text-zinc-300 transition-colors cursor-pointer"
+                className="absolute right-4 top-4 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-900/[0.06] hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/50 dark:text-slate-500 dark:hover:bg-white/[0.08] dark:hover:text-slate-300"
               >
                 <X className="h-4 w-4" />
               </button>
 
               <div className="px-7 pt-8 pb-7">
                 {/* Header */}
-                <div className="mb-6 text-center">
-                  <div className="mb-4 flex justify-center">
-                    <div className="relative">
-                      <div className="absolute inset-0 rounded-[18px] bg-amber-500/35 blur-2xl" />
-                      <div className="relative flex h-14 w-14 items-center justify-center rounded-[18px] bg-gradient-to-br from-amber-300 via-amber-500 to-amber-600 shadow-lg shadow-amber-500/30 ring-1 ring-inset ring-white/30">
-                        <KeyRound className="h-6 w-6 text-zinc-950 drop-shadow-[0_1px_1px_rgba(0,0,0,0.25)]" />
-                      </div>
-                    </div>
+                <div className="mb-6 pr-8">
+                  <div className="relative mb-4 flex h-12 w-12 items-center justify-center overflow-hidden rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-[0_10px_24px_-16px_rgba(245,158,11,0.9)]">
+                    <div className="absolute inset-x-2 top-0 h-px bg-white/70" />
+                    <KeyRound className="relative h-5 w-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <h2
                     id="forgot-title"
-                    className="text-[18px] font-extrabold tracking-tight text-zinc-900 dark:text-white"
+                    className="text-xl font-bold text-slate-950 dark:text-white"
                   >
-                    Permohonan Reset Password
+                    Bantuan akses akun
                   </h2>
-                  <p className="mt-1.5 text-[12px] leading-relaxed text-zinc-500 dark:text-zinc-500">
-                    Isi data berikut. Permintaan akan dikirim ke developer
-                    melalui WhatsApp untuk diproses.
+                  <p className="mt-1.5 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+                    Kirim detail akun ke tim dukungan melalui WhatsApp untuk proses reset password.
                   </p>
                 </div>
 
                 <form onSubmit={handleSubmitForgot(onSubmitForgot)} className="space-y-4">
                   {/* Nama Admin */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                       Nama Admin
                     </label>
                     <div className="relative">
-                      <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-600" />
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-[var(--primary-theme)]">
+                        <User aria-hidden="true" className="h-5 w-5" />
+                      </span>
                       <input
                         type="text"
                         placeholder="Nama lengkap admin"
                         {...registerForgot('adminName')}
                         className={cn(
-                          'w-full rounded-xl border py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200',
-                          'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
-                          'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
+                          'h-12 w-full rounded-lg border py-3 pl-10 pr-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200',
+                          'bg-white/80 text-slate-900 placeholder:text-slate-500 backdrop-blur-md dark:bg-[#26354c] dark:text-white dark:placeholder:text-slate-300',
                           forgotErrors.adminName
                             ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
                             : [
-                                'border-zinc-200/80 hover:border-zinc-300',
-                                'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
-                                'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
-                                'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
+                                'border-slate-900/10 hover:border-amber-500/40 focus:border-[var(--primary-theme)] focus:ring-2 focus:ring-amber-500/20',
+                                'dark:border-white/[0.12] dark:hover:border-amber-400/40',
                               ]
                         )}
                       />
@@ -496,26 +510,25 @@ export default function LoginPage() {
 
                   {/* Nama Akun */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                       Nama Akun
                     </label>
                     <div className="relative">
-                      <AtSign className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 dark:text-zinc-600" />
+                      <span className="pointer-events-none absolute left-3.5 top-1/2 z-10 flex h-5 w-5 -translate-y-1/2 items-center justify-center text-[var(--primary-theme)]">
+                        <AtSign aria-hidden="true" className="h-5 w-5" />
+                      </span>
                       <input
                         type="text"
                         placeholder="Email / username akun"
                         {...registerForgot('accountName')}
                         className={cn(
-                          'w-full rounded-xl border py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200',
-                          'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
-                          'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
+                          'h-12 w-full rounded-lg border py-3 pl-10 pr-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200',
+                          'bg-white/80 text-slate-900 placeholder:text-slate-500 backdrop-blur-md dark:bg-[#26354c] dark:text-white dark:placeholder:text-slate-300',
                           forgotErrors.accountName
                             ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
                             : [
-                                'border-zinc-200/80 hover:border-zinc-300',
-                                'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
-                                'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
-                                'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
+                                'border-slate-900/10 hover:border-amber-500/40 focus:border-[var(--primary-theme)] focus:ring-2 focus:ring-amber-500/20',
+                                'dark:border-white/[0.12] dark:hover:border-amber-400/40',
                               ]
                         )}
                       />
@@ -529,26 +542,25 @@ export default function LoginPage() {
 
                   {/* Note */}
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">
+                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                       Catatan <span className="font-medium normal-case tracking-normal text-zinc-400/70">(opsional)</span>
                     </label>
                     <div className="relative">
-                      <MessageSquare className="pointer-events-none absolute left-3.5 top-3.5 h-4 w-4 text-zinc-400 dark:text-zinc-600" />
+                      <span className="pointer-events-none absolute left-3.5 top-3.5 z-10 flex h-5 w-5 items-center justify-center text-[var(--primary-theme)]">
+                        <MessageSquare aria-hidden="true" className="h-5 w-5" />
+                      </span>
                       <textarea
                         rows={3}
-                        placeholder="Mis. lupa password setelah ganti perangkat…"
+                        placeholder="Contoh: lupa password setelah ganti perangkat"
                         {...registerForgot('note')}
                         className={cn(
-                          'w-full resize-none rounded-xl border py-3 pl-10 pr-4 text-sm outline-none transition-all duration-200',
-                          'bg-white/60 text-zinc-800 placeholder:text-zinc-400',
-                          'dark:bg-white/[0.045] dark:text-zinc-100 dark:placeholder:text-zinc-600',
+                          'w-full resize-none rounded-lg border py-3 pl-10 pr-4 text-sm outline-none transition-[border-color,background-color,box-shadow] duration-200',
+                          'bg-white/80 text-slate-900 placeholder:text-slate-500 backdrop-blur-md dark:bg-[#26354c] dark:text-white dark:placeholder:text-slate-300',
                           forgotErrors.note
                             ? 'border-red-400/60 bg-red-50/80 dark:border-red-500/40 dark:bg-red-500/5'
                             : [
-                                'border-zinc-200/80 hover:border-zinc-300',
-                                'focus:border-amber-400 focus:shadow-[0_0_0_3px_rgba(245,158,11,0.12)]',
-                                'dark:border-white/[0.08] dark:hover:border-white/[0.13]',
-                                'dark:focus:border-amber-500/55 dark:focus:shadow-[0_0_0_3px_rgba(245,158,11,0.09)]',
+                                'border-slate-900/10 hover:border-amber-500/40 focus:border-[var(--primary-theme)] focus:ring-2 focus:ring-amber-500/20',
+                                'dark:border-white/[0.12] dark:hover:border-amber-400/40',
                               ]
                         )}
                       />
@@ -565,23 +577,20 @@ export default function LoginPage() {
                     <button
                       type="button"
                       onClick={closeForgot}
-                      className="w-full rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-600 whitespace-nowrap transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-transparent dark:text-zinc-300 dark:hover:bg-white/[0.05] cursor-pointer sm:flex-1"
+                      className="h-11 w-full cursor-pointer rounded-lg border border-slate-900/10 bg-white/45 px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 dark:border-white/[0.12] dark:bg-white/[0.06] dark:text-slate-300 dark:hover:bg-white/[0.1] sm:flex-1"
                     >
                       Batal
                     </button>
                     <motion.button
                       type="submit"
                       className={cn(
-                        'relative flex w-full items-center justify-center gap-2 overflow-hidden whitespace-nowrap rounded-xl px-4 py-3 text-sm font-bold text-zinc-950 cursor-pointer sm:flex-[1.5]',
-                        'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600',
-                        'shadow-md shadow-amber-500/25 ring-1 ring-inset ring-white/25 dark:shadow-amber-500/20',
-                        'transition-all duration-250 hover:shadow-lg hover:shadow-amber-500/35'
+                        'relative flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--primary-theme)] px-4 text-sm font-bold text-slate-950 sm:flex-[1.5]',
+                        'shadow-[0_10px_24px_-14px_rgba(245,158,11,0.95)] transition-[filter,transform] duration-200 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
                       )}
-                      whileHover={{ scale: 1.015 }}
                       whileTap={{ scale: 0.985 }}
                     >
                       <Send className="h-4 w-4" />
-                      Kirim ke Developer
+                      Kirim permintaan
                     </motion.button>
                   </div>
                 </form>

@@ -74,15 +74,26 @@ export function useSurveyStatuses() {
 /**
  * Admin/sales mengajukan survey untuk sebuah lead.
  */
+export type RequestSurveyPayload = {
+  requested_date: string
+  requested_time?: string
+  requested_item?: string
+  google_maps_url?: string
+  admin_notes?: string
+}
+
 export function useRequestSurvey(consultationId: number) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () =>
-      api.post<ApiResponse<Survey>>(`/consultations/${consultationId}/survey`),
+    mutationFn: (payload: RequestSurveyPayload) =>
+      api.post<ApiResponse<Survey>>(`/consultations/${consultationId}/survey`, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(consultationId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      // Badge "lead belum diajukan" ikut berubah begitu pengajuan masuk.
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })
 }
