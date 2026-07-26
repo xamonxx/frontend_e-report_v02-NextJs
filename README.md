@@ -1,12 +1,24 @@
-# 📊 E-Report Frontend — Next.js 16 Web Client
+<h1 align="center">📊 E-Report Frontend — Next.js 16 Web Client</h1>
 
-[![Framework: Next.js 16](https://img.shields.io/badge/Framework-Next.js%2016-black?style=flat-square&logo=next.js)](https://nextjs.org/)
-[![Language: TypeScript](https://img.shields.io/badge/Language-TypeScript-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
-[![Styling: Tailwind CSS v4](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
-[![State Store: Zustand](https://img.shields.io/badge/State-Zustand-orange?style=flat-square)](https://github.com/pmndrs/zustand)
-[![Data Fetching: TanStack Query](https://img.shields.io/badge/Data%20Fetching-TanStack%20Query-ff4154?style=flat-square&logo=react-query)](https://tanstack.com/query/latest)
+<p align="center">
+  <a href="https://nextjs.org/"><img src="https://img.shields.io/badge/Framework-Next.js%2016-black?style=flat-square&logo=next.js" alt="Framework: Next.js 16"></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/Language-TypeScript-blue?style=flat-square&logo=typescript" alt="Language: TypeScript"></a>
+  <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8?style=flat-square&logo=tailwind-css" alt="Styling: Tailwind CSS v4"></a>
+  <a href="https://github.com/pmndrs/zustand"><img src="https://img.shields.io/badge/State-Zustand-orange?style=flat-square" alt="State Store: Zustand"></a>
+  <a href="https://tanstack.com/query/latest"><img src="https://img.shields.io/badge/Data%20Fetching-TanStack%20Query-ff4154?style=flat-square&logo=react-query" alt="Data Fetching: TanStack Query"></a>
+</p>
 
-A decoupled, modern Single Page Application (SPA) dashboard built using **Next.js 16 (App Router)** and **TypeScript** for the E-Report Management System. It communicates with a backend Laravel 11 API using stateful cookie-based authentication (Laravel Sanctum).
+<p align="center">
+  A decoupled, modern Single Page Application (SPA) dashboard built using <strong>Next.js 16 (App Router)</strong> and <strong>TypeScript</strong> for the E-Report Management System. It communicates with a backend Laravel 11 API using stateful cookie-based authentication (Laravel Sanctum).
+</p>
+
+<p align="center">
+  <a href="#-features">Features</a> •
+  <a href="#️-tech-stack">Tech Stack</a> •
+  <a href="#-folder-structure">Folder Structure</a> •
+  <a href="#️-configuration--environment-variables">Configuration</a> •
+  <a href="#-installation--development">Installation</a>
+</p>
 
 ---
 
