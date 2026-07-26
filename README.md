@@ -18,6 +18,7 @@ A decoupled, modern Single Page Application (SPA) dashboard built using **Next.j
 - 🔄 **Pagination Reset**: Smart search interaction that automatically resets current page indexes to `1` when searching or filtering.
 - 🛠️ **Master Data Management**: Full CRUD interfaces for Accounts, Consultations, Attendance, Audit Logs, and Analytics.
 - 📊 **Dynamic Charts**: Interactive data visualizations and analytics using `Recharts`.
+- 🗺️ **Geo Analytics**: Interactive map view of leads distribution across Indonesian provinces/kabkota using GeoJSON layers.
 - 🌓 **Theme Toggle**: Built-in support for Light and Dark modes.
 
 ---
@@ -42,6 +43,7 @@ e-report-frontend/
 │   ├── app/                 # Next.js App Router (Pages, layouts)
 │   │   ├── accounts/        # Account management pages
 │   │   ├── analytics/       # System and consultation analytics
+│   │   ├── geo-analytics/   # Geographic map analytics (leads by province/kabkota)
 │   │   ├── audit-logs/      # System security logs view
 │   │   ├── consultations/   # Consultation CRUD pages
 │   │   ├── report-attendances/ # Attendance summary pages
