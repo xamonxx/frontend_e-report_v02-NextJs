@@ -57,6 +57,7 @@ export const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   { prefix: '/surveys', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { prefix: '/consultations', roles: ['admin'] },
   { prefix: '/analytics', roles: ['admin'] },
+  { prefix: '/geo-analytics', roles: ['super_admin'] },
   { prefix: '/report-attendances', roles: ['admin'] },
 ]
 

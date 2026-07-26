@@ -55,7 +55,7 @@ export default function RootLayout({
       className={`${plusJakartaSans.variable} ${jetbrainsMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="h-full bg-background text-foreground font-sans selection:bg-amber-500/25 selection:text-amber-200">
+      <body className="h-full bg-background text-foreground font-sans">
         <ChunkErrorReloader />
         <Providers>
           <AppLayout>

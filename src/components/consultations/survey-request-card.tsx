@@ -9,11 +9,11 @@ import { CalendarClock, Calendar as CalendarIcon, ClipboardCheck, Loader2, MapPi
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { CustomSelect } from '@/components/ui/custom-select'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { TimeSearchSelect } from '@/components/ui/time-search-select'
 import { Textarea } from '@/components/ui/textarea'
 import { useRequestSurvey } from '@/lib/hooks/useSurveys'
 import { cn, formatApiError } from '@/lib/utils'
@@ -206,16 +206,21 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md border-border bg-card text-foreground dark:border-zinc-800 dark:bg-zinc-900">
+        <DialogContent className="max-w-md border-slate-700/70 bg-[#131b2e] text-foreground shadow-[0_24px_70px_-40px_rgba(0,188,212,0.5)]">
           <form onSubmit={submit} className="space-y-4">
             <DialogHeader>
-              <DialogTitle>Ajukan Survey ke Manager Surveyor</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <span className="grid size-8 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400">
+                  <UserRoundCheck className="size-4" />
+                </span>
+                Ajukan Survey ke Manager Surveyor
+              </DialogTitle>
               <DialogDescription className="text-xs text-muted-foreground">
                 Tentukan kapan konsumen bersedia disurvei. Manager Surveyor yang akan menetapkan surveyornya.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-xs text-muted-foreground">
+            <div className="rounded-xl border border-cyan-500/25 bg-cyan-500/10 p-3 text-xs text-muted-foreground">
               <span className="font-semibold text-foreground">{consultation.client_name}</span>
               <br />
               {[consultation.district, consultation.city, consultation.province].filter(Boolean).join(', ') || 'Wilayah belum dikonfirmasi'}
@@ -233,12 +238,12 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
                   <PopoverTrigger
                     id="survey-date"
                     type="button"
-                    className="flex h-10 w-full items-center justify-between rounded-lg border border-border bg-background px-3 text-left text-sm font-normal text-foreground/85 outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 dark:border-zinc-800"
+                    className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-700/80 bg-slate-950/65 px-3 text-left text-xs font-semibold text-foreground/90 outline-none transition-colors hover:border-cyan-500/35 hover:bg-slate-950/80 focus-visible:ring-2 focus-visible:ring-cyan-500/25"
                   >
                     {date ? format(parseISO(date), 'd MMMM yyyy', { locale: idLocale }) : 'Pilih tanggal'}
-                    <CalendarIcon className="ml-auto h-4 w-4 text-muted-foreground/70" />
+                    <CalendarIcon className="ml-auto h-4 w-4 text-cyan-400/80" />
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto border border-border bg-popover p-0 dark:border-zinc-800" align="start">
+                  <PopoverContent className="w-auto border border-slate-700/80 bg-slate-950 p-0 text-foreground shadow-2xl" align="start">
                     <Calendar
                       mode="single"
                       selected={date ? parseISO(date) : undefined}
@@ -252,12 +257,13 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
                 <Label htmlFor="survey-time" className="text-xs font-semibold text-muted-foreground">
                   Jam <span className="text-muted-foreground/60">(opsional)</span>
                 </Label>
-                <CustomSelect
+                <TimeSearchSelect
                   value={time}
                   onChange={setTime}
                   options={TIME_OPTIONS}
                   placeholder="Belum ditentukan"
-                  className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm dark:border-zinc-800"
+                  searchPlaceholder="Cari jam..."
+                  className="h-11"
                 />
               </div>
             </div>
@@ -273,6 +279,7 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
                 value={mapsUrl}
                 onChange={(e) => setMapsUrl(e.target.value)}
                 placeholder="https://maps.app.goo.gl/..."
+                className="h-11 rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25"
               />
               <p className="text-[10px] leading-relaxed text-muted-foreground/70">
                 Tempelkan tautan dari tombol Bagikan di aplikasi Maps supaya surveyor tidak salah alamat.
@@ -288,18 +295,18 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Contoh: konsumen hanya bisa sore hari"
-                className="min-h-[70px] text-xs"
+                className="min-h-[82px] rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25"
               />
             </div>
 
             <div className="flex justify-end gap-2 pt-1">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-slate-700/80 bg-slate-950/40 hover:bg-slate-800/60">
                 Nanti saja
               </Button>
               <Button
                 type="submit"
                 disabled={requestSurvey.isPending || !date}
-                className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
+                className="bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
               >
                 {requestSurvey.isPending ? (
                   <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />Mengirim...</>

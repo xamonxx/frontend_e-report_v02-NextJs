@@ -165,7 +165,8 @@ class ApiClient {
    * Used for Excel/PDF/CSV export endpoints.
    */
   async downloadFile(path: string, params?: Record<string, string | number | undefined>, filename?: string): Promise<void> {
-    let url = `${this.baseUrl}${path}`
+    // Prefix /api/v1 sama seperti request(); `path` dipakai seperti get() (mis. '/master-data/users/export').
+    let url = `${this.baseUrl}/api/v1${path}`
 
     if (params) {
       const searchParams = new URLSearchParams()
