@@ -13,27 +13,78 @@ export type AttendanceItem = {
   report_category: 'ada_wa' | 'nol_wa' | 'libur_susulan' | null
 }
 
-export type AttendanceResponse = {
-  data: AttendanceItem[]
-  status_counts: {
-    all: number
-    ada_wa: number
-    nol_wa: number
-    libur_susulan: number
-    belum_laporan: number
-  }
-  date: string
-  selected_status: string
+/** Satu baris mode rekap: hitungan hari sepanjang rentang, bukan status harian. */
+export type AttendanceRecapItem = {
+  admin_id: number
+  admin_name: string
+  account_name: string
+  account_description: string | null
+  ada_wa: number
+  nol_wa: number
+  libur_susulan: number
+  reported_days: number
+  missing_days: number
+  total_days: number
+  compliance_rate: number
+}
+
+export type AttendanceStatusCounts = {
+  all: number
+  ada_wa: number
+  nol_wa: number
+  libur_susulan: number
+  belum_laporan: number
+}
+
+export type AttendanceResponse =
+  | {
+      mode: 'daily'
+      data: AttendanceItem[]
+      status_counts: AttendanceStatusCounts
+      date: string
+      selected_status: string
+    }
+  | {
+      mode: 'recap'
+      data: AttendanceRecapItem[]
+      status_counts: AttendanceStatusCounts
+      start_date: string
+      end_date: string
+      total_days: number
+      admin_count: number
+      range_truncated: boolean
+      max_range_days: number
+      selected_status: string
+    }
+
+export type AccountGroupOption = {
+  value: string
+  label: string
+  subtitle: string
 }
 
 export function useReportAttendances(filters: {
   date?: string
   status?: string
+  start_date?: string
+  end_date?: string
 }) {
   return useQuery({
     queryKey: ['report-attendances', 'list', filters],
     queryFn: () =>
       api.get<AttendanceResponse>('/report-attendances', filters as any),
+  })
+}
+
+/**
+ * Daftar grup akun dari server. Sengaja tidak di-hardcode di frontend supaya
+ * grup baru cukup ditambahkan di App\Support\AccountGroup.
+ */
+export function useAccountGroups() {
+  return useQuery({
+    queryKey: ['master-data', 'account-groups'],
+    queryFn: () => api.get<{ data: AccountGroupOption[] }>('/master-data/account-groups'),
+    staleTime: 5 * 60 * 1000,
   })
 }
 

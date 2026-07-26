@@ -154,6 +154,10 @@
     width: 100%;
     overflow-x: clip;
   }
+  ::selection {
+    background-color: color-mix(in srgb, var(--primary-theme) 45%, transparent);
+    color: var(--primary-theme-foreground);
+  }
 }
 
 @keyframes shake {

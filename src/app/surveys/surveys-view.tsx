@@ -17,7 +17,7 @@ import {
   History,
   XCircle,
   FileText,
-  Calendar,
+  Calendar as CalendarIcon,
   ChevronRight,
   CheckCircle2,
   Timer,
@@ -45,6 +45,9 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { TimeSearchSelect } from '@/components/ui/time-search-select'
 import {
   Dialog,
   DialogContent,
@@ -57,10 +60,28 @@ import { cn, rawPhoneDigits } from '@/lib/utils'
 // ── State metadata ─────────────────────────────────────────────
 const STATE_META: Record<SurveyState, { label: string; color: string; icon: typeof Clock }> = {
   requested:   { label: 'Request Survey',   color: '#f59e0b', icon: FileText },
-  scheduled:   { label: 'Terjadwal',        color: '#3b82f6', icon: Calendar },
+  scheduled:   { label: 'Terjadwal',        color: '#3b82f6', icon: CalendarIcon },
   in_progress: { label: 'Sedang Survey',    color: '#8b5cf6', icon: Timer },
   completed:   { label: 'Selesai',          color: '#10b981', icon: CheckCircle2 },
   cancelled:   { label: 'Dibatalkan',        color: '#71717a', icon: XCircle },
+}
+
+const SURVEY_TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const value = `${String(Math.floor(index / 2)).padStart(2, '0')}:${index % 2 === 0 ? '00' : '30'}`
+  return { value, label: `${value} WIB` }
+})
+
+function combineLocalDateTime(date: string, time: string): string {
+  return date && time ? `${date}T${time}` : ''
+}
+
+function formatDateLabel(value: string): string {
+  if (!value) return 'Pilih tanggal'
+  return new Date(`${value}T00:00:00`).toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+  })
 }
 
 function StateChip({ state, size = 'sm' }: { state: SurveyState; size?: 'sm' | 'md' }) {
@@ -428,7 +449,7 @@ function SurveyCard({
               <ActionButton icon={UserCheck} label="Jadwalkan" onClick={onAssign} primary />
             )}
             {managerMode && survey.state === 'scheduled' && (
-              <ActionButton icon={Calendar} label="Ubah Jadwal" onClick={onAssign} />
+              <ActionButton icon={CalendarIcon} label="Ubah Jadwal" onClick={onAssign} />
             )}
             {adminMode && (survey.state === 'requested' || survey.state === 'scheduled') && (
               <ActionButton icon={RotateCcw} label="Reschedule" onClick={onAdminReschedule} warning />
@@ -615,22 +636,35 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
   const [scheduledAt, setScheduledAt] = useState<string>(
     survey.scheduled_at ? toLocalInput(survey.scheduled_at) : ''
   )
+  const [scheduledDate, setScheduledDate] = useState<string>(() => scheduledAt.slice(0, 10))
+  const [scheduledTime, setScheduledTime] = useState<string>(() => scheduledAt.slice(11, 16))
   const [locationNotes, setLocationNotes] = useState<string>(survey.location_notes ?? '')
   const [managerNotes, setManagerNotes] = useState<string>('')
-  const availabilityDate = scheduledAt ? scheduledAt.slice(0, 10) : undefined
+  const availabilityDate = scheduledDate || undefined
   const { data: availabilityResponse } = useSurveyorAvailability(availabilityDate)
   const availability = new Map(
     (availabilityResponse?.data ?? []).map((item) => [item.id, item])
   )
+  const setScheduleDatePart = (date: string) => {
+    const nextTime = scheduledTime || '09:00'
+    setScheduledDate(date)
+    setScheduledTime(nextTime)
+    setScheduledAt(combineLocalDateTime(date, nextTime))
+  }
+  const setScheduleTimePart = (time: string) => {
+    setScheduledTime(time)
+    setScheduledAt(combineLocalDateTime(scheduledDate, time))
+  }
 
   const submit = () => {
     if (!surveyorId) return toast.error('Pilih surveyor terlebih dahulu.')
-    if (!scheduledAt) return toast.error('Tentukan tanggal & jam survey.')
+    if (!scheduledDate || !scheduledTime) return toast.error('Tentukan tanggal & jam survey.')
+    const finalScheduledAt = combineLocalDateTime(scheduledDate, scheduledTime)
     const mutation = isReschedule ? rescheduleMutation : assignMutation
     mutation.mutate(
       {
         surveyor_id: Number(surveyorId),
-        scheduled_at: scheduledAt,
+        scheduled_at: finalScheduledAt,
         location_notes: locationNotes || undefined,
         ...(isReschedule ? { manager_notes: managerNotes || undefined } : {}),
       },
@@ -646,10 +680,12 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="border-slate-700/70 bg-[#131b2e] text-foreground shadow-[0_24px_70px_-40px_rgba(0,188,212,0.5)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserCheck className="size-4 text-amber-500" />
+            <span className="grid size-8 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400">
+              <UserCheck className="size-4" />
+            </span>
             {isReschedule ? 'Reschedule Survey' : 'Jadwalkan Survey'}
           </DialogTitle>
           <DialogDescription>
@@ -671,18 +707,47 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
                   label: scheduleCount > 0 ? `${s.name} (${scheduleCount} jadwal)` : s.name,
                 }
               })}
-              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+              className="h-11 w-full rounded-xl border-slate-700/80 bg-slate-950/65 px-3 text-xs font-semibold text-foreground hover:border-cyan-500/35 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
             />
           </div>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground/80">Tanggal & Jam Survey</Label>
-            <Input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              className="h-10 border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
-            />
+          <div className="grid gap-3 sm:grid-cols-[1fr_128px]">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground/80">Tanggal Survey</Label>
+              <Popover>
+                <PopoverTrigger
+                  type="button"
+                  className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-700/80 bg-slate-950/65 px-3 text-left text-xs font-semibold text-foreground/90 outline-none transition-colors hover:border-cyan-500/35 hover:bg-slate-950/80 focus-visible:ring-2 focus-visible:ring-cyan-500/25"
+                >
+                  {formatDateLabel(scheduledDate)}
+                  <CalendarIcon className="size-4 text-cyan-400/80" />
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto border-slate-700/80 bg-slate-950 p-0 text-foreground shadow-2xl">
+                  <CalendarComponent
+                    mode="single"
+                    selected={scheduledDate ? new Date(`${scheduledDate}T00:00:00`) : undefined}
+                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                    onSelect={(picked) => {
+                      if (!picked) return
+                      const yyyy = picked.getFullYear()
+                      const mm = String(picked.getMonth() + 1).padStart(2, '0')
+                      const dd = String(picked.getDate()).padStart(2, '0')
+                      setScheduleDatePart(`${yyyy}-${mm}-${dd}`)
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground/80">Jam</Label>
+              <TimeSearchSelect
+                value={scheduledTime}
+                onChange={setScheduleTimePart}
+                options={SURVEY_TIME_OPTIONS}
+                placeholder="09:00 WIB"
+                className="h-11"
+              />
+            </div>
           </div>
 
           <div className="space-y-1.5">
@@ -691,7 +756,7 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
               value={locationNotes}
               onChange={(e) => setLocationNotes(e.target.value)}
               placeholder="Patokan lokasi, akses, jam temu klien..."
-              className="min-h-[72px] border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+              className="min-h-[72px] rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25"
             />
           </div>
 
@@ -702,21 +767,21 @@ function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void
                 value={managerNotes}
                 onChange={(e) => setManagerNotes(e.target.value)}
                 placeholder="Alasan perubahan jadwal untuk surveyor..."
-                className="min-h-[72px] border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+                className="min-h-[72px] rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25"
               />
             </div>
           )}
         </div>
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" size="sm" onClick={onClose} className="dark:border-zinc-700">
+          <Button variant="outline" size="sm" onClick={onClose} className="border-slate-700/80 bg-slate-950/40 hover:bg-slate-800/60">
             Batal
           </Button>
           <Button
             size="sm"
             onClick={submit}
             disabled={assignMutation.isPending || rescheduleMutation.isPending}
-            className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400"
+            className="bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
           >
             {assignMutation.isPending || rescheduleMutation.isPending ? (
               <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -735,12 +800,20 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
   const suggested = survey.requested_date
     ? `${survey.requested_date}T${(survey.requested_time || '09:00').slice(0, 5)}`
     : survey.scheduled_at ? toLocalInput(survey.scheduled_at) : ''
-  const [requestedAt, setRequestedAt] = useState(suggested)
+  const [requestedDate, setRequestedDate] = useState(() => suggested.slice(0, 10))
+  const [requestedTime, setRequestedTime] = useState(() => suggested.slice(11, 16))
   const [notes, setNotes] = useState(survey.admin_notes ?? '')
+  const setRequestedDatePart = (date: string) => {
+    const nextTime = requestedTime || '09:00'
+    setRequestedDate(date)
+    setRequestedTime(nextTime)
+  }
+  const setRequestedTimePart = (time: string) => {
+    setRequestedTime(time)
+  }
 
   const submit = () => {
-    if (!requestedAt) return toast.error('Tentukan usulan tanggal dan jam survey.')
-    const [requestedDate, requestedTime] = requestedAt.split('T')
+    if (!requestedDate || !requestedTime) return toast.error('Tentukan usulan tanggal dan jam survey.')
     rescheduleMutation.mutate(
       { requested_date: requestedDate, requested_time: requestedTime, admin_notes: notes || undefined },
       {
@@ -755,27 +828,63 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="border-slate-700/70 bg-[#131b2e] text-foreground shadow-[0_24px_70px_-40px_rgba(0,188,212,0.5)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <RotateCcw className="size-4 text-amber-500" />
+            <span className="grid size-8 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400">
+              <RotateCcw className="size-4" />
+            </span>
             Reschedule Survey
           </DialogTitle>
           <DialogDescription>Usulan jadwal baru akan dikirim ke Manager Surveyor untuk divalidasi.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-1">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground/80">Usulan Tanggal & Jam</Label>
-            <Input type="datetime-local" value={requestedAt} onChange={(event) => setRequestedAt(event.target.value)} className="h-10 border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950" />
+          <div className="grid gap-3 sm:grid-cols-[1fr_128px]">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground/80">Usulan Tanggal</Label>
+              <Popover>
+                <PopoverTrigger
+                  type="button"
+                  className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-700/80 bg-slate-950/65 px-3 text-left text-xs font-semibold text-foreground/90 outline-none transition-colors hover:border-cyan-500/35 hover:bg-slate-950/80 focus-visible:ring-2 focus-visible:ring-cyan-500/25"
+                >
+                  {formatDateLabel(requestedDate)}
+                  <CalendarIcon className="size-4 text-cyan-400/80" />
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto border-slate-700/80 bg-slate-950 p-0 text-foreground shadow-2xl">
+                  <CalendarComponent
+                    mode="single"
+                    selected={requestedDate ? new Date(`${requestedDate}T00:00:00`) : undefined}
+                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
+                    onSelect={(picked) => {
+                      if (!picked) return
+                      const yyyy = picked.getFullYear()
+                      const mm = String(picked.getMonth() + 1).padStart(2, '0')
+                      const dd = String(picked.getDate()).padStart(2, '0')
+                      setRequestedDatePart(`${yyyy}-${mm}-${dd}`)
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground/80">Jam</Label>
+              <TimeSearchSelect
+                value={requestedTime}
+                onChange={setRequestedTimePart}
+                options={SURVEY_TIME_OPTIONS}
+                placeholder="09:00 WIB"
+                className="h-11"
+              />
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground/80">Catatan untuk Manager (opsional)</Label>
-            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alasan perubahan jadwal atau informasi dari klien..." className="min-h-[88px] border-border bg-background text-xs focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950" />
+            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alasan perubahan jadwal atau informasi dari klien..." className="min-h-[88px] rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25" />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" size="sm" onClick={onClose} className="dark:border-zinc-700">Batal</Button>
-          <Button size="sm" onClick={submit} disabled={rescheduleMutation.isPending} className="bg-amber-500 font-semibold text-zinc-950 hover:bg-amber-400">
+          <Button variant="outline" size="sm" onClick={onClose} className="border-slate-700/80 bg-slate-950/40 hover:bg-slate-800/60">Batal</Button>
+          <Button size="sm" onClick={submit} disabled={rescheduleMutation.isPending} className="bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400">
             {rescheduleMutation.isPending ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <RotateCcw className="mr-1.5 size-3.5" />}
             Kirim Reschedule
           </Button>

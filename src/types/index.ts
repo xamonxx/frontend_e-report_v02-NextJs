@@ -198,6 +198,7 @@ export type DashboardStats = {
   active_accounts?: number
   avg_conversion?: number
   growth_percent?: number
+  total_request_surveys?: number
 }
 
 export type DashboardData = {

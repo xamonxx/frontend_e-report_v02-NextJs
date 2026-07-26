@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useAnalytics } from '@/lib/hooks/useAnalytics'
 import { useAccounts } from '@/lib/hooks/useMasterData'
+import { useAccountGroups } from '@/lib/hooks/useReportAttendances'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CardExportButtons } from '@/components/ui/card-export-buttons'
 import { Button } from '@/components/ui/button'
@@ -68,14 +69,21 @@ export default function AnalyticsPage() {
   // Ref to the trend card; PNG/PDF export helpers live in @/lib/export-card.
   const trendCardRef = useRef<HTMLDivElement>(null)
 
-  const [periodType, setPeriodType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly')
+  const [periodType, setPeriodType] = useState<'weekly' | 'monthly' | 'yearly' | 'custom'>('monthly')
   const [selectedAccount, setSelectedAccount] = useState<number | undefined>(undefined)
+  const [selectedAccountGroup, setSelectedAccountGroup] = useState<string | undefined>(undefined)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [weekDate, setWeekDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [customStartDate, setCustomStartDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [customEndDate, setCustomEndDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [customStartPickerOpen, setCustomStartPickerOpen] = useState(false)
+  const [customEndPickerOpen, setCustomEndPickerOpen] = useState(false)
 
   const { data: accounts } = useAccounts()
+  const { data: accountGroupsResponse } = useAccountGroups()
+  const accountGroups = accountGroupsResponse?.data ?? []
 
   const accountOptions = useMemo(() => {
     const opts: AutocompleteOption[] = [{ label: 'Semua Akun', value: 'all' }]
@@ -90,9 +98,12 @@ export default function AnalyticsPage() {
   const { data: response, isLoading, isRefetching, refetch } = useAnalytics({
     period_type: periodType,
     account: selectedAccount,
+    account_group: selectedAccountGroup,
     month: periodType === 'monthly' ? selectedMonth : undefined,
     year: selectedYear,
     week_date: periodType === 'weekly' ? weekDate : undefined,
+    start_date: periodType === 'custom' ? customStartDate : undefined,
+    end_date: periodType === 'custom' ? customEndDate : undefined,
   })
 
   const analytics = response?.data
@@ -242,9 +253,12 @@ export default function AnalyticsPage() {
             href={isMounted ? buildExportUrl('/api/v1/export/analytics/excel', {
               period_type: periodType,
               account: selectedAccount ? String(selectedAccount) : undefined,
+              account_group: selectedAccountGroup,
               month: periodType === 'monthly' ? String(selectedMonth) : undefined,
               year: String(selectedYear),
               week_date: periodType === 'weekly' ? weekDate : undefined,
+              start_date: periodType === 'custom' ? customStartDate : undefined,
+              end_date: periodType === 'custom' ? customEndDate : undefined,
             }) : '#'}
             target="_blank"
             rel="noopener noreferrer"
@@ -257,9 +271,12 @@ export default function AnalyticsPage() {
             href={isMounted ? buildExportUrl('/api/v1/export/analytics/pdf', {
               period_type: periodType,
               account: selectedAccount ? String(selectedAccount) : undefined,
+              account_group: selectedAccountGroup,
               month: periodType === 'monthly' ? String(selectedMonth) : undefined,
               year: String(selectedYear),
               week_date: periodType === 'weekly' ? weekDate : undefined,
+              start_date: periodType === 'custom' ? customStartDate : undefined,
+              end_date: periodType === 'custom' ? customEndDate : undefined,
             }) : '#'}
             target="_blank"
             rel="noopener noreferrer"
@@ -284,8 +301,8 @@ export default function AnalyticsPage() {
       <div className="glass-panel max-w-full p-4 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:bg-zinc-900/40 sm:p-5">
         <div className={cn(
           "grid gap-4 grid-cols-1 sm:grid-cols-2",
-          isSuperAdmin 
-            ? (periodType === 'yearly' ? "md:grid-cols-3" : "md:grid-cols-4") 
+          isSuperAdmin
+            ? (periodType === 'yearly' ? "md:grid-cols-4" : "md:grid-cols-5")
             : (periodType === 'yearly' ? "md:grid-cols-2" : "md:grid-cols-3")
         )}>
           {/* Period Type */}
@@ -294,13 +311,14 @@ export default function AnalyticsPage() {
             <Select value={periodType} onValueChange={(v) => v && setPeriodType(v as any)}>
               <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50">
                 <SelectValue>
-                  {periodType === 'weekly' ? 'Mingguan' : periodType === 'monthly' ? 'Bulanan' : 'Tahunan'}
+                  {periodType === 'weekly' ? 'Mingguan' : periodType === 'monthly' ? 'Bulanan' : periodType === 'yearly' ? 'Tahunan' : 'Kustom'}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="weekly">Mingguan</SelectItem>
                 <SelectItem value="monthly">Bulanan</SelectItem>
                 <SelectItem value="yearly">Tahunan</SelectItem>
+                <SelectItem value="custom">Kustom</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -318,6 +336,34 @@ export default function AnalyticsPage() {
                 clearOnFocus
                 className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50"
               />
+            </div>
+          )}
+
+          {/* Group Selector (Super Admin Only) — AND-kan dengan Akun di
+              backend, sama seperti pola di Rekap Jadwal Surveyor & Absensi. */}
+          {isSuperAdmin && (
+            <div className="space-y-1.5">
+              <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Grup Akun</Label>
+              <Select
+                value={selectedAccountGroup ?? 'all'}
+                onValueChange={(v) => setSelectedAccountGroup(v && v !== 'all' ? v : undefined)}
+              >
+                <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50">
+                  <SelectValue>
+                    {selectedAccountGroup
+                      ? accountGroups.find((g) => g.value === selectedAccountGroup)?.label ?? selectedAccountGroup
+                      : 'Semua Grup'}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Semua Grup</SelectItem>
+                  {accountGroups.map((group) => (
+                    <SelectItem key={group.value} value={group.value}>
+                      {group.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
@@ -367,16 +413,66 @@ export default function AnalyticsPage() {
             </div>
           )}
 
+          {/* Custom date range (if Custom) */}
+          {periodType === 'custom' && (
+            <>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Dari Tanggal</Label>
+                <Popover open={customStartPickerOpen} onOpenChange={setCustomStartPickerOpen}>
+                  <PopoverTrigger className="inline-flex w-full h-10 items-center justify-start gap-2 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground transition-all hover:bg-muted/50 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 cursor-pointer">
+                    <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    {customStartDate ? format(new Date(customStartDate + 'T12:00:00'), 'd MMM yyyy') : 'Pilih tanggal'}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customStartDate ? new Date(customStartDate + 'T12:00:00') : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setCustomStartDate(format(date, 'yyyy-MM-dd'))
+                          setCustomStartPickerOpen(false)
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Sampai Tanggal</Label>
+                <Popover open={customEndPickerOpen} onOpenChange={setCustomEndPickerOpen}>
+                  <PopoverTrigger className="inline-flex w-full h-10 items-center justify-start gap-2 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground transition-all hover:bg-muted/50 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 cursor-pointer">
+                    <CalendarIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    {customEndDate ? format(new Date(customEndDate + 'T12:00:00'), 'd MMM yyyy') : 'Pilih tanggal'}
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={customEndDate ? new Date(customEndDate + 'T12:00:00') : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          setCustomEndDate(format(date, 'yyyy-MM-dd'))
+                          setCustomEndPickerOpen(false)
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </>
+          )}
+
           {/* Year Input */}
-          <div className="space-y-1.5">
-            <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Tahun</Label>
-            <Input
-              type="number"
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-              className="h-10 border-border bg-background/60 text-xs text-foreground rounded-xl focus-visible:ring-amber-500/20 focus-visible:border-amber-500/50 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300"
-            />
-          </div>
+          {periodType !== 'custom' && (
+            <div className="space-y-1.5">
+              <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Tahun</Label>
+              <Input
+                type="number"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+                className="h-10 border-border bg-background/60 text-xs text-foreground rounded-xl focus-visible:ring-amber-500/20 focus-visible:border-amber-500/50 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300"
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -963,6 +1059,7 @@ export default function AnalyticsPage() {
                           <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 dark:border-zinc-900 dark:bg-zinc-950/20">
                             <th className="py-3 px-5">Akun</th>
                             <th className="py-3 px-2 text-center">Total Lead</th>
+                            <th className="py-3 px-2 text-center">Survey</th>
                             <th className="py-3 px-2 text-center">Closing Deal</th>
                             <th className="py-3 px-5 text-right">Skor Performa</th>
                           </tr>
@@ -982,7 +1079,8 @@ export default function AnalyticsPage() {
                                   {ranking.name}
                                 </td>
                                 <td className="py-3 px-2 text-center text-muted-foreground font-semibold">{ranking.total}</td>
-                                <td className="py-3 px-2 text-center text-muted-foreground">{ranking.deals} <span className="text-[9px] text-muted-foreground/50">({ranking.deal_rate}%)</span></td>
+                                <td className="py-3 px-2 text-center text-muted-foreground">{ranking.surveys} <span className="text-[9px] font-semibold text-foreground/60">({ranking.rate}%)</span></td>
+                                <td className="py-3 px-2 text-center text-muted-foreground">{ranking.deals} <span className="text-[9px] font-semibold text-foreground/60">({ranking.deal_rate}%)</span></td>
                                 <td className="py-3 px-5 text-right font-black text-amber-600 dark:text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.25)]">
                                   {ranking.score}
                                 </td>
@@ -1143,7 +1241,8 @@ export default function AnalyticsPage() {
               )}
             </div>
 
-            {/* ── Analitik Tim Survey ─────────────────────────────── */}
+            {/* ── Analitik Tim Survey (super_admin only) ──────────── */}
+            {isSuperAdmin && (
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="h-6 w-1 rounded-full bg-amber-500" />
@@ -1293,6 +1392,7 @@ export default function AnalyticsPage() {
                 </Card>
               </div>
             </div>
+            )}
           </div>
         </div>
       )}

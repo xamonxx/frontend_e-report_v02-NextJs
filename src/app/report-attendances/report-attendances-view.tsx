@@ -6,6 +6,9 @@ import {
   useReportAttendances,
   useSubmitAttendance,
   useUpsertAttendanceBySuperAdmin,
+  useAccountGroups,
+  type AttendanceItem,
+  type AttendanceRecapItem,
 } from '@/lib/hooks/useReportAttendances'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,6 +25,13 @@ import {
 } from '@/components/ui/table'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { format, parseISO } from 'date-fns'
 import {
   Loader2,
@@ -43,6 +53,86 @@ import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { buildExportUrl } from '@/lib/api/client'
 
+type AttendanceStatusFilter = 'all' | 'ada_wa' | 'nol_wa' | 'libur_susulan' | 'belum_laporan'
+
+const statusOptions: Array<{
+  id: AttendanceStatusFilter
+  label: string
+  shortLabel: string
+  helper: string
+  Icon: typeof Users
+  chip: string
+  tint: string
+  badge: string
+  bar: string
+}> = [
+  {
+    id: 'all',
+    label: 'Semua admin',
+    shortLabel: 'Total Admin',
+    helper: 'Seluruh data',
+    Icon: Users,
+    chip: 'bg-cyan-500/10',
+    tint: 'text-cyan-400',
+    badge: 'border-cyan-500/20 bg-cyan-500/10 text-cyan-300',
+    bar: 'bg-cyan-400',
+  },
+  {
+    id: 'ada_wa',
+    label: 'Ada Chat WA',
+    shortLabel: 'Ada WA',
+    helper: 'Laporan masuk',
+    Icon: CheckCircle,
+    chip: 'bg-emerald-500/10',
+    tint: 'text-emerald-400',
+    badge: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
+    bar: 'bg-emerald-400',
+  },
+  {
+    id: 'nol_wa',
+    label: '0 Chat WA',
+    shortLabel: '0 WA',
+    helper: 'Tidak ada chat',
+    Icon: PhoneOff,
+    chip: 'bg-orange-500/10',
+    tint: 'text-orange-400',
+    badge: 'border-orange-500/25 bg-orange-500/10 text-orange-300',
+    bar: 'bg-orange-400',
+  },
+  {
+    id: 'libur_susulan',
+    label: 'Libur / Susulan',
+    shortLabel: 'Libur',
+    helper: 'Admin off',
+    Icon: Coffee,
+    chip: 'bg-blue-500/10',
+    tint: 'text-blue-400',
+    badge: 'border-blue-500/25 bg-blue-500/10 text-blue-300',
+    bar: 'bg-blue-400',
+  },
+  {
+    id: 'belum_laporan',
+    label: 'Belum Lapor',
+    shortLabel: 'Belum Lapor',
+    helper: 'Perlu follow-up',
+    Icon: Clock,
+    chip: 'bg-red-500/10',
+    tint: 'text-red-400',
+    badge: 'border-red-500/25 bg-red-500/10 text-red-300',
+    bar: 'bg-red-400',
+  },
+]
+
+const getStatusOption = (status: string | null) => {
+  if (!status) return statusOptions.find((item) => item.id === 'belum_laporan')!
+  return statusOptions.find((item) => item.id === status) ?? statusOptions[0]
+}
+
+const statusSelectItems = statusOptions.map((option) => ({
+  value: option.id,
+  label: option.label,
+}))
+
 export default function ReportAttendancesPage() {
   const user = useAuthStore((s) => s.user)
   const isSuperAdmin = user?.role === 'super_admin'
@@ -52,15 +142,32 @@ export default function ReportAttendancesPage() {
     setIsMounted(true)
   }, [])
 
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })
-  )
-  const [selectedStatus, setSelectedStatus] = useState('all')
+  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })
+  const [selectedDate, setSelectedDate] = useState(today)
+  const [selectedStatus, setSelectedStatus] = useState<AttendanceStatusFilter>('all')
+  const [viewMode, setViewMode] = useState<'daily' | 'recap'>('daily')
+  const [rangeStart, setRangeStart] = useState(today)
+  const [rangeEnd, setRangeEnd] = useState(today)
+  const [rangeStartOpen, setRangeStartOpen] = useState(false)
+  const [rangeEndOpen, setRangeEndOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
-  const { data: response, isLoading, isRefetching, refetch } = useReportAttendances({
-    date: selectedDate,
-    status: selectedStatus,
-  })
+  const isRecap = viewMode === 'recap'
+
+  const { data: response, isLoading, isRefetching, refetch } = useReportAttendances(
+    isRecap
+      ? { start_date: rangeStart, end_date: rangeEnd, status: selectedStatus }
+      : { date: selectedDate, status: selectedStatus }
+  )
+
+  const { data: accountGroupsResponse } = useAccountGroups()
+  const accountGroups = accountGroupsResponse?.data ?? []
+
+  // Filter tanggal yang sedang aktif — dipakai bersama oleh tabel dan export
+  // supaya file yang diunduh selalu mengikuti apa yang terlihat di layar.
+  const exportDateParams = isRecap
+    ? { start_date: rangeStart, end_date: rangeEnd }
+    : { date: selectedDate }
 
   const submitPresenceMutation = useSubmitAttendance()
   const upsertPresenceMutation = useUpsertAttendanceBySuperAdmin()
@@ -69,10 +176,43 @@ export default function ReportAttendancesPage() {
   const [modAdminId, setModAdminId] = useState<number | null>(null)
   const [modCategory, setModCategory] = useState<string>('')
 
-  const statusCounts = response?.status_counts
-  const records = response?.data || []
+  const statusCounts = response?.status_counts ?? {
+    all: 0,
+    ada_wa: 0,
+    nol_wa: 0,
+    libur_susulan: 0,
+    belum_laporan: 0,
+  }
+  // Bentuk baris berbeda antar mode, jadi dipisah supaya tidak ada akses
+  // properti yang tidak ada di salah satu mode.
+  const dailyRecords: AttendanceItem[] =
+    response?.mode === 'recap' ? [] : ((response?.data as AttendanceItem[]) ?? [])
+  const recapRecords: AttendanceRecapItem[] =
+    response?.mode === 'recap' ? (response.data as AttendanceRecapItem[]) : []
+  const rowCount = isRecap ? recapRecords.length : dailyRecords.length
 
-  const currentUserRecord = records.find((rec) => rec.admin_id === user?.id)
+  const selectedStatusMeta = getStatusOption(selectedStatus)
+  const toLabel = (value: string) => (value ? format(parseISO(value), 'dd/MM/yyyy') : '-')
+  const toLongLabel = (value: string) =>
+    value
+      ? parseISO(value).toLocaleDateString('id-ID', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : '-'
+
+  const selectedDateLabel = toLabel(selectedDate)
+  const selectedDateLong = toLongLabel(selectedDate)
+  const activeRangeLabel = isRecap
+    ? `${toLongLabel(rangeStart)} - ${toLongLabel(rangeEnd)}`
+    : selectedDateLong
+
+  const rangeTruncated = response?.mode === 'recap' && response.range_truncated
+  const maxRangeDays = response?.mode === 'recap' ? response.max_range_days : 0
+
+  const currentUserRecord = dailyRecords.find((rec) => rec.admin_id === user?.id)
+  const selectedModerationRecord = dailyRecords.find((rec) => rec.admin_id === modAdminId)
 
   const handleAdminSubmit = (category: 'ada_wa' | 'nol_wa' | 'libur_susulan') => {
     submitPresenceMutation.mutate(
@@ -132,21 +272,12 @@ export default function ReportAttendancesPage() {
   }
 
   const getCategoryBadgeColor = (cat: string | null) => {
-    switch (cat) {
-      case 'ada_wa':
-        return 'border-green-500/20 text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-950/20'
-      case 'nol_wa':
-        return 'border-amber-500/20 text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-950/20'
-      case 'libur_susulan':
-        return 'border-blue-500/20 text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-950/20'
-      default:
-        return 'border-border text-muted-foreground/70 bg-muted/20 dark:border-zinc-800 dark:text-zinc-500 dark:bg-zinc-950/20'
-    }
+    return getStatusOption(cat).badge
   }
 
   return (
     <div className="min-w-0 space-y-5 pb-8 sm:space-y-6">
-      <header className="flex flex-col gap-4 pb-1 lg:flex-row lg:items-center lg:justify-between">
+      <header className="space-y-4 pb-1">
         <div className="min-w-0">
           <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--primary-theme)]">Operasional - laporan harian</p>
           <h1 className="flex items-center gap-2.5 text-2xl font-black tracking-tight text-foreground">
@@ -160,21 +291,95 @@ export default function ReportAttendancesPage() {
           </p>
         </div>
 
-        <div className="flex w-full items-center gap-2 sm:w-auto">
+        {/* Baris sendiri, selalu di bawah judul — dulu ini berbagi baris
+            dengan judul lewat lg:flex-row, jadi lebar panel kontrol (4 field
+            di mode Harian vs 5 di mode Rekap karena tanggal Dari+Sampai)
+            menekan lebar paragraf deskripsi, bikin ia wrap beda jumlah baris,
+            dan seluruh konten di bawahnya (termasuk kartu KPI) ikut naik-turun
+            setiap ganti mode. Baris terpisah = lebar judul tidak lagi
+            tergantung berapa banyak kontrol yang sedang tampil. */}
+        <div className="flex flex-wrap items-stretch gap-2 rounded-xl border border-border/80 bg-card p-2 shadow-sm ring-1 ring-border/40 sm:ml-auto sm:w-fit dark:border-zinc-700/80">
+          {isSuperAdmin && (
+            <Select
+              value={viewMode}
+              onValueChange={(value) => setViewMode((value as 'daily' | 'recap') ?? 'daily')}
+              items={[
+                { value: 'daily', label: 'Harian' },
+                { value: 'recap', label: 'Rekap Periode' },
+              ]}
+            >
+              <SelectTrigger className="h-10 w-full shrink-0 rounded-xl border-border/55 bg-card text-xs font-semibold shadow-sm transition-shadow hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))] hover:shadow-md sm:w-[136px]">
+                <SelectValue placeholder="Mode">
+                  {isRecap ? 'Rekap Periode' : 'Harian'}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent align="end" className="min-w-60 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+                {[
+                  { value: 'daily', label: 'Harian', helper: 'Status satu tanggal' },
+                  { value: 'recap', label: 'Rekap Periode', helper: 'Hitungan hari sepanjang rentang' },
+                ].map((option) => (
+                  <SelectItem key={option.value} value={option.value} className="rounded-lg px-2.5 py-2 text-xs">
+                    {/* Anak SelectItem ditata sebagai flex, jadi label dan
+                        helper harus dibungkus satu wrapper agar bertumpuk. */}
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{option.label}</span>
+                      {/* Helper dibiarkan membungkus: lebar popup mengikuti
+                          trigger, memaksanya satu baris bikin teks terpotong. */}
+                      <span className="mt-0.5 block whitespace-normal text-[10px] leading-snug text-muted-foreground">
+                        {option.helper}
+                      </span>
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {isRecap ? (
+            <>
+              {([
+                { label: 'Dari', value: rangeStart, set: setRangeStart, open: rangeStartOpen, setOpen: setRangeStartOpen },
+                { label: 'Sampai', value: rangeEnd, set: setRangeEnd, open: rangeEndOpen, setOpen: setRangeEndOpen },
+              ] as const).map((field) => (
+                <Popover key={field.label} open={field.open} onOpenChange={field.setOpen}>
+                  <PopoverTrigger
+                    type="button"
+                    className="flex h-10 w-full shrink-0 items-center justify-between gap-1.5 rounded-xl border border-border/55 bg-card px-3 text-left text-xs font-semibold text-foreground/80 shadow-sm transition-[border-color,background-color,box-shadow] hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))] hover:shadow-md focus:outline-hidden focus:ring-2 focus:ring-ring/25 sm:w-[172px]"
+                  >
+                    <span className="whitespace-nowrap">
+                      <span className="text-muted-foreground/70">{field.label} </span>
+                      {toLabel(field.value)}
+                    </span>
+                    <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="end">
+                    <CalendarComponent
+                      mode="single"
+                      selected={field.value ? parseISO(field.value) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          field.set(format(date, 'yyyy-MM-dd'))
+                          field.setOpen(false)
+                        }
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              ))}
+            </>
+          ) : (
           <Popover>
             <PopoverTrigger
               type="button"
               className={cn(
-                "flex h-10 min-w-0 flex-1 items-center justify-between rounded-lg border border-border/55 bg-card/70 px-3 text-left text-xs font-semibold text-foreground/80 transition-colors hover:border-border hover:bg-muted/40 focus:outline-hidden focus:ring-2 focus:ring-ring/25 sm:w-40 sm:flex-none",
+                "flex h-10 w-full shrink-0 items-center justify-between gap-1.5 rounded-xl border border-border/55 bg-card px-3 text-left text-xs font-semibold text-foreground/80 shadow-sm transition-[border-color,background-color,box-shadow] hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))] hover:shadow-md focus:outline-hidden focus:ring-2 focus:ring-ring/25 sm:w-[172px]",
                 !selectedDate && "text-muted-foreground/50"
               )}
             >
-              {selectedDate ? (
-                format(parseISO(selectedDate), 'dd/MM/yyyy')
-              ) : (
-                <span>Pilih Tanggal</span>
-              )}
-              <Calendar className="h-3.5 w-3.5 text-muted-foreground/70" />
+              <span className="whitespace-nowrap">
+                {selectedDate ? selectedDateLabel : 'Pilih Tanggal'}
+              </span>
+              <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="end">
               <CalendarComponent
@@ -191,11 +396,41 @@ export default function ReportAttendancesPage() {
               />
             </PopoverContent>
           </Popover>
+          )}
+
+          <Select
+            value={selectedStatus}
+            onValueChange={(value) => setSelectedStatus(value as AttendanceStatusFilter)}
+            items={statusSelectItems}
+          >
+            <SelectTrigger className="h-10 w-full shrink-0 rounded-xl border-border/55 bg-card text-xs font-semibold shadow-sm transition-shadow hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))] hover:shadow-md sm:w-[190px]">
+              <SelectValue placeholder="Filter status">
+                <span className="inline-flex min-w-0 items-center gap-2">
+                  <span className={cn('size-2 rounded-full shrink-0', selectedStatusMeta.bar)} />
+                  <span className="truncate">{selectedStatusMeta.label}</span>
+                </span>
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent align="end" className="min-w-56 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+              {statusOptions.map((option) => (
+                <SelectItem key={option.id} value={option.id} className="rounded-lg px-2.5 py-2 text-xs">
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className={cn('size-2 rounded-full', option.bar)} />
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold">{option.label}</span>
+                      <span className="block text-[10px] text-muted-foreground">{option.helper}</span>
+                    </span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button
             variant="outline"
             size="icon"
             onClick={() => refetch()}
-            className="size-10 rounded-lg border-border/55 bg-card/70 hover:bg-muted/40"
+            className="size-10 shrink-0 rounded-xl border-border/55 bg-card shadow-sm transition-[transform,box-shadow,border-color,background-color] hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))] hover:shadow-md active:scale-95"
           >
             <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground", isRefetching && "animate-spin")} />
           </Button>
@@ -204,7 +439,7 @@ export default function ReportAttendancesPage() {
 
       {/* Admin Quick Report Action Area */}
       {!isSuperAdmin && (
-        <Card className="gap-0 rounded-xl border-0 bg-card/75 py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
+        <Card className="gap-0 rounded-xl border-0 bg-card py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
           <CardHeader className="p-4 pb-3">
             <CardTitle className="text-sm font-semibold text-foreground/90">Kehadiran Laporan Hari Ini</CardTitle>
             <CardDescription className="text-xs text-muted-foreground/70">
@@ -230,13 +465,7 @@ export default function ReportAttendancesPage() {
                   <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
                   <p className="text-xs text-foreground/70 leading-relaxed">
                     Anda belum mengirimkan laporan harian untuk tanggal{' '}
-                    <span className="font-bold text-foreground">
-                      {new Date(selectedDate).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric'
-                      })}
-                    </span>
+                    <span className="font-bold text-foreground">{selectedDateLong}</span>
                     . Silakan pilih salah satu kategori di bawah:
                   </p>
                 </div>
@@ -276,55 +505,63 @@ export default function ReportAttendancesPage() {
       {/* Super Admin Monitoring Grid & Statistics */}
       {isSuperAdmin && (
         <>
-          {/* Clickable KPI cards — these double as the category filter */}
-          {statusCounts && (
-            <section aria-label="Filter status absensi" className="grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-border/45 shadow-[0_16px_42px_-34px_rgba(2,8,23,0.72)] ring-1 ring-border/50 sm:grid-cols-3 lg:grid-cols-5">
-              {[
-                { id: 'all', label: 'Total Admin', value: statusCounts.all, Icon: Users, chip: 'bg-amber-500/10', tint: 'text-amber-500', ring: 'border-amber-500/50 ring-amber-500/25', hover: 'hover:border-amber-500/40', bar: 'bg-amber-500', neutral: true },
-                { id: 'ada_wa', label: 'Ada WA', value: statusCounts.ada_wa, Icon: CheckCircle, chip: 'bg-green-500/10', tint: 'text-green-500', ring: 'border-green-500/50 ring-green-500/25', hover: 'hover:border-green-500/40', bar: 'bg-green-500' },
-                { id: 'nol_wa', label: '0 WA', value: statusCounts.nol_wa, Icon: PhoneOff, chip: 'bg-orange-500/10', tint: 'text-orange-500', ring: 'border-orange-500/50 ring-orange-500/25', hover: 'hover:border-orange-500/40', bar: 'bg-orange-500' },
-                { id: 'libur_susulan', label: 'Libur', value: statusCounts.libur_susulan, Icon: Coffee, chip: 'bg-blue-500/10', tint: 'text-blue-500', ring: 'border-blue-500/50 ring-blue-500/25', hover: 'hover:border-blue-500/40', bar: 'bg-blue-500' },
-                { id: 'belum_laporan', label: 'Belum Lapor', value: statusCounts.belum_laporan, Icon: Clock, chip: 'bg-red-500/10', tint: 'text-red-500', ring: 'border-red-500/50 ring-red-500/25', hover: 'hover:border-red-500/40', bar: 'bg-red-500' },
-              ].map((s) => {
-                const isActive = selectedStatus === s.id
-                return (
-                  <button
-                    key={s.id}
-                    onClick={() => setSelectedStatus(s.id)}
-                    aria-pressed={isActive}
+          {/* Clickable KPI cards — these double as the category filter. */}
+          <section aria-label="Filter status absensi" className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+            {statusOptions.map((s) => {
+              const isActive = selectedStatus === s.id
+              const value = statusCounts[s.id]
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSelectedStatus(s.id)}
+                  aria-pressed={isActive}
+                  className={cn(
+                    'group relative flex min-h-[78px] items-center gap-3 overflow-hidden rounded-2xl border bg-card px-3.5 py-3 text-left outline-none transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-ring/35',
+                    isActive
+                      ? 'border-[color-mix(in_srgb,var(--primary-theme)_38%,var(--border))] bg-[color-mix(in_srgb,var(--primary-theme)_9%,var(--card))] shadow-[0_10px_28px_-16px_var(--primary-theme)]'
+                      : 'border-border/45 hover:border-[color-mix(in_srgb,var(--primary-theme)_24%,var(--border))]'
+                  )}
+                >
+                  {/* Aksen kiri, bukan garis bawah — tidak ambil ruang layout
+                      (absolute) jadi tak pernah menggeser konten di sebelahnya. */}
+                  <span
                     className={cn(
-                       'group relative flex min-h-[78px] items-center gap-3 overflow-hidden bg-card/90 px-3.5 py-3 text-left outline-none transition-colors duration-200 hover:bg-muted/45 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40',
-                       isActive && 'bg-[color-mix(in_srgb,var(--primary-theme)_7%,var(--card))]'
+                      'absolute inset-y-2.5 left-0 w-1 rounded-r-full transition-opacity duration-200',
+                      s.bar,
+                      isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
                     )}
-                  >
-                    <span className={cn('flex size-9 shrink-0 items-center justify-center rounded-lg', s.chip)}>
-                      <s.Icon className={cn('h-5 w-5', s.tint)} />
+                  />
+                  <span className={cn('flex size-10 shrink-0 items-center justify-center rounded-xl transition-transform duration-200 group-hover:scale-105', s.chip)}>
+                    <s.Icon className={cn('h-5 w-5', s.tint)} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className={cn('block text-xl font-black leading-none tabular-nums', s.tint)}>
+                      {value}
                     </span>
-                    <span className="min-w-0">
-                       <span className={cn('block text-xl font-black leading-none tabular-nums', s.neutral ? 'text-foreground' : s.tint)}>
-                        {s.value}
-                      </span>
-                      <span className="mt-1 block truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {s.label}
-                      </span>
+                    <span className="mt-1.5 block truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      {s.shortLabel}
                     </span>
-                    {isActive && <span className={cn('absolute inset-x-3 bottom-0 h-0.5 rounded-t-full', s.bar)} />}
-                  </button>
-                )
-              })}
-            </section>
-          )}
+                    <span className="mt-0.5 hidden truncate text-[10px] text-muted-foreground/70 xl:block">
+                      {/* Di mode rekap semua angka bersatuan hari-admin, jadi
+                          helper harian diganti supaya tidak salah dibaca. */}
+                      {isRecap ? (s.id === 'all' ? 'Total hari-admin' : 'Jumlah hari') : s.helper}
+                    </span>
+                  </span>
+                </button>
+              )
+            })}
+          </section>
 
           {/* Toolbar: active filter hint + exports */}
-          <div className="relative z-10 -mb-px flex flex-col gap-3 rounded-t-xl bg-card/75 px-3.5 py-3 ring-1 ring-border/50 sm:flex-row sm:items-center sm:justify-between sm:px-4">
+          <div className="relative z-10 -mb-px flex flex-col gap-3 rounded-t-xl bg-card px-3.5 py-3 ring-1 ring-border/50 sm:flex-row sm:items-center sm:justify-between sm:px-4">
             <div className="flex min-w-0 items-center gap-2.5">
               <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_9%,var(--card))] text-[var(--primary-theme)]">
                 <Filter className="size-3.5" />
               </span>
               <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Data ditampilkan</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">Data absensi</p>
                 <p className="truncate text-xs font-semibold text-foreground/90">
-                  {selectedStatus === 'all' ? 'Semua admin' : getCategoryLabel(selectedStatus === 'belum_laporan' ? null : selectedStatus)}
+                  {selectedStatusMeta.label} - {activeRangeLabel}
                 </p>
               </div>
               {selectedStatus !== 'all' && (
@@ -339,48 +576,104 @@ export default function ReportAttendancesPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {(['PC', 'NPP'] as const).map((group) => (
-                <a
-                  key={group}
-                  href={isMounted ? buildExportUrl('/api/v1/report-attendances/export', {
-                    date: selectedDate,
-                    account_group: group,
-                  }) : '#'}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/55 bg-background/45 px-2.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_32%,var(--border))] hover:text-[var(--primary-theme)]"
+              {/* Satu tombol export; grup dipilih di dalam. Daftar grup datang
+                  dari server, jadi grup baru muncul sendiri tanpa ubah kode. */}
+              <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                <PopoverTrigger
+                  type="button"
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--primary-theme)_30%,var(--border))] bg-[color-mix(in_srgb,var(--primary-theme)_9%,var(--card))] px-3 text-[11px] font-bold text-[var(--primary-theme)] shadow-sm transition-[transform,box-shadow,background-color] hover:bg-[color-mix(in_srgb,var(--primary-theme)_16%,var(--card))] hover:shadow-md active:scale-95"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  Export {group}
-                </a>
-              ))}
+                  Export Excel
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-60 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+                  <p className="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                    Pilih grup akun
+                  </p>
+                  {[
+                    ...accountGroups.map((group) => ({
+                      key: group.value,
+                      label: group.label,
+                      helper: group.subtitle,
+                      params: { account_group: group.value },
+                    })),
+                    {
+                      key: '__all__',
+                      label: 'Semua Grup',
+                      helper: 'Seluruh akun dalam satu lembar',
+                      params: {},
+                    },
+                  ].map((option) => (
+                    <a
+                      key={option.key}
+                      href={isMounted ? buildExportUrl('/api/v1/report-attendances/export', {
+                        ...exportDateParams,
+                        ...option.params,
+                      }) : '#'}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setExportOpen(false)}
+                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))]"
+                    >
+                      <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                      <span className="min-w-0">
+                        <span className="block truncate font-semibold text-foreground/90">{option.label}</span>
+                        <span className="block truncate text-[10px] text-muted-foreground">{option.helper}</span>
+                      </span>
+                    </a>
+                  ))}
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
 
+          {rangeTruncated && (
+            <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/[0.07] px-3.5 py-2.5 ring-1 ring-amber-500/20">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <p className="text-[11px] leading-relaxed text-foreground/75">
+                Rentang dipotong ke <span className="font-bold text-foreground">{maxRangeDays} hari</span> pertama.
+                Persempit rentang bila ingin rekap yang lebih panjang dipecah per periode.
+              </p>
+            </div>
+          )}
+
           {/* Presence monitor list */}
-          <Card className="gap-0 overflow-hidden rounded-b-xl rounded-t-none border-0 bg-card/75 py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
+          <Card className="gap-0 overflow-hidden rounded-b-xl rounded-t-none border-0 bg-card py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="border-b border-border/45 bg-muted/20">
-                    <TableRow className="border-0 hover:bg-transparent">
+                    <TableRow className="border-0 hover:bg-muted/15">
                       <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Nama Admin</TableHead>
                       <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Akun</TableHead>
-                      <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Status Absen</TableHead>
-                      <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Jam Laporan</TableHead>
-                      <TableHead className="h-11 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Moderasi</TableHead>
+                      {isRecap ? (
+                        <>
+                          <TableHead className="h-11 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Ada WA</TableHead>
+                          <TableHead className="h-11 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">0 WA</TableHead>
+                          <TableHead className="h-11 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Libur</TableHead>
+                          <TableHead className="h-11 text-center text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Belum Lapor</TableHead>
+                          <TableHead className="h-11 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Kepatuhan</TableHead>
+                        </>
+                      ) : (
+                        <>
+                          <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Tanggal Absen</TableHead>
+                          <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Status Absen</TableHead>
+                          <TableHead className="h-11 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Jam Laporan</TableHead>
+                          <TableHead className="h-11 text-right text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Moderasi</TableHead>
+                        </>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {isLoading ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-32 text-center">
+                        <TableCell colSpan={7} className="h-32 text-center">
                           <Loader2 className="h-5 w-5 animate-spin text-amber-500 mx-auto" />
                         </TableCell>
                       </TableRow>
-                    ) : records.length === 0 ? (
+                    ) : rowCount === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-56 p-0 text-center">
+                        <TableCell colSpan={7} className="h-56 p-0 text-center">
                           <div className="flex flex-col items-center justify-center px-6 py-10">
                             <span className="grid size-11 place-items-center rounded-xl bg-muted/45 text-muted-foreground">
                               <ClipboardX className="size-5" />
@@ -397,14 +690,34 @@ export default function ReportAttendancesPage() {
                           </div>
                         </TableCell>
                       </TableRow>
+                    ) : isRecap ? (
+                      recapRecords.map((rec) => (
+                        <TableRow key={rec.admin_id} className="border-border/30 transition-colors odd:bg-background/[0.08] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))]">
+                          <TableCell className="text-xs font-semibold text-foreground/90">{rec.admin_name}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{rec.account_name}</TableCell>
+                          <TableCell className="text-center text-xs font-semibold text-emerald-500">{rec.ada_wa}</TableCell>
+                          <TableCell className="text-center text-xs font-semibold text-orange-500">{rec.nol_wa}</TableCell>
+                          <TableCell className="text-center text-xs font-semibold text-blue-500">{rec.libur_susulan}</TableCell>
+                          <TableCell className="text-center text-xs font-semibold text-red-500">{rec.missing_days}</TableCell>
+                          <TableCell className="text-right">
+                            <span className="text-xs font-black tabular-nums text-foreground/90">{rec.compliance_rate}%</span>
+                            <span className="ml-1 text-[10px] text-muted-foreground/70">
+                              {rec.reported_days}/{rec.total_days} hari
+                            </span>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     ) : (
-                      records.map((rec) => (
+                      dailyRecords.map((rec) => (
                         <TableRow key={rec.admin_id} className="border-border/30 transition-colors odd:bg-background/[0.08] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))]">
                           <TableCell className="text-xs font-semibold text-foreground/90">
                             {rec.admin_name}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {rec.account_name}
+                          </TableCell>
+                          <TableCell className="text-xs font-medium text-muted-foreground/80">
+                            {selectedDateLabel}
                           </TableCell>
                           <TableCell>
                             <Badge
@@ -451,24 +764,68 @@ export default function ReportAttendancesPage() {
                 <DialogHeader>
                   <DialogTitle className="text-foreground">Ubah Absensi Admin</DialogTitle>
                   <DialogDescription className="text-muted-foreground text-xs">
-                    Override status absensi harian untuk admin terpilih pada tanggal terpilih.
+                    Koreksi status harian tanpa mengubah data admin lainnya.
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-3 py-2">
+                  <div className="grid grid-cols-2 gap-2 rounded-xl border border-border/55 bg-background/45 p-3 text-xs dark:border-slate-800 dark:bg-slate-950/45">
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Tanggal absen</p>
+                      <p className="mt-1 font-semibold text-foreground">{selectedDateLabel}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">Jam laporan</p>
+                      <p className="mt-1 font-semibold text-foreground">
+                        {selectedModerationRecord?.reported_at
+                          ? new Date(selectedModerationRecord.reported_at).toLocaleTimeString('id-ID', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : '-'}
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="space-y-1.5">
                     <Label htmlFor="mod-cat" className="text-xs font-semibold text-muted-foreground">Status Absensi</Label>
-                    <select
-                      id="mod-cat"
+                    <Select
                       value={modCategory}
-                      onChange={(e) => setModCategory(e.target.value)}
-                      className="w-full h-9 rounded-lg border border-border bg-background px-3 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+                      onValueChange={(value) => setModCategory(value ?? '')}
+                      items={[
+                        { value: '', label: 'Belum Laporan (Hapus Absen)' },
+                        { value: 'ada_wa', label: 'Ada Chat WA Masuk' },
+                        { value: 'nol_wa', label: '0 Chat WA Masuk' },
+                        { value: 'libur_susulan', label: 'Libur / Susulan' },
+                      ]}
                     >
-                      <option value="">Belum Laporan (Hapus Absen)</option>
-                      <option value="ada_wa">Ada Chat WA Masuk</option>
-                      <option value="nol_wa">0 Chat WA Masuk</option>
-                      <option value="libur_susulan">Libur / Susulan</option>
-                    </select>
+                      <SelectTrigger id="mod-cat" className="h-10 rounded-lg border-border/70 bg-background/70 text-xs font-semibold hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--background))] dark:border-slate-800 dark:bg-slate-950/80">
+                        <SelectValue placeholder="Pilih status">
+                          <span className="inline-flex min-w-0 items-center gap-2">
+                            <span className={cn('size-2 rounded-full', getStatusOption(modCategory || null).bar)} />
+                            <span className="truncate">{getCategoryLabel(modCategory || null)}</span>
+                          </span>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent align="start" className="min-w-72 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+                        {[
+                          { value: '', label: 'Belum Laporan', helper: 'Hapus status absensi' },
+                          { value: 'ada_wa', label: 'Ada Chat WA Masuk', helper: 'Admin menerima chat' },
+                          { value: 'nol_wa', label: '0 Chat WA Masuk', helper: 'Tidak ada chat masuk' },
+                          { value: 'libur_susulan', label: 'Libur / Susulan', helper: 'Admin off atau susulan' },
+                        ].map((option) => (
+                          <SelectItem key={option.value || 'empty'} value={option.value} className="rounded-lg px-2.5 py-2 text-xs">
+                            <span className="flex min-w-0 items-center gap-2">
+                              <span className={cn('size-2 rounded-full', getStatusOption(option.value || null).bar)} />
+                              <span className="min-w-0">
+                                <span className="block truncate font-semibold">{option.label}</span>
+                                <span className="block text-[10px] text-muted-foreground">{option.helper}</span>
+                              </span>
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 

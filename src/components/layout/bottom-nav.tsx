@@ -21,6 +21,7 @@ import {
   ChevronRight,
   X,
   MapPinned,
+  Globe2,
   CalendarClock,
   UsersRound,
   type LucideIcon,
@@ -62,6 +63,7 @@ const MANAGER_SURVEY_TABS: NavItem[] = [
 // Overflow items surfaced in the "More" sheet. Role gating mirrors the sidebar.
 const MORE_ITEMS: NavItem[] = [
   { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', superOnly: true },
+  { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Globe2, hint: 'Persebaran konsumen per wilayah', superOnly: true },
   { href: '/report-attendances', label: 'Absensi', icon: FileClock, hint: 'Laporan absensi harian' },
 ]
 

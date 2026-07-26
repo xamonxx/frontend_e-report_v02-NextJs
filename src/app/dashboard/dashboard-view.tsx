@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useDashboard } from '@/lib/hooks/useDashboard'
 import { useAnalytics } from '@/lib/hooks/useAnalytics'
 import { useAccounts } from '@/lib/hooks/useMasterData'
+import { useAccountGroups } from '@/lib/hooks/useReportAttendances'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CardExportButtons } from '@/components/ui/card-export-buttons'
 import { Badge } from '@/components/ui/badge'
@@ -39,6 +40,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
+  ClipboardList,
 } from 'lucide-react'
 import {
   BarChart,
@@ -250,15 +252,22 @@ export default function DashboardPage() {
   const trendCardRef = useRef<HTMLDivElement>(null)
 
   // Filter States
-  const [periodType, setPeriodType] = useState<'weekly' | 'monthly' | 'yearly'>('monthly')
+  const [periodType, setPeriodType] = useState<'weekly' | 'monthly' | 'yearly' | 'custom'>('monthly')
   const [selectedAccount, setSelectedAccount] = useState<number | undefined>(undefined)
+  const [selectedAccountGroup, setSelectedAccountGroup] = useState<string | undefined>(undefined)
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [weekDate, setWeekDate] = useState<string>(new Date().toISOString().split('T')[0])
   const [datePickerOpen, setDatePickerOpen] = useState(false)
+  const [customStartDate, setCustomStartDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [customEndDate, setCustomEndDate] = useState<string>(new Date().toISOString().split('T')[0])
+  const [customStartPickerOpen, setCustomStartPickerOpen] = useState(false)
+  const [customEndPickerOpen, setCustomEndPickerOpen] = useState(false)
   const [accountsPage, setAccountsPage] = useState(1)
 
   const { data: accounts } = useAccounts()
+  const { data: accountGroupsResponse } = useAccountGroups()
+  const accountGroups = accountGroupsResponse?.data ?? []
 
   const accountOptions = useMemo(() => {
     const opts: AutocompleteOption[] = [{ label: 'Semua Akun', value: 'all' }]
@@ -273,9 +282,12 @@ export default function DashboardPage() {
   const { data: analyticsResponse, isLoading: analyticsLoading, isRefetching: analyticsRefetching } = useAnalytics({
     period_type: periodType,
     account: selectedAccount,
+    account_group: selectedAccountGroup,
     month: periodType === 'monthly' ? selectedMonth : undefined,
     year: selectedYear,
     week_date: periodType === 'weekly' ? weekDate : undefined,
+    start_date: periodType === 'custom' ? customStartDate : undefined,
+    end_date: periodType === 'custom' ? customEndDate : undefined,
   })
 
   const trendData = analyticsResponse?.data?.trendSeries || []
@@ -293,8 +305,10 @@ export default function DashboardPage() {
       return {
         id: matched?.id || acct.name,
         name: acct.name,
-        admins: matched?.admins || [],
+        admins: acct.admins || [],
         total_leads: acct.total,
+        surveys: acct.surveys,
+        survey_rate: acct.rate,
         deals: acct.deals,
         conversion_rate: acct.deal_rate,
       }
@@ -328,6 +342,7 @@ export default function DashboardPage() {
       pending_surveys: dashboard?.stats?.pending_surveys,
       completed_this_month: d.totalDeals,
       growth_percent: d.growthPercent,
+      total_request_surveys: dashboard?.stats?.total_request_surveys,
     }
   }, [dashboard, analyticsResponse])
 
@@ -386,7 +401,7 @@ export default function DashboardPage() {
         {/* Ringkasan. */}
         <section className="dash-rise space-y-4" style={{ animationDelay: '60ms' }}>
           <SectionLabel index="01" title="Ringkasan" sub="Metrik utama periode terpilih" />
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className={cn("grid gap-3 sm:grid-cols-2", isSuperAdmin ? "xl:grid-cols-5" : "xl:grid-cols-4")}>
             <FeatureStatCard
               title="Total Leads"
               value={stats?.total_leads || 0}
@@ -416,6 +431,15 @@ export default function DashboardPage() {
                 description="Leads berstatus request survey"
                 icon={Clock}
                 tooltip="Jumlah leads yang sudah meminta jadwal survey lapangan namun belum dijadwalkan."
+              />
+            )}
+            {isSuperAdmin && (
+              <StatCard
+                title="Request Survey"
+                value={stats?.total_request_surveys || 0}
+                description="Total leads berstatus request survey"
+                icon={ClipboardList}
+                tooltip="Jumlah seluruh leads dari semua akun yang berstatus request survey (menunggu dijadwalkan)."
               />
             )}
             <StatCard
@@ -452,7 +476,7 @@ export default function DashboardPage() {
             <div className={cn(
               "grid gap-3 grid-cols-1 sm:grid-cols-2",
               isSuperAdmin
-                ? (periodType === 'yearly' ? "md:grid-cols-3" : "md:grid-cols-4")
+                ? (periodType === 'yearly' ? "md:grid-cols-4" : "md:grid-cols-5")
                 : (periodType === 'yearly' ? "md:grid-cols-2" : "md:grid-cols-3")
             )}>
               {/* Period Type */}
@@ -461,13 +485,14 @@ export default function DashboardPage() {
                 <Select value={periodType} onValueChange={(v) => v && setPeriodType(v as any)}>
                   <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50">
                     <SelectValue>
-                      {periodType === 'weekly' ? 'Mingguan' : periodType === 'monthly' ? 'Bulanan' : 'Tahunan'}
+                      {periodType === 'weekly' ? 'Mingguan' : periodType === 'monthly' ? 'Bulanan' : periodType === 'yearly' ? 'Tahunan' : 'Kustom'}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="weekly">Mingguan</SelectItem>
                     <SelectItem value="monthly">Bulanan</SelectItem>
                     <SelectItem value="yearly">Tahunan</SelectItem>
+                    <SelectItem value="custom">Kustom</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -485,6 +510,33 @@ export default function DashboardPage() {
                     clearOnFocus
                     className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50"
                   />
+                </div>
+              )}
+
+              {/* Group Selector (Super Admin Only) */}
+              {isSuperAdmin && (
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Grup Akun</Label>
+                  <Select
+                    value={selectedAccountGroup ?? 'all'}
+                    onValueChange={(v) => setSelectedAccountGroup(v && v !== 'all' ? v : undefined)}
+                  >
+                    <SelectTrigger className="h-10 rounded-xl border-border bg-background/60 text-xs dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 hover:bg-muted/50">
+                      <SelectValue>
+                        {selectedAccountGroup
+                          ? accountGroups.find((g) => g.value === selectedAccountGroup)?.label ?? selectedAccountGroup
+                          : 'Semua Grup'}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Semua Grup</SelectItem>
+                      {accountGroups.map((group) => (
+                        <SelectItem key={group.value} value={group.value}>
+                          {group.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               )}
 
@@ -536,16 +588,70 @@ export default function DashboardPage() {
                 </div>
               )}
 
+              {/* Custom date range (if Custom) */}
+              {periodType === 'custom' && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Dari Tanggal</Label>
+                    <Popover open={customStartPickerOpen} onOpenChange={setCustomStartPickerOpen}>
+                      <PopoverTrigger className="inline-flex w-full h-10 items-center justify-start gap-2 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground transition-all hover:bg-muted/50 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 cursor-pointer">
+                        <CalendarIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="truncate">
+                          {customStartDate ? format(new Date(customStartDate + 'T12:00:00'), 'd MMM yyyy') : 'Pilih tanggal'}
+                        </span>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={customStartDate ? new Date(customStartDate + 'T12:00:00') : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              setCustomStartDate(format(date, 'yyyy-MM-dd'))
+                              setCustomStartPickerOpen(false)
+                            }
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Sampai Tanggal</Label>
+                    <Popover open={customEndPickerOpen} onOpenChange={setCustomEndPickerOpen}>
+                      <PopoverTrigger className="inline-flex w-full h-10 items-center justify-start gap-2 rounded-xl border border-border bg-background/60 px-3 text-xs text-foreground transition-all hover:bg-muted/50 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-200 cursor-pointer">
+                        <CalendarIcon className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="truncate">
+                          {customEndDate ? format(new Date(customEndDate + 'T12:00:00'), 'd MMM yyyy') : 'Pilih tanggal'}
+                        </span>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={customEndDate ? new Date(customEndDate + 'T12:00:00') : undefined}
+                          onSelect={(date) => {
+                            if (date) {
+                              setCustomEndDate(format(date, 'yyyy-MM-dd'))
+                              setCustomEndPickerOpen(false)
+                            }
+                          }}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                </>
+              )}
+
               {/* Year Input */}
-              <div className="space-y-1.5">
-                <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Tahun</Label>
-                <Input
-                  type="number"
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
-                  className="h-10 border-border bg-background/60 text-xs text-foreground rounded-xl focus-visible:ring-amber-500/20 focus-visible:border-amber-500/50 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300"
-                />
-              </div>
+              {periodType !== 'custom' && (
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Tahun</Label>
+                  <Input
+                    type="number"
+                    value={selectedYear}
+                    onChange={(e) => setSelectedYear(parseInt(e.target.value, 10))}
+                    className="h-10 border-border bg-background/60 text-xs text-foreground rounded-xl focus-visible:ring-amber-500/20 focus-visible:border-amber-500/50 transition-all duration-300 dark:border-zinc-800 dark:bg-zinc-950/60 dark:text-zinc-300"
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -787,6 +893,12 @@ export default function DashboardPage() {
                         </th>
                         <th className="pb-3 px-1 text-center">
                           <Tooltip>
+                            <TooltipTrigger className="cursor-help">Survey</TooltipTrigger>
+                            <TooltipContent className="text-[11px]">Total leads yang sudah request survey</TooltipContent>
+                          </Tooltip>
+                        </th>
+                        <th className="pb-3 px-1 text-center">
+                          <Tooltip>
                             <TooltipTrigger className="cursor-help">Deal</TooltipTrigger>
                             <TooltipContent className="text-[11px]">Total leads yang berhasil closing</TooltipContent>
                           </Tooltip>
@@ -828,6 +940,7 @@ export default function DashboardPage() {
                               {acct.admins.map((a: any) => a.name).join(', ') || '-'}
                             </td>
                             <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.total_leads}</td>
+                            <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.surveys ?? 0} <span className="text-[9px] font-semibold text-foreground/60">({acct.survey_rate ?? 0}%)</span></td>
                             <td className="py-3.5 px-1 text-center text-muted-foreground">{acct.deals}</td>
                             <td className="py-3.5 px-1 text-right">
                               <Tooltip>

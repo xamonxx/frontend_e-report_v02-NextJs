@@ -22,6 +22,7 @@ import {
   SlidersHorizontal,
   LayoutGrid,
   MapPinned,
+  Globe2,
   CalendarClock,
   UsersRound,
 } from 'lucide-react'
@@ -39,6 +40,7 @@ const NAV_LINKS: { href: string; label: string; icon: typeof Gauge; hint: string
   { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, hint: 'Ringkasan performa & statistik', roles: ['admin'] },
   { href: '/consultations', label: 'Konsultasi', icon: MessagesSquare, hint: 'Kelola data leads konsultasi', roles: ['admin'] },
   { href: '/analytics', label: 'Analitik', icon: ChartNoAxesCombined, hint: 'Laporan & analitik mendalam', roles: ['admin'] },
+  { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Globe2, hint: 'Persebaran konsumen per wilayah', roles: ['super_admin'] },
   { href: '/surveys', label: 'Survey', icon: MapPinned, hint: 'Penugasan dan hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { href: '/rekap-jadwal-surveyor', label: 'Rekap Jadwal', icon: CalendarClock, hint: 'Jadwal mingguan surveyor', roles: ['manager_surveyor'] },
   { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Daftar konsumen dan hasil survey', roles: ['manager_surveyor'] },

@@ -70,8 +70,10 @@ import {
   AlertCircle,
   CheckCircle2,
   ClipboardCheck,
+  Download,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import { api } from '@/lib/api/client'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/components/ui/confirm-dialog'
@@ -266,6 +268,21 @@ export default function MasterDataPage() {
     setRole('admin')
     setAccountId('')
     setOpenModal(true)
+  }
+
+  const [exportingUsers, setExportingUsers] = useState(false)
+  const handleExportUsers = async () => {
+    if (exportingUsers) return
+    setExportingUsers(true)
+    try {
+      // Ekspor menghormati filter pencarian aktif agar cocok dengan tampilan.
+      await api.downloadFile('/master-data/users/export', { search: debouncedUserSearch || undefined })
+      toast.success('Excel daftar user berhasil diunduh.')
+    } catch (err: any) {
+      toast.error(err?.message || 'Gagal mengekspor daftar user.')
+    } finally {
+      setExportingUsers(false)
+    }
   }
 
   const handleOpenUserEdit = (usr: UserItem) => {
@@ -519,10 +536,22 @@ export default function MasterDataPage() {
             </Button>
           )}
           {activeTab === 'users' && (
-            <Button onClick={handleOpenUserCreate} size="sm" className="h-10 w-full rounded-lg bg-[var(--primary-theme)] px-4 font-semibold text-white shadow-none hover:brightness-110 sm:w-auto">
-              <Plus className="h-4 w-4 mr-1.5" />
-              User Baru
-            </Button>
+            <>
+              <Button
+                onClick={handleExportUsers}
+                disabled={exportingUsers}
+                size="sm"
+                variant="outline"
+                className="h-10 w-full rounded-lg px-4 font-semibold shadow-none sm:w-auto"
+              >
+                {exportingUsers ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Download className="h-4 w-4 mr-1.5" />}
+                Export Excel
+              </Button>
+              <Button onClick={handleOpenUserCreate} size="sm" className="h-10 w-full rounded-lg bg-[var(--primary-theme)] px-4 font-semibold text-white shadow-none hover:brightness-110 sm:w-auto">
+                <Plus className="h-4 w-4 mr-1.5" />
+                User Baru
+              </Button>
+            </>
           )}
         </div>
       </div>

@@ -6,10 +6,13 @@ import { queryKeys } from '@/lib/api/queryKeys'
 
 export interface AnalyticsFilters {
   account?: number
-  period_type: 'weekly' | 'monthly' | 'yearly'
+  account_group?: string
+  period_type: 'weekly' | 'monthly' | 'yearly' | 'custom'
   week_date?: string
   month?: number
   year: number
+  start_date?: string
+  end_date?: string
 }
 
 export function useAnalytics(filters: AnalyticsFilters) {
