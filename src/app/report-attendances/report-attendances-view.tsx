@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuthStore } from '@/lib/stores/authStore'
 import {
   useReportAttendances,
@@ -51,7 +51,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { buildExportUrl } from '@/lib/api/client'
+import { useFileDownload } from '@/lib/hooks/useFileDownload'
 
 type AttendanceStatusFilter = 'all' | 'ada_wa' | 'nol_wa' | 'libur_susulan' | 'belum_laporan'
 
@@ -137,10 +137,6 @@ export default function ReportAttendancesPage() {
   const user = useAuthStore((s) => s.user)
   const isSuperAdmin = user?.role === 'super_admin'
 
-  const [isMounted, setIsMounted] = useState(false)
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
 
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })
   const [selectedDate, setSelectedDate] = useState(today)
@@ -151,6 +147,7 @@ export default function ReportAttendancesPage() {
   const [rangeStartOpen, setRangeStartOpen] = useState(false)
   const [rangeEndOpen, setRangeEndOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const { download, isDownloading } = useFileDownload()
 
   const isRecap = viewMode === 'recap'
 
@@ -609,23 +606,26 @@ export default function ReportAttendancesPage() {
                       params: {},
                     },
                   ].map((option) => (
-                    <a
+                    <button
                       key={option.key}
-                      href={isMounted ? buildExportUrl('/api/v1/report-attendances/export', {
-                        ...exportDateParams,
-                        ...option.params,
-                      }) : '#'}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={() => setExportOpen(false)}
-                      className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))]"
+                      type="button"
+                      onClick={() => {
+                        setExportOpen(false)
+                        download(
+                          '/report-attendances/export',
+                          { ...exportDateParams, ...option.params },
+                          'Rekap absensi berhasil diunduh.'
+                        )
+                      }}
+                      disabled={isDownloading('/report-attendances/export')}
+                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] disabled:cursor-wait disabled:opacity-60"
                     >
                       <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
                       <span className="min-w-0">
                         <span className="block truncate font-semibold text-foreground/90">{option.label}</span>
                         <span className="block truncate text-[10px] text-muted-foreground">{option.helper}</span>
                       </span>
-                    </a>
+                    </button>
                   ))}
                 </PopoverContent>
               </Popover>

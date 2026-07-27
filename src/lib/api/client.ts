@@ -31,6 +31,30 @@ export function removeAuthToken(): void {
 }
 
 /**
+ * Bersihkan sesi lalu antar ke halaman login saat server menolak token.
+ *
+ * Sebelumnya 401 tidak ditangani di mana pun. `/auth/me` hanya dipanggil saat
+ * mount, jadi sesi yang ditolak di tengah pemakaian tidak pernah dibersihkan —
+ * pengguna hanya melihat permintaan gagal beruntun sampai ia memuat ulang
+ * sendiri. Itu tidak terasa selama token berlaku selamanya; sejak token diberi
+ * masa berlaku (`config/sanctum.php`), ini jadi jalur yang pasti dilewati.
+ *
+ * `/auth/login` dikecualikan: 401 di sana berarti kata sandi salah, dan itu
+ * urusan form, bukan sesi kedaluwarsa.
+ */
+function handleUnauthorized(path: string): void {
+  if (typeof window === 'undefined') return
+  if (path.startsWith('/auth/login')) return
+
+  removeAuthToken()
+  localStorage.setItem('e_report_logged_in', 'false')
+
+  if (window.location.pathname !== '/login') {
+    window.location.href = '/login'
+  }
+}
+
+/**
  * Base API client with Sanctum token-based auth.
  * Uses Bearer token stored in localStorage for cross-domain compatibility.
  */
@@ -54,7 +78,7 @@ class ApiClient {
         if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
           resolvedUrl = `${url.protocol}//${window.location.hostname}:${url.port || '8000'}`
         }
-      } catch (e) {
+      } catch {
         // Fallback if URL is not a valid absolute URL
       }
     }
@@ -77,6 +101,7 @@ class ApiClient {
     options: {
       body?: unknown
       params?: Record<string, string | number | undefined>
+      signal?: AbortSignal
     } = {}
   ): Promise<T> {
     let url = `${this.baseUrl}/api/v1${path}`
@@ -116,6 +141,7 @@ class ApiClient {
       headers,
       body: fetchBody,
       credentials: 'include',
+      signal: options.signal,
     })
 
     // Handle 204 No Content
@@ -126,6 +152,10 @@ class ApiClient {
     const data = await response.json()
 
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized(path)
+      }
+
       const error: ApiError = {
         message: data.message || 'Terjadi kesalahan.',
         errors: data.errors,
@@ -136,8 +166,8 @@ class ApiClient {
     return data as T
   }
 
-  get<T>(path: string, params?: Record<string, string | number | undefined>) {
-    return this.request<T>('GET', path, { params })
+  get<T>(path: string, params?: Record<string, string | number | undefined>, signal?: AbortSignal) {
+    return this.request<T>('GET', path, { params, signal })
   }
 
   post<T>(path: string, body?: unknown) {
@@ -196,6 +226,10 @@ class ApiClient {
     })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        handleUnauthorized(path)
+      }
+
       const errorData = await response.json().catch(() => ({ message: 'Gagal mengunduh file.' }))
       throw { message: errorData.message || `Download failed: ${response.status}` }
     }
@@ -221,33 +255,17 @@ class ApiClient {
 
 export const api = new ApiClient(API_BASE)
 
-/**
- * Build export URL for direct window.open downloads.
- * Appends auth token as query parameter for cross-domain compatibility.
+/*
+ * `buildExportUrl()` dihapus 2026-07-27.
+ *
+ * Fungsi itu menempelkan token auth ke query string supaya unduhan lewat
+ * `window.open` / `<a href>` bisa menembus auth. Akibatnya URL bertoken tertulis
+ * ke DOM sebagai `href`, ikut masuk riwayat browser saat diklik, terkirim
+ * sebagai `Referer`, dan bisa disalin lewat "copy link address" — padahal token
+ * Sanctum di aplikasi ini tidak punya masa berlaku.
+ *
+ * Semua export sekarang lewat `useFileDownload()` → `api.downloadFile()`, yang
+ * mengirim token di header `Authorization` dan menyimpan hasilnya dari blob.
+ * Untuk aset statis `/storage/...` cukup sambung ke `api.baseUrl` — tidak ada
+ * auth di sana.
  */
-export function buildExportUrl(path: string, params?: Record<string, string | number | undefined>): string {
-  const base = api.baseUrl
-  let url = `${base}${path}`
-
-  const searchParams = new URLSearchParams()
-  if (params) {
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        searchParams.set(key, String(value))
-      }
-    })
-  }
-
-  // Automatically append the auth token if present and calling an API path
-  if (path.startsWith('/api/')) {
-    const token = getAuthToken()
-    if (token) {
-      searchParams.set('token', token)
-    }
-  }
-
-  const qs = searchParams.toString()
-  if (qs) url += `?${qs}`
-
-  return url
-}

@@ -17,7 +17,7 @@ export function prefetchRoute(qc: QueryClient, href: string): void {
     case '/dashboard':
       qc.prefetchQuery({
         queryKey: queryKeys.dashboard.data(),
-        queryFn: () => api.get('/dashboard'),
+        queryFn: ({ signal }) => api.get('/dashboard', undefined, signal),
         staleTime,
       })
       break
@@ -34,7 +34,7 @@ export function prefetchRoute(qc: QueryClient, href: string): void {
       }
       qc.prefetchQuery({
         queryKey: queryKeys.analytics.summary(filters as Record<string, unknown>),
-        queryFn: () => api.get('/analytics', filters as Record<string, string | number | undefined>),
+        queryFn: ({ signal }) => api.get('/analytics', filters as Record<string, string | number | undefined>, signal),
         staleTime,
       })
       break
@@ -55,7 +55,7 @@ export function prefetchRoute(qc: QueryClient, href: string): void {
       }
       qc.prefetchQuery({
         queryKey: queryKeys.consultations.list(filters),
-        queryFn: () => api.get('/consultations', filters as Record<string, string | number | undefined>),
+        queryFn: ({ signal }) => api.get('/consultations', filters as Record<string, string | number | undefined>, signal),
         staleTime,
       })
       break

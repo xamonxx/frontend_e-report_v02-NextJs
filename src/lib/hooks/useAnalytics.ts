@@ -18,7 +18,7 @@ export interface AnalyticsFilters {
 export function useAnalytics(filters: AnalyticsFilters) {
   return useQuery({
     queryKey: queryKeys.analytics.summary(filters as any),
-    queryFn: () => api.get<any>('/analytics', filters as any),
+    queryFn: ({ signal }) => api.get<any>('/analytics', filters as any, signal),
     placeholderData: (previousData) => previousData,
   })
 }

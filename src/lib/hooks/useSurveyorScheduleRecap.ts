@@ -16,7 +16,7 @@ import type { ApiResponse, SurveyorRecapFilters, SurveyorRecapReport } from '@/t
 export function useSurveyorScheduleRecap(filters: SurveyorRecapFilters) {
   return useQuery({
     queryKey: queryKeys.surveys.recap(filters),
-    queryFn: () => api.get<ApiResponse<SurveyorRecapReport>>('/surveys/recap', filters),
+    queryFn: ({ signal }) => api.get<ApiResponse<SurveyorRecapReport>>('/surveys/recap', filters, signal),
     // Pertahankan data lama saat filter berganti supaya grid tidak berkedip.
     placeholderData: (previousData) => previousData,
   })

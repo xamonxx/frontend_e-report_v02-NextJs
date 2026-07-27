@@ -12,8 +12,8 @@ import type { DashboardData } from '@/types'
 export function useDashboard() {
   return useQuery({
     queryKey: queryKeys.dashboard.data(),
-    queryFn: async () => {
-      const res = await api.get<DashboardData>('/dashboard')
+    queryFn: async ({ signal }) => {
+      const res = await api.get<DashboardData>('/dashboard', undefined, signal)
       return res
     },
     staleTime: 5 * 60 * 1000, // 5 minutes stale time

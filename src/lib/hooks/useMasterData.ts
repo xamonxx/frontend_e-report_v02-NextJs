@@ -25,8 +25,8 @@ function mergeStatus(current: StatusCategory[] | undefined, next: StatusCategory
 export function useNeedsCategories() {
   return useQuery({
     queryKey: queryKeys.masterData.needsCategories,
-    queryFn: async () => {
-      const res = await api.get<{ data: NeedsCategory[] }>('/master-data/needs-categories')
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: NeedsCategory[] }>('/master-data/needs-categories', undefined, signal)
       return res.data
     },
     // Master data (dropdown) bisa diubah super admin dan dipakai lintas
@@ -40,15 +40,15 @@ export function useNeedsCategories() {
 export function useStatusCategories() {
   return useQuery({
     queryKey: queryKeys.masterData.statusCategories,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       try {
         const res = await api.get<PaginatedResponse<StatusCategory>>('/master-data/statuses/list', {
           page: 1,
           per_page: 500,
-        })
+        }, signal)
         return sortStatuses(res.data)
       } catch {
-        const res = await api.get<{ data: StatusCategory[] }>('/master-data/status-categories')
+        const res = await api.get<{ data: StatusCategory[] }>('/master-data/status-categories', undefined, signal)
         return sortStatuses(res.data)
       }
     },
@@ -62,8 +62,8 @@ export function useStatusCategories() {
 export function useProvinces() {
   return useQuery({
     queryKey: queryKeys.wilayah.provinces,
-    queryFn: async () => {
-      const res = await api.get<{ data: string[] }>('/wilayah/provinces')
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: string[] }>('/wilayah/provinces', undefined, signal)
       return res.data
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours caching
@@ -73,8 +73,8 @@ export function useProvinces() {
 export function useCities(province?: string) {
   return useQuery({
     queryKey: queryKeys.wilayah.cities(province),
-    queryFn: async () => {
-      const res = await api.get<{ data: string[] }>('/wilayah/cities', { province })
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: string[] }>('/wilayah/cities', { province }, signal)
       return res.data
     },
     enabled: !!province,
@@ -85,8 +85,8 @@ export function useCities(province?: string) {
 export function useDistricts(city?: string) {
   return useQuery({
     queryKey: queryKeys.wilayah.districts(city),
-    queryFn: async () => {
-      const res = await api.get<{ data: string[] }>('/wilayah/districts', { city })
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: string[] }>('/wilayah/districts', { city }, signal)
       return res.data
     },
     enabled: !!city,
@@ -108,8 +108,8 @@ export type DetailedDistrict = {
 export function useAllDetailedCities() {
   return useQuery({
     queryKey: ['wilayah', 'cities', 'detailed'],
-    queryFn: async () => {
-      const res = await api.get<{ data: DetailedCity[] }>('/wilayah/cities', { include_details: 'true' })
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: DetailedCity[] }>('/wilayah/cities', { include_details: 'true' }, signal)
       return res.data
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours caching
@@ -119,8 +119,8 @@ export function useAllDetailedCities() {
 export function useAllDetailedDistricts() {
   return useQuery({
     queryKey: ['wilayah', 'districts', 'detailed'],
-    queryFn: async () => {
-      const res = await api.get<{ data: DetailedDistrict[] }>('/wilayah/districts', { include_details: 'true' })
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: DetailedDistrict[] }>('/wilayah/districts', { include_details: 'true' }, signal)
       return res.data
     },
     staleTime: 24 * 60 * 60 * 1000, // 24 hours caching
@@ -130,8 +130,8 @@ export function useAllDetailedDistricts() {
 export function useAccounts() {
   return useQuery({
     queryKey: queryKeys.accounts.all,
-    queryFn: async () => {
-      const res = await api.get<{ data: any[] }>('/master-data/accounts')
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: any[] }>('/master-data/accounts', undefined, signal)
       return res.data
     },
     staleTime: 5 * 60 * 1000, // 5 min caching
@@ -143,8 +143,8 @@ export function useAccounts() {
 export function useCategoriesList(filters?: { page?: number; per_page?: number; search?: string }) {
   return useQuery({
     queryKey: ['master-data', 'categories', 'list', filters],
-    queryFn: () =>
-      api.get<PaginatedResponse<NeedsCategory>>('/master-data/categories/list', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<NeedsCategory>>('/master-data/categories/list', filters as any, signal),
   })
 }
 
@@ -189,8 +189,8 @@ export function useDeleteCategory() {
 export function useStatusesList(filters?: { page?: number; per_page?: number }) {
   return useQuery({
     queryKey: ['master-data', 'statuses', 'list', filters],
-    queryFn: () =>
-      api.get<PaginatedResponse<StatusCategory>>('/master-data/statuses/list', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<StatusCategory>>('/master-data/statuses/list', filters as any, signal),
   })
 }
 
@@ -264,7 +264,7 @@ export function useReorderStatuses() {
 export function useSurveyStatusesList() {
   return useQuery({
     queryKey: queryKeys.masterData.surveyStatuses,
-    queryFn: () => api.get<{ data: SurveyStatusItem[] }>('/master-data/survey-statuses'),
+    queryFn: ({ signal }) => api.get<{ data: SurveyStatusItem[] }>('/master-data/survey-statuses', undefined, signal),
   })
 }
 
@@ -323,8 +323,8 @@ export type UserItem = {
 export function useUsersList(filters: { search?: string; page?: number }) {
   return useQuery({
     queryKey: ['master-data', 'users', 'list', filters],
-    queryFn: () =>
-      api.get<PaginatedResponse<UserItem>>('/master-data/users', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<UserItem>>('/master-data/users', filters as any, signal),
   })
 }
 

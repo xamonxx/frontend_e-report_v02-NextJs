@@ -52,7 +52,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { cn } from '@/lib/utils'
-import { buildExportUrl } from '@/lib/api/client'
+import { useFileDownload } from '@/lib/hooks/useFileDownload'
 import { saveCardAsPng, saveCardAsPdf } from '@/lib/export-card'
 
 export default function AnalyticsPage() {
@@ -81,9 +81,24 @@ export default function AnalyticsPage() {
   const [customStartPickerOpen, setCustomStartPickerOpen] = useState(false)
   const [customEndPickerOpen, setCustomEndPickerOpen] = useState(false)
 
+  const { download, isDownloading } = useFileDownload()
+
   const { data: accounts } = useAccounts()
   const { data: accountGroupsResponse } = useAccountGroups()
   const accountGroups = accountGroupsResponse?.data ?? []
+
+  // Filter aktif yang dikirim ke endpoint export — dipakai tombol Excel dan PDF,
+  // jadi berkas yang diunduh selalu mengikuti apa yang terlihat di layar.
+  const exportParams = {
+    period_type: periodType,
+    account: selectedAccount ? String(selectedAccount) : undefined,
+    account_group: selectedAccountGroup,
+    month: periodType === 'monthly' ? String(selectedMonth) : undefined,
+    year: String(selectedYear),
+    week_date: periodType === 'weekly' ? weekDate : undefined,
+    start_date: periodType === 'custom' ? customStartDate : undefined,
+    end_date: periodType === 'custom' ? customEndDate : undefined,
+  }
 
   const accountOptions = useMemo(() => {
     const opts: AutocompleteOption[] = [{ label: 'Semua Akun', value: 'all' }]
@@ -249,42 +264,24 @@ export default function AnalyticsPage() {
           </p>
         </div>
         <div className="grid w-full grid-cols-3 gap-1.5 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2">
-          <a
-            href={isMounted ? buildExportUrl('/api/v1/export/analytics/excel', {
-              period_type: periodType,
-              account: selectedAccount ? String(selectedAccount) : undefined,
-              account_group: selectedAccountGroup,
-              month: periodType === 'monthly' ? String(selectedMonth) : undefined,
-              year: String(selectedYear),
-              week_date: periodType === 'weekly' ? weekDate : undefined,
-              start_date: periodType === 'custom' ? customStartDate : undefined,
-              end_date: periodType === 'custom' ? customEndDate : undefined,
-            }) : '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-border/80 bg-card px-2 py-2 text-[11px] font-semibold text-foreground/80 transition-all duration-300 hover:bg-muted hover:text-amber-600 hover:border-amber-500/30 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-amber-400 sm:gap-1.5 sm:px-3 sm:text-xs"
+          <button
+            type="button"
+            onClick={() => download('/export/analytics/excel', exportParams, 'Excel analitik berhasil diunduh.')}
+            disabled={isDownloading('/export/analytics/excel')}
+            className="inline-flex h-9 cursor-pointer items-center justify-center gap-1 rounded-xl border border-border/80 bg-card px-2 py-2 text-[11px] font-semibold text-foreground/80 transition-all duration-300 hover:bg-muted hover:text-amber-600 hover:border-amber-500/30 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-amber-400 sm:gap-1.5 sm:px-3 sm:text-xs"
           >
             <FileSpreadsheet className="h-3.5 w-3.5" />
             Excel
-          </a>
-          <a
-            href={isMounted ? buildExportUrl('/api/v1/export/analytics/pdf', {
-              period_type: periodType,
-              account: selectedAccount ? String(selectedAccount) : undefined,
-              account_group: selectedAccountGroup,
-              month: periodType === 'monthly' ? String(selectedMonth) : undefined,
-              year: String(selectedYear),
-              week_date: periodType === 'weekly' ? weekDate : undefined,
-              start_date: periodType === 'custom' ? customStartDate : undefined,
-              end_date: periodType === 'custom' ? customEndDate : undefined,
-            }) : '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center justify-center gap-1 rounded-xl border border-border/80 bg-card px-2 py-2 text-[11px] font-semibold text-foreground/80 transition-all duration-300 hover:bg-muted hover:text-amber-600 hover:border-amber-500/30 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-amber-400 sm:gap-1.5 sm:px-3 sm:text-xs"
+          </button>
+          <button
+            type="button"
+            onClick={() => download('/export/analytics/pdf', exportParams, 'PDF analitik berhasil diunduh.')}
+            disabled={isDownloading('/export/analytics/pdf')}
+            className="inline-flex h-9 cursor-pointer items-center justify-center gap-1 rounded-xl border border-border/80 bg-card px-2 py-2 text-[11px] font-semibold text-foreground/80 transition-all duration-300 hover:bg-muted hover:text-amber-600 hover:border-amber-500/30 disabled:cursor-wait disabled:opacity-60 dark:border-zinc-800/80 dark:bg-zinc-950/45 dark:text-zinc-300 dark:hover:bg-zinc-800/60 dark:hover:text-amber-400 sm:gap-1.5 sm:px-3 sm:text-xs"
           >
             <Download className="h-3.5 w-3.5" />
             PDF
-          </a>
+          </button>
           <Button
             variant="outline"
             size="sm"

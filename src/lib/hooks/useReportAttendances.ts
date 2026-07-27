@@ -76,8 +76,8 @@ export function useReportAttendances(
 ) {
   return useQuery({
     queryKey: ['report-attendances', 'list', filters],
-    queryFn: () =>
-      api.get<AttendanceResponse>('/report-attendances', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<AttendanceResponse>('/report-attendances', filters as any, signal),
     enabled: options?.enabled ?? true,
   })
 }
@@ -89,7 +89,7 @@ export function useReportAttendances(
 export function useAccountGroups() {
   return useQuery({
     queryKey: ['master-data', 'account-groups'],
-    queryFn: () => api.get<{ data: AccountGroupOption[] }>('/master-data/account-groups'),
+    queryFn: ({ signal }) => api.get<{ data: AccountGroupOption[] }>('/master-data/account-groups', undefined, signal),
     staleTime: 5 * 60 * 1000,
   })
 }

@@ -75,7 +75,7 @@ export function useNotificationCount() {
   // "Memuat dashboard interior...". Disetel agar masih responsif tapi aman.
   return useQuery({
     queryKey: queryKeys.notifications.count(),
-    queryFn: () => api.get<NotificationCount>('/notifications'),
+    queryFn: ({ signal }) => api.get<NotificationCount>('/notifications', undefined, signal),
     refetchInterval: isActive ? 30000 : 120000, // 30s active, 2m idle
     // Gratis: hanya berjalan saat user kembali ke tab, tidak menambah polling
     // latar. Ini yang membuat angka terasa segar tanpa menaikkan koneksi DB.
@@ -93,7 +93,7 @@ export function useNotificationSummary(enabled = true) {
 
   return useQuery({
     queryKey: queryKeys.notifications.summary(),
-    queryFn: () => api.get<NotificationSummary>('/notifications/summary'),
+    queryFn: ({ signal }) => api.get<NotificationSummary>('/notifications/summary', undefined, signal),
     enabled,
     refetchInterval: interval,
     refetchOnWindowFocus: enabled,

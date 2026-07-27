@@ -37,11 +37,11 @@ export function useCurrentUser() {
 
   const query = useQuery({
     queryKey: queryKeys.auth.me,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!getAuthToken()) {
         throw new Error('No auth token')
       }
-      const res = await api.get<{ user: AuthUser }>('/auth/me')
+      const res = await api.get<{ user: AuthUser }>('/auth/me', undefined, signal)
       return res.user
     },
     retry: false,
