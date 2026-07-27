@@ -58,7 +58,6 @@ function buildMarkerEl(total: number, ratio: number, name: string): HTMLElement 
   const size = Math.round(28 + Math.min(1, ratio) * 22) // 28–50px
   const el = document.createElement('div')
   el.className = 'geo-pin'
-  el.style.cssText = 'will-change:transform;position:relative;'
 
   const inner = document.createElement('div')
   inner.style.cssText = `width:${size}px;height:${size}px;display:grid;place-items:center;border-radius:9999px;`
