@@ -18,7 +18,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
-  Bug,
   SlidersHorizontal,
   LayoutGrid,
   MapPinned,
@@ -48,7 +47,6 @@ const NAV_LINKS: { href: string; label: string; icon: typeof Gauge; hint: string
   { href: '/master-data', label: 'Master Data', icon: DatabaseZap, hint: 'Kategori, status & data referensi', roles: ['super_admin'] },
   { href: '/report-attendances', label: 'Absensi', icon: FileClock, hint: 'Laporan absensi harian', roles: ['admin'] },
   { href: '/audit-logs', label: 'Audit Logs', icon: History, hint: 'Log aktivitas sistem', roles: ['super_admin'] },
-  { href: '/debug', label: 'Debug & Test', icon: Bug, hint: 'Data dummy & pengujian sistem', roles: ['super_admin'] },
   { href: '/settings', label: 'Settings', icon: SlidersHorizontal, hint: 'Pengaturan akun & preferensi' },
 ]
 
