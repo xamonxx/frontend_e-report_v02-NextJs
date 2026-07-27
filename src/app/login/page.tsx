@@ -162,7 +162,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-8 sm:px-6">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden px-4 py-6 sm:px-6 sm:py-8">
 
       {/* Animated background */}
       <LoginBackground />
@@ -172,14 +172,17 @@ export default function LoginPage() {
 
       {/* Login card */}
       <motion.div
-        className={cn('relative z-10 w-full max-w-[980px]', isShaking && 'animate-shake')}
+        // Below lg only the form column renders, so the card is capped near a
+        // comfortable form measure. Without this it stretched to the full 980px
+        // on tablets and the inputs became uncomfortably wide.
+        className={cn('relative z-10 w-full max-w-[440px] lg:max-w-[980px]', isShaking && 'animate-shake')}
         variants={cardVariants}
         initial="hidden"
         animate="visible"
       >
         {/* Outer ambient glow ring */}
         {/* Card surface — Solid sleek design for performance */}
-        <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/65 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.25)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.16] dark:bg-slate-900/70 dark:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.55)]">
+        <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.25)] backdrop-blur-2xl backdrop-saturate-150 sm:rounded-3xl dark:border-white/[0.16] dark:bg-slate-900/70 dark:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.55)]">
 
           {/* Theme hairline */}
           {/* Inner top reflection (light mode only) */}
@@ -188,13 +191,16 @@ export default function LoginPage() {
           {/* Bottom hairline */}
           <div className="absolute inset-x-0 bottom-0 h-px bg-border/60" />
 
-          <div className="grid min-h-[600px] min-w-0 lg:grid-cols-[1.04fr_0.96fr]">
+          {/* The 600px floor exists to give the two-column desktop layout its
+              stature. Below lg the aside is hidden, so forcing it there only
+              padded the form with dead space on short phones. */}
+          <div className="grid min-w-0 lg:min-h-[600px] lg:grid-cols-[1.04fr_0.96fr]">
             <aside className="relative hidden overflow-hidden border-r border-slate-900/10 bg-slate-950/[0.035] px-12 py-12 text-slate-950 lg:flex lg:flex-col lg:justify-between dark:border-white/[0.08] dark:bg-black/15 dark:text-white">
               <div className="absolute inset-0 opacity-[0.14] dark:opacity-[0.16]" style={{ backgroundImage: 'linear-gradient(rgba(245,158,11,.18) 1px, transparent 1px), linear-gradient(90deg,rgba(245,158,11,.18) 1px, transparent 1px)', backgroundSize: '48px 48px' }} />
               <div className="relative">
                 <div className="relative mb-10 flex h-16 w-16 items-center justify-center overflow-hidden rounded-[18px] border border-amber-400/30 bg-amber-400/10 shadow-[0_12px_30px_-18px_rgba(245,158,11,0.9)] backdrop-blur-md">
                   <div className="absolute inset-x-2 top-0 h-px bg-white/70" />
-                  <Logo className="relative h-12 w-12 text-amber-500 drop-shadow-[0_6px_12px_rgba(245,158,11,0.25)]" />
+                  <Logo className="relative h-9 w-9 text-amber-500 drop-shadow-[0_6px_12px_rgba(245,158,11,0.25)]" />
                 </div>
                 <p className="text-[11px] font-bold uppercase text-amber-600 dark:text-amber-400">Putra Corporation</p>
                 {/* Yang konkret dinaikkan jadi headline; sub-headline dulu
@@ -212,25 +218,26 @@ export default function LoginPage() {
             </aside>
 
           <motion.div
-            className="relative min-w-0 flex flex-col justify-center px-6 py-8 sm:px-10 lg:px-12"
+            className="relative min-w-0 flex flex-col justify-center px-5 py-7 sm:px-10 sm:py-9 lg:px-12"
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            <motion.div className="mb-7" variants={itemVariants}>
-              <div className="mb-5 flex lg:hidden">
+            <motion.div className="mb-6 sm:mb-7" variants={itemVariants}>
+              <div className="mb-4 flex sm:mb-5 lg:hidden">
                 <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-[0_10px_24px_-16px_rgba(245,158,11,0.9)] backdrop-blur-md">
                   <div className="absolute inset-x-2 top-0 h-px bg-white/70" />
-                  <Logo className="relative h-11 w-11 text-[var(--primary-theme)]" />
+                  {/* The mark used to fill 79% of its tile and read as cramped. */}
+                  <Logo className="relative h-8 w-8 text-[var(--primary-theme)]" />
                 </div>
               </div>
               <p className="text-[10px] font-bold uppercase text-[var(--primary-theme)] lg:hidden">
                 Putra Corporation
               </p>
-              <h2 className="mt-1 text-2xl font-bold text-slate-950 dark:text-slate-50">
+              <h2 className="mt-1 text-xl font-bold text-slate-950 sm:text-2xl dark:text-slate-50">
                 Selamat datang kembali
               </h2>
-              <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+              <p className="mt-2 text-[13px] text-slate-500 sm:text-sm dark:text-slate-400">
                 Masuk untuk mengelola laporan dan aktivitas tim.
               </p>
             </motion.div>
@@ -400,7 +407,7 @@ export default function LoginPage() {
             </form>
 
             {/* Footer */}
-            <motion.div variants={itemVariants} className="mt-7 text-center">
+            <motion.div variants={itemVariants} className="mt-6 text-center sm:mt-7">
               <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                 Akses aman untuk pengguna terdaftar
