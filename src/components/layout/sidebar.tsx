@@ -9,22 +9,22 @@ import { useAuthStore } from '@/lib/stores/authStore'
 import { cn } from '@/lib/utils'
 import { prefetchRoute } from '@/lib/prefetch'
 import {
-  Gauge,
   MessagesSquare,
   ChartNoAxesCombined,
-  DatabaseZap,
-  FileClock,
+  Database,
+  CalendarCheck,
   History,
   ChevronLeft,
   ChevronRight,
   Building2,
-  SlidersHorizontal,
-  LayoutGrid,
-  MapPinned,
-  Globe2,
+  Settings,
+  LayoutDashboard,
+  ClipboardCheck,
+  Map,
   CalendarClock,
   UsersRound,
 } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Logo from '@/components/brand/logo'
 import {
   Tooltip,
@@ -35,19 +35,23 @@ import {
 import { canAccess } from '@/lib/auth/roles'
 import type { UserRole } from '@/types'
 
-const NAV_LINKS: { href: string; label: string; icon: typeof Gauge; hint: string; roles?: UserRole[] }[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid, hint: 'Ringkasan performa & statistik', roles: ['admin'] },
+/* Icon language: one metaphor per domain, no duplicates. `Map` belongs to the
+ * regional analysis view, so Survey uses a clipboard (it is a task, not a place).
+ * `Building2` is shared with the Akun KPI tile on the dashboard on purpose so the
+ * same concept reads the same everywhere. */
+const NAV_LINKS: { href: string; label: string; icon: LucideIcon; hint: string; roles?: UserRole[] }[] = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, hint: 'Ringkasan performa & statistik', roles: ['admin'] },
   { href: '/consultations', label: 'Konsultasi', icon: MessagesSquare, hint: 'Kelola data leads konsultasi', roles: ['admin'] },
   { href: '/analytics', label: 'Analitik', icon: ChartNoAxesCombined, hint: 'Laporan & analitik mendalam', roles: ['admin'] },
-  { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Globe2, hint: 'Persebaran konsumen per wilayah', roles: ['super_admin'] },
-  { href: '/surveys', label: 'Survey', icon: MapPinned, hint: 'Penugasan dan hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
+  { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Map, hint: 'Persebaran konsumen per wilayah', roles: ['super_admin'] },
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck, hint: 'Penugasan dan hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { href: '/rekap-jadwal-surveyor', label: 'Rekap Jadwal', icon: CalendarClock, hint: 'Jadwal mingguan surveyor', roles: ['manager_surveyor'] },
   { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Daftar konsumen dan hasil survey', roles: ['manager_surveyor'] },
   { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', roles: ['super_admin'] },
-  { href: '/master-data', label: 'Master Data', icon: DatabaseZap, hint: 'Kategori, status & data referensi', roles: ['super_admin'] },
-  { href: '/report-attendances', label: 'Absensi', icon: FileClock, hint: 'Laporan absensi harian', roles: ['admin'] },
+  { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & data referensi', roles: ['super_admin'] },
+  { href: '/report-attendances', label: 'Absensi', icon: CalendarCheck, hint: 'Laporan absensi harian', roles: ['admin'] },
   { href: '/audit-logs', label: 'Audit Logs', icon: History, hint: 'Log aktivitas sistem', roles: ['super_admin'] },
-  { href: '/settings', label: 'Settings', icon: SlidersHorizontal, hint: 'Pengaturan akun & preferensi' },
+  { href: '/settings', label: 'Settings', icon: Settings, hint: 'Pengaturan akun & preferensi' },
 ]
 
 const activeNavTransition = {
@@ -163,7 +167,10 @@ export default function Sidebar() {
                       >
                         <Icon
                           className={cn(
-                            'h-5 w-5 shrink-0 stroke-[2.2] transition-[color,filter] duration-200',
+                            // 1.75 rather than lucide's 2: at 20px across a 12-item rail the
+                            // heavier stroke closes up the counters and the icons read as blobs.
+                            // Colour, glow and scale carry the active state instead of weight.
+                            'h-5 w-5 shrink-0 stroke-[1.75] transition-[color,filter] duration-200',
                             isActive
                               ? 'drop-shadow-[0_0_8px_color-mix(in_srgb,var(--primary-theme)_50%,transparent)]'
                               : 'text-sidebar-foreground/60 group-hover:text-sidebar-foreground/90'

@@ -6,22 +6,21 @@ import { useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-  LayoutGrid,
+  LayoutDashboard,
   MessagesSquare,
   ChartNoAxesCombined,
   Plus,
   Building2,
-  FileClock,
-  DatabaseZap,
+  CalendarCheck,
+  Database,
   History,
-  Bug,
-  SlidersHorizontal,
+  Settings,
   LogOut,
   MoreHorizontal,
   ChevronRight,
   X,
-  MapPinned,
-  Globe2,
+  ClipboardCheck,
+  Map,
   CalendarClock,
   UsersRound,
   type LucideIcon,
@@ -43,38 +42,37 @@ type NavItem = {
 // The four tabs that flank the centre (+) FAB. Identical for every role so the
 // bar never shifts shape between admin and super-admin.
 const PRIMARY_TABS: NavItem[] = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutGrid },
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/consultations', label: 'Konsultasi', icon: MessagesSquare },
   { href: '/analytics', label: 'Analisa', icon: ChartNoAxesCombined },
 ]
 
 const SURVEY_TEAM_TABS: NavItem[] = [
-  { href: '/surveys', label: 'Survey', icon: MapPinned },
-  { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal },
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
+  { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
 
 const MANAGER_SURVEY_TABS: NavItem[] = [
-  { href: '/surveys', label: 'Survey', icon: MapPinned },
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
   { href: '/rekap-jadwal-surveyor', label: 'Rekap', icon: CalendarClock },
   { href: '/survey-consumers', label: 'Data', icon: UsersRound },
-  { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal },
+  { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
 
 // Overflow items surfaced in the "More" sheet. Role gating mirrors the sidebar.
 const MORE_ITEMS: NavItem[] = [
   { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', superOnly: true },
-  { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Globe2, hint: 'Persebaran konsumen per wilayah', superOnly: true },
-  { href: '/report-attendances', label: 'Absensi', icon: FileClock, hint: 'Laporan absensi harian' },
+  { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Map, hint: 'Persebaran konsumen per wilayah', superOnly: true },
+  { href: '/report-attendances', label: 'Absensi', icon: CalendarCheck, hint: 'Laporan absensi harian' },
 ]
 
 // Notch mask is no longer needed since we are using a floating glassmorphism pill layout.
 
 // Items grouped under "Pengaturan" inside the More sheet.
 const SETTINGS_ITEMS: NavItem[] = [
-  { href: '/master-data', label: 'Master Data', icon: DatabaseZap, hint: 'Kategori, status & referensi', superOnly: true },
+  { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & referensi', superOnly: true },
   { href: '/audit-logs', label: 'Audit Log', icon: History, hint: 'Log aktivitas sistem', superOnly: true },
-  { href: '/debug', label: 'Debug & Test', icon: Bug, hint: 'Data dummy & pengujian', superOnly: true },
-  { href: '/settings', label: 'Pengaturan', icon: SlidersHorizontal, hint: 'Preferensi & akun' },
+  { href: '/settings', label: 'Pengaturan', icon: Settings, hint: 'Preferensi & akun' },
 ]
 
 export default function BottomNav() {

@@ -27,7 +27,7 @@ import {
   Target,
   TrendingUp,
   Clock,
-  Layers,
+  Building2,
   ArrowUpRight,
   Info,
   Activity,
@@ -140,20 +140,58 @@ function GrowthBadge({ label, positive }: { label: string; positive?: boolean })
   )
 }
 
+/* â”€â”€ KPI accent tokens â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * Each supporting metric owns a hue so the row is scannable at a glance instead
+ * of five identical amber chips. `amber` is the only theme-reactive tone (see the
+ * --color-amber-* overrides in globals.css) and stays reserved for the hero KPI.
+ * Class strings are written in full so Tailwind's JIT can see them. */
+const KPI_ACCENTS = {
+  amber: {
+    chip: 'border-amber-500/25 bg-amber-500/10 group-hover:bg-amber-500/15',
+    icon: 'text-amber-600 dark:text-amber-500',
+    rule: 'bg-amber-500/45',
+  },
+  emerald: {
+    chip: 'border-emerald-500/25 bg-emerald-500/10 group-hover:bg-emerald-500/15',
+    icon: 'text-emerald-600 dark:text-emerald-400',
+    rule: 'bg-emerald-500/45',
+  },
+  sky: {
+    chip: 'border-sky-500/25 bg-sky-500/10 group-hover:bg-sky-500/15',
+    icon: 'text-sky-600 dark:text-sky-400',
+    rule: 'bg-sky-500/45',
+  },
+  violet: {
+    chip: 'border-violet-500/25 bg-violet-500/10 group-hover:bg-violet-500/15',
+    icon: 'text-violet-600 dark:text-violet-400',
+    rule: 'bg-violet-500/45',
+  },
+  cyan: {
+    chip: 'border-cyan-500/25 bg-cyan-500/10 group-hover:bg-cyan-500/15',
+    icon: 'text-cyan-600 dark:text-cyan-400',
+    rule: 'bg-cyan-500/45',
+  },
+} as const
+
+type KpiAccent = keyof typeof KPI_ACCENTS
+
 interface StatCardProps {
   title: string
   value: string | number
   description: string
   icon: React.ElementType
   tooltip: string
+  accent?: KpiAccent
   badge?: { label: string; positive?: boolean }
 }
 
-/* Secondary KPI tile: compact, restrained, with a left accent spine that lights
- * up on hover. Deliberately quieter than the hero so the bento has hierarchy. */
-function StatCard({ title, value, description, icon: Icon, tooltip, badge }: StatCardProps) {
+/* Secondary KPI tile: compact, restrained, carrying its accent on a top hairline
+ * and the icon chip. Deliberately quieter than the hero so the bento has hierarchy. */
+function StatCard({ title, value, description, icon: Icon, tooltip, accent = 'amber', badge }: StatCardProps) {
+  const tone = KPI_ACCENTS[accent]
   return (
     <Card className="dashboard-metric group relative min-h-40 overflow-hidden">
+      <span className={cn('pointer-events-none absolute inset-x-0 top-0 h-px', tone.rule)} />
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
         <div className="flex items-center gap-1.5">
           <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -168,12 +206,12 @@ function StatCard({ title, value, description, icon: Icon, tooltip, badge }: Sta
             </TooltipContent>
           </Tooltip>
         </div>
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 transition-colors group-hover:bg-amber-500/15">
-          <Icon className="h-4 w-4 text-amber-500" />
+        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors', tone.chip)}>
+          <Icon className={cn('h-4 w-4', tone.icon)} strokeWidth={2} />
         </div>
       </CardHeader>
       <CardContent className="mt-auto">
-        <div className="text-3xl font-black tracking-tight text-foreground tabular-nums">{value}</div>
+        <div className="font-heading text-3xl font-bold tracking-tight text-foreground tabular-nums">{value}</div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <p className="text-[10px] font-medium text-muted-foreground/80">{description}</p>
           {badge && <GrowthBadge label={badge.label} positive={badge.positive} />}
@@ -224,7 +262,7 @@ function FeatureStatCard({ title, value, description, icon: Icon, tooltip, badge
 
       <CardContent className="relative mt-auto pt-3">
         <div>
-          <div className="text-gradient-amber text-4xl font-black leading-none tracking-tight tabular-nums">
+          <div className="text-gradient-amber font-heading text-4xl font-bold leading-none tracking-tight tabular-nums">
             {value}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -414,6 +452,7 @@ export default function DashboardPage() {
               value={`${stats?.avg_conversion !== undefined ? stats.avg_conversion : (stats?.conversion_rate || 0)}%`}
               description={analyticsResponse?.data ? "Rasio konversi periode terpilih" : "Rasio konversi leads menjadi deal"}
               icon={Target}
+              accent="emerald"
               tooltip="Persentase rata-rata leads yang berhasil dikonversi menjadi proyek interior aktif (deal)."
             />
             {isSuperAdmin ? (
@@ -421,7 +460,8 @@ export default function DashboardPage() {
                 title="Akun Aktif"
                 value={stats?.active_accounts || 0}
                 description={`Dari ${stats?.total_accounts || 0} akun terdaftar`}
-                icon={Layers}
+                icon={Building2}
+                accent="sky"
                 tooltip="Jumlah akun yang aktif beroperasi dari total seluruh akun yang terdaftar di sistem."
               />
             ) : (
@@ -430,6 +470,7 @@ export default function DashboardPage() {
                 value={stats?.pending_surveys || 0}
                 description="Leads berstatus request survey"
                 icon={Clock}
+                accent="violet"
                 tooltip="Jumlah leads yang sudah meminta jadwal survey lapangan namun belum dijadwalkan."
               />
             )}
@@ -439,6 +480,7 @@ export default function DashboardPage() {
                 value={stats?.total_request_surveys || 0}
                 description="Total leads berstatus request survey"
                 icon={ClipboardList}
+                accent="violet"
                 tooltip="Jumlah seluruh leads dari semua akun yang berstatus request survey (menunggu dijadwalkan)."
               />
             )}
@@ -447,6 +489,7 @@ export default function DashboardPage() {
               value={stats?.completed_this_month || 0}
               description={analyticsResponse?.data ? "Leads closing periode terpilih" : "Leads closing bulan ini"}
               icon={TrendingUp}
+              accent="cyan"
               tooltip="Jumlah leads yang berhasil closing (deal) dalam periode terpilih."
               badge={{
                 label: `${growthPositive ? '+' : ''}${growthPercent}% vs bln lalu`,
