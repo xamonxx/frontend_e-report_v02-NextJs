@@ -185,18 +185,68 @@ interface StatCardProps {
   accent?: KpiAccent
   badge?: { label: string; positive?: boolean }
   className?: string
+  /** `feature` is the row's primary metric — louder, but built from the same parts. */
+  variant?: 'default' | 'feature'
 }
 
-/* Secondary KPI tile: compact, restrained, carrying its accent on a top hairline
- * and the icon chip. Deliberately quieter than the hero so the bento has hierarchy. */
-function StatCard({ title, value, description, icon: Icon, tooltip, accent = 'amber', badge, className }: StatCardProps) {
+/* â”€â”€ KPI tile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+ * The hero used to be a separate component that repeated this structure with
+ * small deviations â€” pb-0 against pb-1, items-center against items-start, a 24px
+ * badge where the others had a 36px chip, a left spine where the others had a top
+ * rule. Every one of those was a seam the row could pull apart along, and it had:
+ * nothing in the top-right slot lined up and no two figures shared a baseline.
+ * One component with a variant is what keeps the row a row.
+ *
+ * Three rules hold the alignment:
+ *   1. The top-right slot is always h-9, whatever sits in it.
+ *   2. The accent is always the top rule; the hero just gets a thicker, opaque
+ *      one. Hierarchy through intensity, not through a different mechanism.
+ *   3. Content is anchored to the top, not the bottom. Bottom-anchoring put the
+ *      figure at `cardBottom - footerHeight`, so the one tile carrying a growth
+ *      badge sat a row higher than the rest. Anchored to the top, every figure
+ *      clears the same fixed header and any slack falls to the card's foot,
+ *      where nothing has to line up. */
+function StatCard({
+  title,
+  value,
+  description,
+  icon: Icon,
+  tooltip,
+  accent = 'amber',
+  badge,
+  className,
+  variant = 'default',
+}: StatCardProps) {
   const tone = KPI_ACCENTS[accent]
+  const isFeature = variant === 'feature'
+
   return (
     // Two-up on phones leaves roughly 170px of tile, so the chrome steps down a
     // size below sm to keep the number the loudest thing in the card.
-    <Card className={cn('dashboard-metric group relative min-h-32 overflow-hidden sm:min-h-40', className)}>
-      <span className={cn('pointer-events-none absolute inset-x-0 top-0 h-px', tone.rule)} />
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-1">
+    <Card
+      className={cn(
+        'dashboard-metric group relative flex min-h-32 flex-col overflow-hidden sm:min-h-40',
+        // The hero keeps full width on phones: its figure, watermark and badge
+        // do not survive a ~170px column.
+        isFeature && 'dashboard-metric-feature col-span-2 h-full sm:col-span-1',
+        className
+      )}
+    >
+      <span
+        className={cn(
+          'pointer-events-none absolute inset-x-0 top-0',
+          isFeature ? 'h-0.5 bg-amber-500' : cn('h-px', tone.rule)
+        )}
+      />
+      {isFeature && (
+        <Icon
+          aria-hidden
+          className="pointer-events-none absolute -bottom-5 right-3 size-28 text-amber-500/[0.055] sm:size-32"
+          strokeWidth={1.25}
+        />
+      )}
+
+      <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-1">
         <div className="flex min-w-0 items-center gap-1.5">
           <CardTitle className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px] sm:tracking-wider">
             {title}
@@ -210,72 +260,40 @@ function StatCard({ title, value, description, icon: Icon, tooltip, accent = 'am
             </TooltipContent>
           </Tooltip>
         </div>
-        <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors sm:size-9 sm:rounded-xl', tone.chip)}>
-          <Icon className={cn('size-4', tone.icon)} strokeWidth={2} />
-        </div>
-      </CardHeader>
-      <CardContent className="mt-auto">
-        <div className="font-heading text-2xl font-bold tracking-tight text-foreground tabular-nums sm:text-3xl">{value}</div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <p className="text-[10px] font-medium leading-snug text-muted-foreground/80">{description}</p>
-          {badge && <GrowthBadge label={badge.label} positive={badge.positive} />}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
 
-interface FeatureStatCardProps {
-  title: string
-  value: string | number
-  description: string
-  icon: React.ElementType
-  tooltip: string
-  badge?: { label: string; positive?: boolean }
-}
-
-/* Primary KPI uses the same footprint as the supporting metrics, with a stronger
- * theme accent for hierarchy. */
-function FeatureStatCard({ title, value, description, icon: Icon, tooltip, badge }: FeatureStatCardProps) {
-  return (
-    // Keeps the full width on phones while the supporting tiles go two-up: the
-    // hero carries a 4xl figure, a watermark and the Utama badge, none of which
-    // survive a ~170px column.
-    <Card className="dashboard-metric dashboard-metric-feature group relative col-span-2 flex h-full min-h-36 flex-col overflow-hidden sm:col-span-1 sm:min-h-40">
-      <div className="absolute inset-y-0 left-0 w-1 bg-amber-500" />
-      <Icon className="pointer-events-none absolute -bottom-5 right-3 size-28 text-amber-500/[0.055] sm:size-32" strokeWidth={1.25} />
-
-      <CardHeader className="pb-0">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px] sm:tracking-wider">
-              {title}
-            </CardTitle>
-            <Tooltip>
-              <TooltipTrigger className="flex shrink-0 cursor-help items-center leading-none">
-                <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors hover:text-muted-foreground" />
-              </TooltipTrigger>
-              <TooltipContent side="top" className="max-w-[200px] text-center text-[11px] leading-relaxed">
-                {tooltip}
-              </TooltipContent>
-            </Tooltip>
-          </div>
-          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[9px] font-black uppercase text-amber-500">
+        {/* Fixed-height slot: the hero's pill and the others' chip must agree on
+            a top and a bottom edge or the whole row's shoulder line breaks. */}
+        {isFeature ? (
+          <span className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 text-[9px] font-black uppercase text-amber-500 sm:h-9 sm:rounded-xl">
             <Sparkles className="h-2.5 w-2.5" />
             Utama
           </span>
-        </div>
+        ) : (
+          <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors sm:size-9 sm:rounded-xl', tone.chip)}>
+            <Icon className={cn('size-4', tone.icon)} strokeWidth={2} />
+          </div>
+        )}
       </CardHeader>
 
-      <CardContent className="relative mt-auto pt-3">
-        <div>
-          <div className="text-gradient-amber font-heading text-3xl font-bold leading-none tracking-tight tabular-nums sm:text-4xl">
+      <CardContent className="relative pt-1">
+        {/* Fixed box, text sat on its floor. The hero runs a size larger than the
+            rest, so aligning the tops would leave its baseline sitting ~5px low
+            against theirs; aligning the floors is what actually reads as level. */}
+        <div className="flex h-[30px] items-end sm:h-9">
+          <span
+            className={cn(
+              'font-heading font-bold leading-none tracking-tight tabular-nums',
+              isFeature
+                ? 'text-gradient-amber text-3xl sm:text-4xl'
+                : 'text-2xl text-foreground sm:text-3xl'
+            )}
+          >
             {value}
-          </div>
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:mt-3">
-            <p className="text-[11px] font-medium text-muted-foreground">{description}</p>
-            {badge && <GrowthBadge label={badge.label} positive={badge.positive} />}
-          </div>
+          </span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="text-[10px] font-medium leading-snug text-muted-foreground/80">{description}</p>
+          {badge && <GrowthBadge label={badge.label} positive={badge.positive} />}
         </div>
       </CardContent>
     </Card>
@@ -492,7 +510,8 @@ export default function DashboardPage() {
         <section className="dash-rise space-y-4" style={{ animationDelay: '60ms' }}>
           <SectionLabel index="01" title="Ringkasan" sub="Metrik utama periode terpilih" />
           <div className={cn("grid grid-cols-2 gap-2.5 sm:gap-3", isSuperAdmin ? "xl:grid-cols-5" : "xl:grid-cols-4")}>
-            <FeatureStatCard
+            <StatCard
+              variant="feature"
               title="Total Leads"
               value={stats?.total_leads || 0}
               description={analyticsResponse?.data ? 'Dalam periode terpilih' : 'Seluruh waktu terdaftar'}
