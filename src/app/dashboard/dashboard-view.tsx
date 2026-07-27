@@ -184,22 +184,25 @@ interface StatCardProps {
   tooltip: string
   accent?: KpiAccent
   badge?: { label: string; positive?: boolean }
+  className?: string
 }
 
 /* Secondary KPI tile: compact, restrained, carrying its accent on a top hairline
  * and the icon chip. Deliberately quieter than the hero so the bento has hierarchy. */
-function StatCard({ title, value, description, icon: Icon, tooltip, accent = 'amber', badge }: StatCardProps) {
+function StatCard({ title, value, description, icon: Icon, tooltip, accent = 'amber', badge, className }: StatCardProps) {
   const tone = KPI_ACCENTS[accent]
   return (
-    <Card className="dashboard-metric group relative min-h-40 overflow-hidden">
+    // Two-up on phones leaves roughly 170px of tile, so the chrome steps down a
+    // size below sm to keep the number the loudest thing in the card.
+    <Card className={cn('dashboard-metric group relative min-h-32 overflow-hidden sm:min-h-40', className)}>
       <span className={cn('pointer-events-none absolute inset-x-0 top-0 h-px', tone.rule)} />
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1">
-        <div className="flex items-center gap-1.5">
-          <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0 pb-1">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <CardTitle className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px] sm:tracking-wider">
             {title}
           </CardTitle>
           <Tooltip>
-            <TooltipTrigger className="flex shrink-0 cursor-help items-center leading-none">
+            <TooltipTrigger className="hidden shrink-0 cursor-help items-center leading-none sm:flex">
               <Info className="h-3.5 w-3.5 shrink-0 text-muted-foreground/50 transition-colors hover:text-muted-foreground" />
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[200px] text-center text-[11px] leading-relaxed">
@@ -207,14 +210,14 @@ function StatCard({ title, value, description, icon: Icon, tooltip, accent = 'am
             </TooltipContent>
           </Tooltip>
         </div>
-        <div className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-colors', tone.chip)}>
-          <Icon className={cn('h-4 w-4', tone.icon)} strokeWidth={2} />
+        <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors sm:size-9 sm:rounded-xl', tone.chip)}>
+          <Icon className={cn('size-4', tone.icon)} strokeWidth={2} />
         </div>
       </CardHeader>
       <CardContent className="mt-auto">
-        <div className="font-heading text-3xl font-bold tracking-tight text-foreground tabular-nums">{value}</div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <p className="text-[10px] font-medium text-muted-foreground/80">{description}</p>
+        <div className="font-heading text-2xl font-bold tracking-tight text-foreground tabular-nums sm:text-3xl">{value}</div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <p className="text-[10px] font-medium leading-snug text-muted-foreground/80">{description}</p>
           {badge && <GrowthBadge label={badge.label} positive={badge.positive} />}
         </div>
       </CardContent>
@@ -235,14 +238,17 @@ interface FeatureStatCardProps {
  * theme accent for hierarchy. */
 function FeatureStatCard({ title, value, description, icon: Icon, tooltip, badge }: FeatureStatCardProps) {
   return (
-    <Card className="dashboard-metric dashboard-metric-feature group relative flex h-full min-h-40 flex-col overflow-hidden">
+    // Keeps the full width on phones while the supporting tiles go two-up: the
+    // hero carries a 4xl figure, a watermark and the Utama badge, none of which
+    // survive a ~170px column.
+    <Card className="dashboard-metric dashboard-metric-feature group relative col-span-2 flex h-full min-h-36 flex-col overflow-hidden sm:col-span-1 sm:min-h-40">
       <div className="absolute inset-y-0 left-0 w-1 bg-amber-500" />
-      <Icon className="pointer-events-none absolute -bottom-5 right-3 h-32 w-32 text-amber-500/[0.055]" strokeWidth={1.25} />
+      <Icon className="pointer-events-none absolute -bottom-5 right-3 size-28 text-amber-500/[0.055] sm:size-32" strokeWidth={1.25} />
 
       <CardHeader className="pb-0">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5">
-            <CardTitle className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground sm:text-[11px] sm:tracking-wider">
               {title}
             </CardTitle>
             <Tooltip>
@@ -254,7 +260,7 @@ function FeatureStatCard({ title, value, description, icon: Icon, tooltip, badge
               </TooltipContent>
             </Tooltip>
           </div>
-          <span className="inline-flex items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[9px] font-black uppercase text-amber-500">
+          <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[9px] font-black uppercase text-amber-500">
             <Sparkles className="h-2.5 w-2.5" />
             Utama
           </span>
@@ -263,10 +269,10 @@ function FeatureStatCard({ title, value, description, icon: Icon, tooltip, badge
 
       <CardContent className="relative mt-auto pt-3">
         <div>
-          <div className="text-gradient-amber font-heading text-4xl font-bold leading-none tracking-tight tabular-nums">
+          <div className="text-gradient-amber font-heading text-3xl font-bold leading-none tracking-tight tabular-nums sm:text-4xl">
             {value}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1 sm:mt-3">
             <p className="text-[11px] font-medium text-muted-foreground">{description}</p>
             {badge && <GrowthBadge label={badge.label} positive={badge.positive} />}
           </div>
@@ -485,7 +491,7 @@ export default function DashboardPage() {
         {/* Ringkasan. */}
         <section className="dash-rise space-y-4" style={{ animationDelay: '60ms' }}>
           <SectionLabel index="01" title="Ringkasan" sub="Metrik utama periode terpilih" />
-          <div className={cn("grid gap-3 sm:grid-cols-2", isSuperAdmin ? "xl:grid-cols-5" : "xl:grid-cols-4")}>
+          <div className={cn("grid grid-cols-2 gap-2.5 sm:gap-3", isSuperAdmin ? "xl:grid-cols-5" : "xl:grid-cols-4")}>
             <FeatureStatCard
               title="Total Leads"
               value={stats?.total_leads || 0}
@@ -536,6 +542,9 @@ export default function DashboardPage() {
               description={analyticsResponse?.data ? "Leads closing periode terpilih" : "Leads closing bulan ini"}
               icon={TrendingUp}
               accent="cyan"
+              // Admin has an odd number of supporting tiles, so this last one
+              // spans the row instead of leaving a lone cell on phones.
+              className={cn(!isSuperAdmin && 'col-span-2 sm:col-span-1')}
               tooltip="Jumlah leads yang berhasil closing (deal) dalam periode terpilih."
               badge={{
                 label: `${growthPositive ? '+' : ''}${growthPercent}% vs bln lalu`,
