@@ -7,13 +7,11 @@ import NotificationCenter from './notification-center'
 import ThemeToggle from './theme-toggle'
 import PwaInstallButton from './pwa-install-button'
 import {
-  Landmark,
   User,
   Shield,
   Settings,
   LogOut,
   Clock,
-  Building,
   ShieldCheck,
   Loader2,
   ChevronDown,
@@ -33,6 +31,7 @@ import {
 } from '@/components/ui/popover'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
+import { APP_BAR_HEIGHT_CLASS } from './header-action'
 
 const PAGE_NAMES: Record<string, string> = {
   '/dashboard': 'Dashboard',
@@ -79,7 +78,7 @@ export default function Header() {
 
   return (
     <TooltipProvider delay={400}>
-      <header className="flex h-14 min-w-0 items-center justify-between border-b border-border/60 bg-card/60 px-4 sm:px-6 backdrop-blur-lg z-20">
+      <header className={cn(APP_BAR_HEIGHT_CLASS, 'z-20 flex min-w-0 items-center justify-between border-b border-border/60 bg-card/60 px-4 backdrop-blur-lg sm:px-6')}>
         {/* -- Left: account context + breadcrumb -- */}
         <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-4">
           {user?.account ? (

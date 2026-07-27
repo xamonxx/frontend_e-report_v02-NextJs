@@ -1,4 +1,14 @@
 /**
+ * Height of the app's top bar row.
+ *
+ * The sidebar's brand block and the page header sit side by side from `lg` up
+ * and must share a baseline, but they live in different files and had drifted to
+ * h-16 and h-14 — an 8px step where their bottom borders met. Both now read it
+ * from here.
+ */
+export const APP_BAR_HEIGHT_CLASS = 'h-14'
+
+/**
  * Shared geometry for the icon buttons in the header's right-hand action group
  * (PWA install, theme toggle, notifications).
  *

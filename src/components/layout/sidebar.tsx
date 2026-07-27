@@ -33,6 +33,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import { canAccess } from '@/lib/auth/roles'
+import { APP_BAR_HEIGHT_CLASS } from './header-action'
 import type { UserRole } from '@/types'
 
 /* Icon language: one metaphor per domain, no duplicates. `Map` belongs to the
@@ -84,7 +85,9 @@ export default function Sidebar() {
         )}
       >
         {/* Brand Header */}
-        <div className="flex h-16 items-center justify-between px-4 border-b border-sidebar-border/60 bg-sidebar/20">
+        {/* Shares its height with the page header so the two bottom borders meet
+            in one line where the sidebar and content column adjoin. */}
+        <div className={cn(APP_BAR_HEIGHT_CLASS, 'flex items-center justify-between border-b border-sidebar-border/60 bg-sidebar/20 px-4')}>
           <div
             className={cn(
               'flex items-center gap-2 overflow-hidden transition-all duration-300',
