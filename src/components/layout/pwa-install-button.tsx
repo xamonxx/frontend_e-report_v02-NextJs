@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Smartphone, Download, Share, Plus, X, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { HEADER_ACTION_CLASS } from './header-action'
 
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -112,10 +113,11 @@ export default function PwaInstallButton() {
         title="Instal aplikasi E-Report"
         aria-label="Instal aplikasi E-Report"
         className={cn(
-          'relative flex h-9 w-9 items-center justify-center rounded-xl border bg-card/60 backdrop-blur-md shadow-sm shrink-0 cursor-pointer transition-all duration-300',
+          HEADER_ACTION_CLASS,
+          'bg-card/60',
           isInstalledSuccessfully
             ? 'border-emerald-500/40 text-emerald-500'
-            : 'border-border text-muted-foreground hover:text-foreground hover:bg-accent/80'
+            : 'border-border text-muted-foreground hover:bg-accent/80 hover:text-foreground'
         )}
       >
         {isInstalledSuccessfully ? (

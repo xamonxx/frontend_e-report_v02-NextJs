@@ -38,11 +38,14 @@ const PAGE_NAMES: Record<string, string> = {
   '/dashboard': 'Dashboard',
   '/consultations': 'Konsultasi',
   '/analytics': 'Analitik',
+  '/geo-analytics': 'Analisis Wilayah',
+  '/surveys': 'Survey',
+  '/rekap-jadwal-surveyor': 'Rekap Jadwal',
+  '/survey-consumers': 'Data Konsumen Survey',
   '/accounts': 'Akun',
   '/master-data': 'Master Data',
   '/report-attendances': 'Absensi',
   '/audit-logs': 'Audit Logs',
-  '/debug': 'Debug & Testing',
   '/settings': 'Pengaturan',
 }
 
@@ -81,14 +84,17 @@ export default function Header() {
         <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:gap-4">
           {user?.account ? (
             <Tooltip>
-              <TooltipTrigger className="flex items-center gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5 border border-border/40 cursor-default focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]">
+              <TooltipTrigger className="flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-muted/40 px-2.5 py-1.5 cursor-default focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]">
                 <div
                   className="flex h-5 w-5 items-center justify-center rounded-md text-white text-[10px] font-bold shrink-0"
                   style={{ backgroundColor: primaryColor }}
                 >
                   {user.account.name.charAt(0)}
                 </div>
-                <span className="truncate text-xs font-semibold text-muted-foreground max-w-[120px] sm:max-w-[160px]">
+                {/* No cap below sm: the flex parent is already the binding
+                    constraint there, so a fixed max-width only truncated earlier
+                    than it had to. */}
+                <span className="min-w-0 truncate text-xs font-semibold text-muted-foreground sm:max-w-[160px]">
                   {user.account.name}
                 </span>
                 {isSuperAdmin(user) && (
@@ -104,14 +110,14 @@ export default function Header() {
             </Tooltip>
           ) : (
             <Tooltip>
-              <TooltipTrigger className="flex items-center gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5 border border-border/40 cursor-default focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]">
+              <TooltipTrigger className="flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-muted/40 px-2.5 py-1.5 cursor-default focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]">
                 <div
                   className="flex h-5 w-5 items-center justify-center rounded-md text-white text-[10px] font-bold shrink-0"
                   style={{ backgroundColor: primaryColor }}
                 >
                   <Shield className="h-3 w-3" />
                 </div>
-                <span className="truncate text-xs font-semibold text-muted-foreground">
+                <span className="min-w-0 truncate text-xs font-semibold text-muted-foreground">
                   {userRoleLabel}
                 </span>
               </TooltipTrigger>
@@ -130,18 +136,20 @@ export default function Header() {
         </div>
 
         {/* -- Right: actions + profile -- */}
-        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           <PwaInstallButton />
           <ThemeToggle />
           <NotificationCenter />
-          <div className="h-5 w-px bg-border/60 mx-0.5" />
+          {/* The divider earns its keep once the profile trigger shows a name to
+              separate from; on a phone it is one more mark in a tight row. */}
+          <div className="mx-0.5 hidden h-5 w-px bg-border/60 sm:block" />
 
           {/* Profile */}
           <Popover>
-            <PopoverTrigger className="group flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-muted/40 transition-colors cursor-pointer focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]">
+            <PopoverTrigger className="group flex shrink-0 items-center gap-2 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-muted/40 cursor-pointer focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)] sm:px-2">
               {/* Avatar */}
               <div
-                className="flex h-7 w-7 items-center justify-center rounded-full text-white text-[11px] font-bold shrink-0 ring-2 ring-white/10 group-hover:ring-white/20 transition-all"
+                className="flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/10 transition-all group-hover:ring-white/20 sm:size-7"
                 style={{ backgroundColor: primaryColor }}
               >
                 {user?.name ? getInitials(user.name) : <User className="h-3.5 w-3.5" />}

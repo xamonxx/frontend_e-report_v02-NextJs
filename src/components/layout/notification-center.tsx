@@ -41,6 +41,7 @@ import { cn } from '@/lib/utils'
 import type { SurveyNotification } from '@/types'
 
 import PushToggle from './push-toggle'
+import { HEADER_ACTION_CLASS } from './header-action'
 
 type EmptyStateProps = {
   description: string
@@ -279,12 +280,13 @@ export default function NotificationCenter() {
         title="Notifikasi"
         className={cn(
           buttonVariants({ variant: 'ghost', size: 'icon' }),
-          'relative size-10 rounded-[10px] border border-border/75 bg-card/75 text-muted-foreground shadow-sm transition-[border-color,background-color,color,box-shadow,transform] duration-200',
+          HEADER_ACTION_CLASS,
+          'border-border/75 bg-card/75 text-muted-foreground',
           'hover:border-[color-mix(in_srgb,var(--primary-theme)_34%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_7%,var(--card))] hover:text-[var(--primary-theme)] hover:shadow-md active:scale-[0.97]',
           'data-popup-open:border-[color-mix(in_srgb,var(--primary-theme)_42%,var(--border))] data-popup-open:bg-[color-mix(in_srgb,var(--primary-theme)_9%,var(--card))] data-popup-open:text-[var(--primary-theme)]',
         )}
       >
-        <TriggerIcon className="size-[18px]" strokeWidth={2.1} />
+        <TriggerIcon className="size-[18px] sm:size-4" strokeWidth={2.1} />
         {totalUnread > 0 && (
           <span className="absolute -right-1 -top-1 grid min-w-4 place-items-center rounded-md border-2 border-card bg-[var(--primary-theme)] px-1 text-[9px] font-black leading-3.5 text-[color:var(--primary-theme-foreground)] shadow-sm">
             {totalUnread > 99 ? '99+' : totalUnread}
