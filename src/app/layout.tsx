@@ -1,13 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/providers";
 import AppLayout from "@/components/layout/app-layout";
 import ChunkErrorReloader from "@/components/layout/chunk-error-reloader";
 
-const plusJakartaSans = Plus_Jakarta_Sans({
+const inter = Inter({
   variable: "--font-sans",
   subsets: ["latin"],
+  display: "swap",
+});
+
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-heading",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 const jetbrainsMono = JetBrains_Mono({
@@ -48,6 +55,9 @@ export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
+}>) {
+  return (
+    <html lang="id" className={`${inter.variable} ${spaceGrotesk.variable}`}>
 }>) {
   return (
     <html
