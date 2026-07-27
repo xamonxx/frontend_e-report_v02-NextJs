@@ -11,8 +11,8 @@ import type { Consultation, ConsultationFilters, PaginatedResponse, ApiResponse 
 export function useConsultations(filters: ConsultationFilters) {
   return useQuery({
     queryKey: queryKeys.consultations.list(filters),
-    queryFn: () =>
-      api.get<PaginatedResponse<Consultation>>('/consultations', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<Consultation>>('/consultations', filters as any, signal),
     placeholderData: (previousData) => previousData,
   })
 }
@@ -23,7 +23,7 @@ export function useConsultations(filters: ConsultationFilters) {
 export function useConsultation(id: number) {
   return useQuery({
     queryKey: queryKeys.consultations.detail(id),
-    queryFn: () => api.get<ApiResponse<Consultation>>(`/consultations/${id}`),
+    queryFn: ({ signal }) => api.get<ApiResponse<Consultation>>(`/consultations/${id}`, undefined, signal),
     enabled: !!id,
   })
 }
@@ -34,10 +34,10 @@ export function useConsultation(id: number) {
 export function usePreviewConsultationId(accountId?: number) {
   return useQuery({
     queryKey: queryKeys.consultations.previewId(accountId),
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<{ id: string; consultation_id: string }>('/consultations/id-preview', {
         account_id: accountId,
-      }),
+      }, signal),
   })
 }
 

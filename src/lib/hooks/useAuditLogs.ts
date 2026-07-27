@@ -31,7 +31,7 @@ export function useAuditLogs(filters: {
 }) {
   return useQuery({
     queryKey: [...queryKeys.auditLogs.all, filters],
-    queryFn: () =>
-      api.get<PaginatedResponse<AuditLogItem>>('/audit-logs', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<AuditLogItem>>('/audit-logs', filters as any, signal),
   })
 }

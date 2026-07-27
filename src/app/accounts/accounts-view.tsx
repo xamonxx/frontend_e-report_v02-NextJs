@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
-import { buildExportUrl } from '@/lib/api/client'
+import { api } from '@/lib/api/client'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
@@ -69,11 +69,13 @@ function ProgressBar({ percent, label }: { percent: number; label: string }) {
   )
 }
 
+// Logo dibaca langsung dari disk publik Laravel: aset statis, tidak lewat
+// /api/v1 dan tidak butuh auth, jadi cukup disambung ke base URL.
 function AccountLogo({ acc, className }: { acc: AccountItem; className?: string }) {
   return (
     <div className={cn('flex shrink-0 items-center justify-center overflow-hidden rounded-xl border border-border bg-muted dark:border-zinc-700 dark:bg-zinc-900', className)}>
       {acc.logo_path ? (
-        <img src={buildExportUrl(`/storage/${acc.logo_path}`)} alt={acc.name} className="h-full w-full object-cover" />
+        <img src={`${api.baseUrl}/storage/${acc.logo_path}`} alt={acc.name} className="h-full w-full object-cover" />
       ) : (
         <Building className="h-5 w-5 text-muted-foreground/50" />
       )}

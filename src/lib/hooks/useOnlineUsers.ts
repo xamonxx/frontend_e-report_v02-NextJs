@@ -20,7 +20,7 @@ export type OnlineUsersResponse = {
 export function useOnlineUsers() {
   return useQuery({
     queryKey: queryKeys.onlineUsers.all,
-    queryFn: () => api.get<OnlineUsersResponse>('/online-users'),
+    queryFn: ({ signal }) => api.get<OnlineUsersResponse>('/online-users', undefined, signal),
     // Shared hosting MySQL: longgar dari 30s -> 2m supaya tidak menjebol
     // limit max_connections_per_hour (500/jam) yang menyebabkan 500 error.
     refetchInterval: 120_000,

@@ -45,11 +45,11 @@ export function useBugReports(
   return useQuery({
     enabled,
     queryKey: [...queryKeys.bugReports.all, filters],
-    queryFn: () =>
+    queryFn: ({ signal }) =>
       api.get<BugReportListResponse>('/bug-reports', {
         status: filters.status || undefined,
         page: filters.page,
-      }),
+      }, signal),
   })
 }
 
@@ -58,7 +58,7 @@ export function useBugReport(id: number | null, enabled = true) {
   return useQuery({
     enabled: enabled && id != null,
     queryKey: queryKeys.bugReports.detail(id ?? 0),
-    queryFn: () => api.get<{ data: BugReportDetail }>(`/bug-reports/${id}`),
+    queryFn: ({ signal }) => api.get<{ data: BugReportDetail }>(`/bug-reports/${id}`, undefined, signal),
   })
 }
 

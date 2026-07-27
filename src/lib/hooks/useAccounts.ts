@@ -27,8 +27,8 @@ export function useAccountsList(filters: {
 }) {
   return useQuery({
     queryKey: [...queryKeys.accounts.all, 'list', filters],
-    queryFn: () =>
-      api.get<PaginatedResponse<AccountItem>>('/accounts', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<AccountItem>>('/accounts', filters as any, signal),
   })
 }
 
@@ -39,8 +39,8 @@ export function useAccountsList(filters: {
 export function useAccountCategories() {
   return useQuery({
     queryKey: [...queryKeys.accounts.all, 'categories'],
-    queryFn: async () => {
-      const res = await api.get<{ data: string[] }>('/accounts/categories')
+    queryFn: async ({ signal }) => {
+      const res = await api.get<{ data: string[] }>('/accounts/categories', undefined, signal)
       return res.data
     },
     staleTime: 5 * 60 * 1000,
@@ -50,7 +50,7 @@ export function useAccountCategories() {
 export function useAccount(id: number) {
   return useQuery({
     queryKey: [...queryKeys.accounts.all, 'detail', id],
-    queryFn: () => api.get<{ data: AccountItem }>(`/accounts/${id}`),
+    queryFn: ({ signal }) => api.get<{ data: AccountItem }>(`/accounts/${id}`, undefined, signal),
     enabled: !!id,
   })
 }

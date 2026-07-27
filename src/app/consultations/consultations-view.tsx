@@ -45,7 +45,7 @@ import { useDebounce } from 'use-debounce'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { cn, productCategoryNames } from '@/lib/utils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { buildExportUrl } from '@/lib/api/client'
+import { useFileDownload } from '@/lib/hooks/useFileDownload'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
@@ -95,11 +95,6 @@ export default function ConsultationsPage() {
   const user = useAuthStore((s) => s.user)
   const isSuperAdmin = user?.role === 'super_admin'
 
-  const [isMounted, setIsMounted] = useState(false)
-  useEffect(() => {
-    setIsMounted(true)
-  }, [])
-
   // Filter state variables
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
@@ -115,6 +110,19 @@ export default function ConsultationsPage() {
   const [page, setPage] = useState(1)
   const [selectedConsultationIds, setSelectedConsultationIds] = useState<Set<number>>(new Set())
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+  const { download, isDownloading } = useFileDownload()
+
+  // Filter aktif yang ikut ke export, supaya berkas cocok dengan tabel di layar.
+  const leadsExportParams = {
+    search: debouncedSearch || undefined,
+    status: statusFilter || undefined,
+    account: accountFilter || undefined,
+    month: monthFilter || undefined,
+    year: yearFilter || undefined,
+    start_date: startDate || undefined,
+    end_date: endDate || undefined,
+  }
 
   // Filter bar icon popovers
   const [barStatusOpen, setBarStatusOpen] = useState(false)
@@ -670,15 +678,15 @@ export default function ConsultationsPage() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="py-4 space-y-4">
-                      <a
-                        href={isMounted ? buildExportUrl('/api/v1/consultations/import/template') : '#'}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 transition-colors"
+                      <button
+                        type="button"
+                        onClick={() => download('/consultations/import/template', undefined, 'Template CSV berhasil diunduh.')}
+                        disabled={isDownloading('/consultations/import/template')}
+                        className="inline-flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-amber-600 transition-colors hover:text-amber-500 disabled:cursor-wait disabled:opacity-60 dark:text-amber-400 dark:hover:text-amber-300"
                       >
                         <Download className="h-3.5 w-3.5" />
                         Download Template CSV
-                      </a>
+                      </button>
                       <div className="flex flex-col items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-2xl p-8 cursor-pointer transition-all duration-300 bg-muted/40 hover:bg-muted/60 relative group dark:border-zinc-800 dark:bg-zinc-950/60 dark:hover:bg-zinc-950/80">
                         <input
                           type="file"
@@ -722,40 +730,24 @@ export default function ConsultationsPage() {
               </Dialog>
 
               {/* Export Buttons */}
-              <a
-                href={isMounted ? buildExportUrl('/api/v1/export/leads/excel', {
-                  search: debouncedSearch || undefined,
-                  status: statusFilter || undefined,
-                  account: accountFilter || undefined,
-                  month: monthFilter || undefined,
-                  year: yearFilter || undefined,
-                  start_date: startDate || undefined,
-                  end_date: endDate || undefined,
-                }) : '#'}
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => download('/export/leads/excel', leadsExportParams, 'Excel leads berhasil diunduh.')}
+                disabled={isDownloading('/export/leads/excel')}
                 className={secondaryFileActionClass}
               >
                 <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
                 Excel
-              </a>
-              <a
-                href={isMounted ? buildExportUrl('/api/v1/export/leads/pdf', {
-                  search: debouncedSearch || undefined,
-                  status: statusFilter || undefined,
-                  account: accountFilter || undefined,
-                  month: monthFilter || undefined,
-                  year: yearFilter || undefined,
-                  start_date: startDate || undefined,
-                  end_date: endDate || undefined,
-                }) : '#'}
-                target="_blank"
-                rel="noopener noreferrer"
+              </button>
+              <button
+                type="button"
+                onClick={() => download('/export/leads/pdf', leadsExportParams, 'PDF leads berhasil diunduh.')}
+                disabled={isDownloading('/export/leads/pdf')}
                 className={secondaryFileActionClass}
               >
                 <Download className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
                 PDF
-              </a>
+              </button>
             </div>
             <Link
               href="/consultations/create"

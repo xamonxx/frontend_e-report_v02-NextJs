@@ -20,7 +20,7 @@ import type {
 export function useSurveys(filters: SurveyFilters) {
   return useQuery({
     queryKey: queryKeys.surveys.list(filters),
-    queryFn: () => api.get<PaginatedResponse<Survey>>('/surveys', filters as any),
+    queryFn: ({ signal }) => api.get<PaginatedResponse<Survey>>('/surveys', filters as any, signal),
     placeholderData: (previousData) => previousData,
   })
 }
@@ -28,7 +28,7 @@ export function useSurveys(filters: SurveyFilters) {
 export function useSurvey(id: number) {
   return useQuery({
     queryKey: queryKeys.surveys.detail(id),
-    queryFn: () => api.get<ApiResponse<Survey>>(`/surveys/${id}`),
+    queryFn: ({ signal }) => api.get<ApiResponse<Survey>>(`/surveys/${id}`, undefined, signal),
     enabled: !!id,
   })
 }
@@ -36,7 +36,7 @@ export function useSurvey(id: number) {
 export function useSurveyHistory(id: number) {
   return useQuery({
     queryKey: [...queryKeys.surveys.detail(id), 'history'],
-    queryFn: () => api.get<ApiResponse<SurveyActivity[]>>(`/surveys/${id}/history`),
+    queryFn: ({ signal }) => api.get<ApiResponse<SurveyActivity[]>>(`/surveys/${id}/history`, undefined, signal),
     enabled: id > 0,
   })
 }
@@ -44,7 +44,7 @@ export function useSurveyHistory(id: number) {
 export function useSurveyorAvailability(date?: string) {
   return useQuery({
     queryKey: [...queryKeys.surveys.all, 'availability', date],
-    queryFn: () => api.get<ApiResponse<SurveyorAvailability[]>>('/surveys/availability', { date }),
+    queryFn: ({ signal }) => api.get<ApiResponse<SurveyorAvailability[]>>('/surveys/availability', { date }, signal),
     enabled: Boolean(date),
   })
 }
@@ -55,7 +55,7 @@ export function useSurveyorAvailability(date?: string) {
 export function useSurveyors() {
   return useQuery({
     queryKey: queryKeys.masterData.surveyors,
-    queryFn: () => api.get<ApiResponse<SurveyorItem[]>>('/master-data/surveyors'),
+    queryFn: ({ signal }) => api.get<ApiResponse<SurveyorItem[]>>('/master-data/surveyors', undefined, signal),
     staleTime: 5 * 60 * 1000,
   })
 }
@@ -66,7 +66,7 @@ export function useSurveyors() {
 export function useSurveyStatuses() {
   return useQuery({
     queryKey: queryKeys.masterData.surveyStatuses,
-    queryFn: () => api.get<ApiResponse<SurveyStatusItem[]>>('/master-data/survey-statuses'),
+    queryFn: ({ signal }) => api.get<ApiResponse<SurveyStatusItem[]>>('/master-data/survey-statuses', undefined, signal),
     staleTime: 5 * 60 * 1000,
   })
 }

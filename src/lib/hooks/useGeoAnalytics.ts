@@ -77,8 +77,8 @@ export interface GeoAnalyticsData {
 export function useGeoAnalytics(filters: GeoAnalyticsFilters) {
   return useQuery({
     queryKey: ['geo-analytics', filters],
-    queryFn: () =>
-      api.get<{ data: GeoAnalyticsData }>('/geo-analytics', filters as any),
+    queryFn: ({ signal }) =>
+      api.get<{ data: GeoAnalyticsData }>('/geo-analytics', filters as any, signal),
     placeholderData: (previous) => previous,
   })
 }
@@ -101,8 +101,8 @@ export type ProvinceFeatureCollection = RegionFeatureCollection
 function useGeoJson(key: string, path: string) {
   return useQuery({
     queryKey: ['geojson', key],
-    queryFn: async () => {
-      const res = await fetch(path)
+    queryFn: async ({ signal }) => {
+      const res = await fetch(path, { signal })
       if (!res.ok) throw new Error('Gagal memuat peta wilayah')
       return res.json() as Promise<RegionFeatureCollection>
     },

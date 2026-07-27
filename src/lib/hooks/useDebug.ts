@@ -29,7 +29,7 @@ export interface DebugStats {
 export function useDebugStats() {
   return useQuery({
     queryKey: queryKeys.debug.stats(),
-    queryFn: () => api.get<DebugStats>('/debug/stats'),
+    queryFn: ({ signal }) => api.get<DebugStats>('/debug/stats', undefined, signal),
   })
 }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 import {
   CalendarDays,
@@ -14,7 +14,7 @@ import {
   Users,
 } from 'lucide-react'
 
-import { buildExportUrl } from '@/lib/api/client'
+import { useFileDownload } from '@/lib/hooks/useFileDownload'
 import { useSurveyorScheduleRecap } from '@/lib/hooks/useSurveyorScheduleRecap'
 import { useSurveyors } from '@/lib/hooks/useSurveys'
 import { Calendar } from '@/components/ui/calendar'
@@ -35,10 +35,7 @@ export default function RekapJadwalSurveyorView() {
   const [surveyorId, setSurveyorId] = useState<string>('')
   const [datePickerOpen, setDatePickerOpen] = useState(false)
 
-  // buildExportUrl membaca window + localStorage; tahan sampai mounted agar
-  // markup server dan klien tidak berbeda.
-  const [isMounted, setIsMounted] = useState(false)
-  useEffect(() => setIsMounted(true), [])
+  const { download, isDownloading } = useFileDownload()
 
   const { data: surveyorsResponse } = useSurveyors()
   const surveyors = surveyorsResponse?.data ?? []
@@ -69,13 +66,12 @@ export default function RekapJadwalSurveyorView() {
     setSurveyorId('')
   }
 
-  const exportHref = isMounted
-    ? buildExportUrl('/api/v1/export/surveys/recap/excel', {
-        week_date: weekDate,
-        account_group: accountGroup || undefined,
-        surveyor: surveyorId || undefined,
-      })
-    : '#'
+  const exportPath = '/export/surveys/recap/excel'
+  const exportParams = {
+    week_date: weekDate,
+    account_group: accountGroup || undefined,
+    surveyor: surveyorId || undefined,
+  }
 
   return (
     <div className="min-w-0 space-y-5 pb-8 sm:space-y-6">
@@ -100,15 +96,15 @@ export default function RekapJadwalSurveyorView() {
             <RefreshCw className={cn('size-3.5', isFetching && 'animate-spin')} />
             Muat ulang
           </button>
-          <a
-            href={exportHref}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--primary-theme)] px-3 text-xs font-bold text-[var(--primary-theme-foreground)] transition-[filter,transform] hover:brightness-105 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40"
+          <button
+            type="button"
+            onClick={() => download(exportPath, exportParams, 'Rekap jadwal berhasil diunduh.')}
+            disabled={isDownloading(exportPath)}
+            className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[var(--primary-theme)] px-3 text-xs font-bold text-[var(--primary-theme-foreground)] transition-[filter,transform] hover:brightness-105 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-wait disabled:opacity-60"
           >
             <FileSpreadsheet className="size-3.5" />
             Excel
-          </a>
+          </button>
         </div>
       </header>
 
