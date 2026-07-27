@@ -103,17 +103,6 @@ export default function BottomNav() {
   // Derived rather than role-checked so it adapts if the item lists change.
   const soleMoreItem = !surveyTeam && moreItems.length === 1 && settingsItems.length === 0 ? moreItems[0] : null
 
-  const primaryIndex = primaryTabs.findIndex((item) => pathname.startsWith(item.href))
-  let activeIndex = surveyTeam ? primaryIndex : -1
-  if (!surveyTeam) {
-    if (pathname.startsWith('/dashboard')) activeIndex = 0
-    else if (pathname.startsWith('/consultations')) activeIndex = 1
-    else if (pathname.startsWith('/analytics')) activeIndex = 3
-    else if (moreActive) activeIndex = 4
-  } else if (moreActive) {
-    activeIndex = primaryTabs.length
-  }
-
   const handlePrefetch = (href: string) => {
     if (href !== pathname) prefetchRoute(queryClient, href)
   }
@@ -149,7 +138,7 @@ export default function BottomNav() {
             <button
               aria-label="Tutup menu"
               onClick={() => setMoreOpen(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-black/40"
             />
 
             {/* Panel */}
@@ -166,22 +155,16 @@ export default function BottomNav() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[30px] border-t bg-[color-mix(in_srgb,var(--card)_88%,var(--primary-theme)_6%)] shadow-[0_-24px_70px_rgba(2,8,23,0.34),inset_0_1px_0_rgba(255,255,255,0.10)] backdrop-blur-2xl backdrop-saturate-150 touch-none pb-6 dark:bg-[color-mix(in_srgb,var(--card)_82%,var(--primary-theme)_8%)]"
-              style={{
-                paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)',
-                borderColor: `color-mix(in srgb, ${userThemeColor} 20%, var(--border))`,
-              }}
+              // Same vibrancy material as the bar, so the two surfaces read as
+              // one system. The accent tint that used to wash the panel and the
+              // radial glow over its top edge are gone: an Apple sheet is a
+              // neutral frosted plane and lets its contents carry the colour.
+              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[28px] border-t border-black/[0.06] bg-white/78 pb-6 shadow-[0_-1px_2px_rgba(0,0,0,0.06),0_-20px_60px_-12px_rgba(0,0,0,0.28)] backdrop-blur-2xl backdrop-saturate-[1.8] touch-none dark:border-white/[0.09] dark:bg-zinc-900/78"
+              style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
             >
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-x-0 top-0 h-28 opacity-70"
-                style={{
-                  background: `radial-gradient(circle at 50% -25%, ${userThemeColor}22, transparent 64%)`,
-                }}
-              />
               {/* Grab handle */}
-              <div className="flex justify-center pt-3 pb-1">
-                <span className="h-1.5 w-14 rounded-full bg-foreground/20 dark:bg-white/25" />
+              <div className="flex justify-center pt-2.5 pb-1">
+                <span className="h-1 w-9 rounded-full bg-foreground/25 dark:bg-white/30" />
               </div>
 
               <div className="relative flex items-center justify-between px-6 pb-3 pt-2">
@@ -278,7 +261,11 @@ export default function BottomNav() {
         className="fixed inset-x-0 bottom-0 z-50 lg:hidden px-2.5 flex justify-center pointer-events-none sm:px-4"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
       >
-        <div className="relative h-16 w-full max-w-[400px] rounded-[26px] border border-zinc-200/80 dark:border-white/15 bg-zinc-50/95 dark:bg-zinc-800/85 backdrop-blur-xl shadow-[0_10px_35px_rgba(0,0,0,0.12)] dark:shadow-[0_16px_40px_rgba(0,0,0,0.6)] flex items-center justify-between px-1.5 pointer-events-auto transition-all duration-300 sm:h-[68px] sm:rounded-[28px] sm:px-2">
+        {/* Vibrancy material: heavy blur with a saturation lift so colour bleeds
+            through the way Apple's does, a hairline that is brighter on the top
+            edge to read as a lit surface, and a two-stop shadow (tight contact +
+            wide ambient) rather than one heavy drop. */}
+        <div className="pointer-events-auto relative flex h-16 w-full max-w-[400px] items-center justify-between rounded-[28px] border border-black/[0.06] bg-white/72 px-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_12px_32px_-8px_rgba(0,0,0,0.18)] backdrop-blur-2xl backdrop-saturate-[1.8] before:pointer-events-none before:absolute before:inset-x-6 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent sm:h-[68px] sm:px-2 dark:border-white/[0.09] dark:bg-zinc-900/72 dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_16px_40px_-8px_rgba(0,0,0,0.6)] dark:before:via-white/15">
           {!surveyTeam && <>
           {/* Centre FAB Action Button — floats beautifully above the bar */}
           <div className="absolute left-1/2 bottom-[22px] -translate-x-1/2 z-20 sm:bottom-[24px]">
@@ -288,45 +275,29 @@ export default function BottomNav() {
               aria-label="Tambah data konsultasi"
               className="relative block rounded-full outline-none focus-visible:ring-2 focus-visible:ring-amber-500/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
             >
-              {/* Outer Breathing Glow Ring */}
-              <motion.div
-                className="absolute -inset-1.5 rounded-full pointer-events-none -z-10"
-                style={{
-                  border: `2px solid ${userThemeColor}33`,
-                }}
-                animate={{
-                  scale: fabHovered ? [1, 1.15, 1] : [1, 1.08, 1],
-                  opacity: fabHovered ? [0.8, 0.2, 0.8] : [0.5, 0, 0.5],
-                }}
-                transition={{
-                  duration: 2.5,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-              />
-
-              {/* FAB Inner Core */}
+              {/* A ring that pulses forever is the least Apple thing here: their
+                  controls sit still until touched. Emphasis now comes from the
+                  fill and an elevation shadow, and motion only answers a press.
+                  The inner top highlight is the standard glossy-button read. */}
               <motion.div
                 onMouseEnter={() => setFabHovered(true)}
                 onMouseLeave={() => setFabHovered(false)}
-                whileHover={{ scale: 1.06 }}
-                whileTap={{ scale: 0.92 }}
-                transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                className="flex h-[52px] w-[52px] items-center justify-center rounded-full text-zinc-950 dark:text-zinc-900 cursor-pointer shadow-lg sm:h-[56px] sm:w-[56px]"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.94 }}
+                transition={{ type: 'spring', stiffness: 400, damping: 26 }}
+                className="flex size-[52px] cursor-pointer items-center justify-center rounded-full text-zinc-950 sm:size-[56px] dark:text-zinc-900"
                 style={{
-                  background: `linear-gradient(135deg, ${userThemeColor}, color-mix(in srgb, ${userThemeColor} 75%, black))`,
-                  boxShadow: fabHovered 
-                    ? `0 10px 25px ${userThemeColor}59` 
-                    : `0 8px 20px ${userThemeColor}26`,
-                  transition: 'box-shadow 0.2s ease, transform 0.2s ease',
+                  background: `linear-gradient(180deg, color-mix(in srgb, ${userThemeColor} 88%, white), ${userThemeColor})`,
+                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45), 0 1px 2px rgba(0,0,0,0.12), 0 ${fabHovered ? 12 : 8}px ${fabHovered ? 28 : 20}px -6px ${userThemeColor}${fabHovered ? '66' : '4d'}`,
+                  transition: 'box-shadow 0.25s ease',
                 }}
               >
                 <motion.span
-                  animate={{ rotate: fabHovered ? 90 : 0, scale: fabHovered ? 1.08 : 1 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 15 }}
+                  animate={{ rotate: fabHovered ? 90 : 0 }}
+                  transition={{ type: 'spring', stiffness: 300, damping: 22 }}
                   className="flex items-center justify-center"
                 >
-                  <Plus className="h-6 w-6 stroke-[2.5]" />
+                  <Plus className="size-6" strokeWidth={2.25} />
                 </motion.span>
               </motion.div>
             </Link>
@@ -334,14 +305,12 @@ export default function BottomNav() {
 
           {/* Navigation items group */}
           {/* Left group */}
-          <div className="flex flex-1 items-stretch h-full justify-around">
-            {PRIMARY_TABS.slice(0, 2).map((tab, idx) => (
+          <div className="flex h-full flex-1 items-stretch justify-around">
+            {PRIMARY_TABS.slice(0, 2).map((tab) => (
               <Tab
                 key={tab.href}
                 item={tab}
                 active={pathname.startsWith(tab.href)}
-                position={idx}
-                indicatorPosition={activeIndex}
                 themeColor={userThemeColor}
                 onPrefetch={handlePrefetch}
               />
@@ -352,12 +321,10 @@ export default function BottomNav() {
           <div className="w-[56px] shrink-0 sm:w-[68px]" aria-hidden="true" />
 
           {/* Right group */}
-          <div className="flex flex-1 items-stretch h-full justify-around">
+          <div className="flex h-full flex-1 items-stretch justify-around">
             <Tab
               item={PRIMARY_TABS[2]}
               active={pathname.startsWith(PRIMARY_TABS[2].href)}
-              position={3}
-              indicatorPosition={activeIndex}
               themeColor={userThemeColor}
               onPrefetch={handlePrefetch}
             />
@@ -365,8 +332,6 @@ export default function BottomNav() {
               <Tab
                 item={soleMoreItem}
                 active={pathname.startsWith(soleMoreItem.href)}
-                position={4}
-                indicatorPosition={activeIndex}
                 themeColor={userThemeColor}
                 onPrefetch={handlePrefetch}
               />
@@ -374,29 +339,21 @@ export default function BottomNav() {
               <button
                 onClick={() => setMoreOpen(true)}
                 aria-label="Menu lainnya"
-                className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-expanded={moreOpen}
+                className="relative flex flex-1 cursor-pointer items-center justify-center rounded-2xl outline-none transition-transform duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_55%,transparent)]"
               >
-                <TabInner
-                  icon={MoreHorizontal}
-                  label="Lainnya"
-                  active={moreActive}
-                  position={4}
-                  indicatorPosition={activeIndex}
-                  themeColor={userThemeColor}
-                />
+                <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} themeColor={userThemeColor} />
               </button>
             )}
           </div>
           </>}
           {surveyTeam && (
             <div className="flex h-full w-full items-stretch justify-around">
-              {primaryTabs.map((tab, index) => (
+              {primaryTabs.map((tab) => (
                 <Tab
                   key={tab.href}
                   item={tab}
                   active={pathname.startsWith(tab.href)}
-                  position={index}
-                  indicatorPosition={activeIndex}
                   themeColor={userThemeColor}
                   onPrefetch={handlePrefetch}
                 />
@@ -404,9 +361,10 @@ export default function BottomNav() {
               <button
                 onClick={() => setMoreOpen(true)}
                 aria-label="Menu lainnya"
-                className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                aria-expanded={moreOpen}
+                className="relative flex flex-1 cursor-pointer items-center justify-center rounded-2xl outline-none transition-transform duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_55%,transparent)]"
               >
-                <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} position={primaryTabs.length} indicatorPosition={activeIndex} themeColor={userThemeColor} />
+                <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} themeColor={userThemeColor} />
               </button>
             </div>
           )}
@@ -420,15 +378,11 @@ export default function BottomNav() {
 function Tab({
   item,
   active,
-  position,
-  indicatorPosition,
   themeColor,
   onPrefetch,
 }: {
   item: NavItem
   active: boolean
-  position: number
-  indicatorPosition: number
   themeColor: string
   onPrefetch: (href: string) => void
 }) {
@@ -437,97 +391,68 @@ function Tab({
       href={item.href}
       onTouchStart={() => onPrefetch(item.href)}
       aria-label={item.label}
-      className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      aria-current={active ? 'page' : undefined}
+      className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none transition-transform duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_55%,transparent)]"
     >
-      <TabInner 
-        icon={item.icon} 
-        label={item.label} 
-        active={active} 
-        position={position}
-        indicatorPosition={indicatorPosition}
-        themeColor={themeColor}
-      />
+      <TabInner icon={item.icon} label={item.label} active={active} themeColor={themeColor} />
     </Link>
   )
 }
 
+/**
+ * A tab in the Apple-style bar: tint carries the selection, not a container.
+ *
+ * The previous version stacked a blurred "spotlight" gradient, a bordered fill
+ * pill and a lift animation on the active tab. Apple's own tab bars do none of
+ * that — UIKit tints the glyph and label and stops there — and the three effects
+ * together read as glow rather than selection. What remains is a very light tint
+ * wash (about 8%) to anchor the shared layout animation, plus the colour itself.
+ *
+ * Weight substitutes for SF Symbols' filled variants: the active glyph thickens
+ * from 1.7 to 2.1, which reads as emphasis at 22px without changing footprint.
+ */
 function TabInner({
   icon: Icon,
   label,
   active,
-  position,
-  indicatorPosition,
   themeColor,
 }: {
   icon: LucideIcon
   label: string
   active: boolean
-  position: number
-  indicatorPosition: number
   themeColor: string
 }) {
-  const distance = Math.abs(indicatorPosition - position);
-  const spotlightOpacity = active ? 1 : Math.max(0, 1 - distance * 0.6);
-
   return (
-    <div className="relative flex flex-col items-center justify-center w-full h-full py-1">
-      {/* Dynamic Theme Spotlight Glow */}
-      <div 
-        className="absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-[12px] w-14 h-20 bg-gradient-to-b blur-md rounded-full pointer-events-none transition-opacity duration-300"
-        style={{
-          backgroundImage: `linear-gradient(to bottom, ${themeColor}33, ${themeColor}05, transparent)`,
-          opacity: spotlightOpacity,
-        }}
-      />
-
-      {/* Floating Active Pill - using z-0 to stack above background but below content */}
+    <div className="relative flex h-full w-full flex-col items-center justify-center gap-[3px] py-1">
       {active && (
         <motion.span
           layoutId="active-pill"
-          className="absolute inset-x-0.5 inset-y-[10px] rounded-xl z-0 border"
-          style={{
-            backgroundColor: `${themeColor}1a`,
-            borderColor: `${themeColor}26`,
-          }}
-          transition={{
-            type: "spring",
-            stiffness: 380,
-            damping: 30
-          }}
+          aria-hidden
+          className="pointer-events-none absolute inset-x-1 inset-y-[7px] -z-10 rounded-[14px]"
+          style={{ backgroundColor: `${themeColor}14` }}
+          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
         />
       )}
 
-      {/* Content Container - using relative z-10 to stay on top of the active pill */}
-      <div className="relative z-10 flex flex-col items-center justify-center">
-        {/* Icon with lift animation */}
-        <motion.span
-          animate={{ y: active ? -2 : 0 }}
-          transition={{
-            type: "spring",
-            stiffness: 380,
-            damping: 30
-          }}
-          className="relative flex items-center justify-center"
-        >
-          <Icon
-            className="h-[20px] w-[20px] transition-colors duration-300"
-            style={{
-              color: active ? themeColor : '#9CA3AF',
-            }}
-          />
-        </motion.span>
+      <Icon
+        aria-hidden
+        className={cn(
+          'size-[22px] shrink-0 transition-colors duration-200',
+          !active && 'text-muted-foreground'
+        )}
+        strokeWidth={active ? 2.1 : 1.7}
+        style={active ? { color: themeColor } : undefined}
+      />
 
-        {/* Label Text */}
-        <span
-          className="max-w-[58px] truncate text-[8px] sm:text-[10px] tracking-tight font-medium mt-0.5 select-none transition-colors duration-300"
-          style={{
-            color: active ? themeColor : '#9CA3AF',
-            opacity: active ? 1 : 0.8,
-          }}
-        >
-          {label}
-        </span>
-      </div>
+      <span
+        className={cn(
+          'max-w-[62px] truncate text-[10px] font-medium leading-none tracking-[-0.01em] transition-colors duration-200 select-none',
+          !active && 'text-muted-foreground'
+        )}
+        style={active ? { color: themeColor } : undefined}
+      >
+        {label}
+      </span>
     </div>
   )
 }
