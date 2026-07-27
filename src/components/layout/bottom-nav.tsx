@@ -89,10 +89,19 @@ export default function BottomNav() {
   const visible = (item: NavItem) => !item.superOnly || isSuperAdmin
 
   const moreItems = surveyTeam ? [] : MORE_ITEMS.filter(visible)
-  const settingsItems = SETTINGS_ITEMS.filter(visible).filter((item) => !surveyTeam || item.href !== '/settings')
+  // Pengaturan already sits in the header profile menu (alongside Keluar), which
+  // is visible on mobile too. It is only kept in the sheet for super admins,
+  // whose settings group holds other entries anyway.
+  const settingsItems = SETTINGS_ITEMS.filter(visible).filter((item) => item.href !== '/settings' || isSuperAdmin)
 
   // Highlight "More" whenever the active route lives inside the sheet.
   const moreActive = [...moreItems, ...settingsItems].some((i) => pathname.startsWith(i.href))
+
+  // With Pengaturan gone, a plain admin's sheet holds a single destination
+  // (Absensi). A whole bottom sheet for one link is not worth the tap, so it is
+  // promoted to a direct tab and the More button is dropped for that role.
+  // Derived rather than role-checked so it adapts if the item lists change.
+  const soleMoreItem = !surveyTeam && moreItems.length === 1 && settingsItems.length === 0 ? moreItems[0] : null
 
   const primaryIndex = primaryTabs.findIndex((item) => pathname.startsWith(item.href))
   let activeIndex = surveyTeam ? primaryIndex : -1
@@ -352,20 +361,31 @@ export default function BottomNav() {
               themeColor={userThemeColor}
               onPrefetch={handlePrefetch}
             />
-            <button
-              onClick={() => setMoreOpen(true)}
-              aria-label="Menu lainnya"
-              className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-            >
-              <TabInner 
-                icon={MoreHorizontal} 
-                label="Lainnya" 
-                active={moreActive} 
+            {soleMoreItem ? (
+              <Tab
+                item={soleMoreItem}
+                active={pathname.startsWith(soleMoreItem.href)}
                 position={4}
                 indicatorPosition={activeIndex}
                 themeColor={userThemeColor}
+                onPrefetch={handlePrefetch}
               />
-            </button>
+            ) : (
+              <button
+                onClick={() => setMoreOpen(true)}
+                aria-label="Menu lainnya"
+                className="relative flex flex-1 items-center justify-center rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-amber-500/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              >
+                <TabInner
+                  icon={MoreHorizontal}
+                  label="Lainnya"
+                  active={moreActive}
+                  position={4}
+                  indicatorPosition={activeIndex}
+                  themeColor={userThemeColor}
+                />
+              </button>
+            )}
           </div>
           </>}
           {surveyTeam && (
