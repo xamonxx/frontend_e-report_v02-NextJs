@@ -298,42 +298,46 @@ export default function ReportAttendancesPage() {
             dan seluruh konten di bawahnya (termasuk kartu KPI) ikut naik-turun
             setiap ganti mode. Baris terpisah = lebar judul tidak lagi
             tergantung berapa banyak kontrol yang sedang tampil. */}
+        {/* Menyaring per tanggal, status, dan mode adalah kontrol pemantauan:
+            admin hanya melaporkan absensinya sendiri untuk hari ini, jadi panel
+            ini khusus super admin. State yang dikendalikannya tetap di nilai
+            bawaan (hari ini, semua status) — persis yang dibutuhkan kartu
+            laporan admin di bawah. */}
+        {isSuperAdmin && (
         <div className="flex flex-wrap items-stretch gap-2 rounded-xl border border-border/80 bg-card p-2 shadow-sm ring-1 ring-border/40 sm:ml-auto sm:w-fit dark:border-zinc-700/80">
-          {isSuperAdmin && (
-            <Select
-              value={viewMode}
-              onValueChange={(value) => setViewMode((value as 'daily' | 'recap') ?? 'daily')}
-              items={[
-                { value: 'daily', label: 'Harian' },
-                { value: 'recap', label: 'Rekap Periode' },
-              ]}
-            >
-              <SelectTrigger className="h-10 w-full shrink-0 rounded-xl border-border/55 bg-card text-xs font-semibold shadow-sm transition-shadow hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))] hover:shadow-md sm:w-[136px]">
-                <SelectValue placeholder="Mode">
-                  {isRecap ? 'Rekap Periode' : 'Harian'}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent align="end" className="min-w-60 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
-                {[
-                  { value: 'daily', label: 'Harian', helper: 'Status satu tanggal' },
-                  { value: 'recap', label: 'Rekap Periode', helper: 'Hitungan hari sepanjang rentang' },
-                ].map((option) => (
-                  <SelectItem key={option.value} value={option.value} className="rounded-lg px-2.5 py-2 text-xs">
-                    {/* Anak SelectItem ditata sebagai flex, jadi label dan
-                        helper harus dibungkus satu wrapper agar bertumpuk. */}
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">{option.label}</span>
-                      {/* Helper dibiarkan membungkus: lebar popup mengikuti
-                          trigger, memaksanya satu baris bikin teks terpotong. */}
-                      <span className="mt-0.5 block whitespace-normal text-[10px] leading-snug text-muted-foreground">
-                        {option.helper}
-                      </span>
+          <Select
+            value={viewMode}
+            onValueChange={(value) => setViewMode((value as 'daily' | 'recap') ?? 'daily')}
+            items={[
+              { value: 'daily', label: 'Harian' },
+              { value: 'recap', label: 'Rekap Periode' },
+            ]}
+          >
+            <SelectTrigger className="h-10 w-full shrink-0 rounded-xl border-border/55 bg-card text-xs font-semibold shadow-sm transition-shadow hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))] hover:shadow-md sm:w-[136px]">
+              <SelectValue placeholder="Mode">
+                {isRecap ? 'Rekap Periode' : 'Harian'}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent align="end" className="min-w-60 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+              {[
+                { value: 'daily', label: 'Harian', helper: 'Status satu tanggal' },
+                { value: 'recap', label: 'Rekap Periode', helper: 'Hitungan hari sepanjang rentang' },
+              ].map((option) => (
+                <SelectItem key={option.value} value={option.value} className="rounded-lg px-2.5 py-2 text-xs">
+                  {/* Anak SelectItem ditata sebagai flex, jadi label dan
+                      helper harus dibungkus satu wrapper agar bertumpuk. */}
+                  <span className="min-w-0">
+                    <span className="block truncate font-semibold">{option.label}</span>
+                    {/* Helper dibiarkan membungkus: lebar popup mengikuti
+                        trigger, memaksanya satu baris bikin teks terpotong. */}
+                    <span className="mt-0.5 block whitespace-normal text-[10px] leading-snug text-muted-foreground">
+                      {option.helper}
                     </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           {isRecap ? (
             <>
@@ -435,6 +439,7 @@ export default function ReportAttendancesPage() {
             <RefreshCw className={cn("h-3.5 w-3.5 text-muted-foreground", isRefetching && "animate-spin")} />
           </Button>
         </div>
+        )}
       </header>
 
       {/* Admin Quick Report Action Area */}

@@ -3,6 +3,8 @@
 import { useTheme } from 'next-themes'
 import { Sun, Moon } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { cn } from '@/lib/utils'
+import { HEADER_ACTION_CLASS } from './header-action'
 
 export default function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
@@ -14,7 +16,8 @@ export default function ThemeToggle() {
   }, [])
 
   if (!mounted) {
-    return <div className="w-9 h-9 rounded-xl border border-border/50 bg-muted/10 shrink-0" />
+    // Placeholder must match the real button's footprint or the row reflows on mount.
+    return <div className={cn(HEADER_ACTION_CLASS, 'border-border/50 bg-muted/10')} />
   }
 
   const isDark = resolvedTheme === 'dark'
@@ -42,7 +45,7 @@ export default function ThemeToggle() {
     <button
       type="button"
       onClick={handleToggle}
-      className="flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-card/60 backdrop-blur-md text-muted-foreground hover:text-foreground hover:bg-accent/80 transition-all duration-300 shadow-sm shrink-0 cursor-pointer"
+      className={cn(HEADER_ACTION_CLASS, 'border-border bg-card/60 text-muted-foreground hover:bg-accent/80 hover:text-foreground')}
       title={isDark ? 'Aktifkan Mode Terang' : 'Aktifkan Mode Gelap'}
     >
       {isDark ? (

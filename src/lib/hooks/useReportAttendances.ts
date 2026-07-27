@@ -63,16 +63,22 @@ export type AccountGroupOption = {
   subtitle: string
 }
 
-export function useReportAttendances(filters: {
-  date?: string
-  status?: string
-  start_date?: string
-  end_date?: string
-}) {
+export function useReportAttendances(
+  filters: {
+    date?: string
+    status?: string
+    start_date?: string
+    end_date?: string
+  },
+  /** Lewati permintaan saat pemanggil belum membutuhkan datanya — dipakai
+   *  dashboard, yang hanya perlu status absensi untuk admin. */
+  options?: { enabled?: boolean }
+) {
   return useQuery({
     queryKey: ['report-attendances', 'list', filters],
     queryFn: () =>
       api.get<AttendanceResponse>('/report-attendances', filters as any),
+    enabled: options?.enabled ?? true,
   })
 }
 

@@ -4,7 +4,8 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useDashboard } from '@/lib/hooks/useDashboard'
 import { useAnalytics } from '@/lib/hooks/useAnalytics'
 import { useAccounts } from '@/lib/hooks/useMasterData'
-import { useAccountGroups } from '@/lib/hooks/useReportAttendances'
+import { useAccountGroups, useReportAttendances, type AttendanceItem } from '@/lib/hooks/useReportAttendances'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { CardExportButtons } from '@/components/ui/card-export-buttons'
 import { Badge } from '@/components/ui/badge'
@@ -307,6 +308,26 @@ export default function DashboardPage() {
   const { data: accountGroupsResponse } = useAccountGroups()
   const accountGroups = accountGroupsResponse?.data ?? []
 
+  /* â”€â”€ Pengingat absensi harian â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   * Absensi wajib diisi tiap hari tapi halamannya tidak dilewati saat kerja
+   * normal, jadi yang belum lapor baru sadar setelah harinya lewat. Dashboard
+   * adalah layar pertama yang dibuka, jadi pengingatnya ditaruh di sini.
+   * Query hanya jalan untuk admin â€” super admin memantau, tidak mengisi.
+   * Tanggal memakai zona Asia/Jakarta, sama seperti halaman absensi, supaya
+   * "hari ini" tidak bergeser bagi pengguna di zona waktu lain. */
+  const todayJakarta = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })
+  const { data: attendanceToday } = useReportAttendances(
+    { date: todayJakarta, status: 'all' },
+    { enabled: !isSuperAdmin }
+  )
+  const myAttendance =
+    attendanceToday?.mode === 'daily'
+      ? (attendanceToday.data as AttendanceItem[]).find((rec) => rec.admin_id === user?.id)
+      : undefined
+  // Hanya tampil kalau datanya sudah ada dan memang belum lapor â€” jangan
+  // berkedip saat masih loading.
+  const needsAttendance = !isSuperAdmin && !!attendanceToday && !myAttendance?.has_reported
+
   const accountOptions = useMemo(() => {
     const opts: AutocompleteOption[] = [{ label: 'Semua Akun', value: 'all' }]
     if (accounts) {
@@ -435,6 +456,31 @@ export default function DashboardPage() {
             </div>
           </div>
         </header>
+
+        {/* Pengingat absensi — hanya admin, dan hanya sampai ia melapor. */}
+        {needsAttendance && (
+          <Link
+            href="/report-attendances"
+            className="dash-rise group flex items-center gap-3 rounded-2xl border border-amber-500/35 bg-amber-500/[0.07] px-4 py-3.5 transition-colors hover:border-amber-500/55 hover:bg-amber-500/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 sm:gap-4"
+            style={{ animationDelay: '30ms' }}
+          >
+            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400">
+              <Clock className="size-5" strokeWidth={2} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-foreground">
+                Anda belum absen hari ini
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Laporkan status chat WhatsApp masuk sebelum jam operasional berakhir.
+              </span>
+            </span>
+            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-[11px] font-bold text-slate-950 transition-transform group-hover:translate-x-0.5">
+              Absen
+              <ArrowUpRight className="size-3.5" strokeWidth={2.5} />
+            </span>
+          </Link>
+        )}
 
         {/* Ringkasan. */}
         <section className="dash-rise space-y-4" style={{ animationDelay: '60ms' }}>
