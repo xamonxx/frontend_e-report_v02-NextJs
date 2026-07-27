@@ -9,7 +9,7 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-heading);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -148,11 +148,18 @@
     @apply bg-background text-foreground;
     width: 100%;
     overflow-x: clip;
+    font-family: var(--font-sans, system-ui, sans-serif);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   html {
     @apply font-sans;
     width: 100%;
     overflow-x: clip;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading, system-ui, sans-serif);
+    font-weight: 700;
   }
   ::selection {
     background-color: color-mix(in srgb, var(--primary-theme) 45%, transparent);
