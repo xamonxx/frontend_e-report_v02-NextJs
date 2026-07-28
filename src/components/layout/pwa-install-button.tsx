@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Smartphone, Download, Share, Plus, X, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -133,10 +134,12 @@ export default function PwaInstallButton() {
         )}
       </button>
 
-      {/* Manual Installation Guide Modal / Dialog */}
-      <AnimatePresence>
-        {showModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+      {/* Manual Installation Guide Modal / Dialog — portaled to body so it
+          escapes the header's z-20 backdrop-blur stacking context. */}
+      {createPortal(
+        <AnimatePresence>
+          {showModal && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto px-4 py-4">
             {/* Backdrop */}
             <motion.div
               initial={{ opacity: 0 }}
@@ -152,7 +155,7 @@ export default function PwaInstallButton() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl"
+              className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl"
             >
               {/* Close Button */}
               <button
@@ -217,8 +220,10 @@ export default function PwaInstallButton() {
               </button>
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </>
   )
 }

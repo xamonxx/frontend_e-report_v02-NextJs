@@ -47,12 +47,12 @@ const NAV_LINKS: { href: string; label: string; icon: LucideIcon; hint: string; 
   { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Map, hint: 'Persebaran konsumen per wilayah', roles: ['super_admin'] },
   { href: '/surveys', label: 'Survey', icon: ClipboardCheck, hint: 'Penugasan dan hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { href: '/rekap-jadwal-surveyor', label: 'Rekap Jadwal', icon: CalendarClock, hint: 'Jadwal mingguan surveyor', roles: ['manager_surveyor'] },
-  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Daftar konsumen dan hasil survey', roles: ['manager_surveyor'] },
+  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Daftar konsumen dan hasil survey', roles: ['manager_surveyor', 'surveyor'] },
   { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', roles: ['super_admin'] },
   { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & data referensi', roles: ['super_admin'] },
   { href: '/report-attendances', label: 'Absensi', icon: CalendarCheck, hint: 'Laporan absensi harian', roles: ['admin'] },
-  { href: '/audit-logs', label: 'Audit Logs', icon: History, hint: 'Log aktivitas sistem', roles: ['super_admin'] },
-  { href: '/settings', label: 'Settings', icon: Settings, hint: 'Pengaturan akun & preferensi' },
+  { href: '/audit-logs', label: 'Audit Log', icon: History, hint: 'Log aktivitas sistem', roles: ['super_admin'] },
+  { href: '/settings', label: 'Pengaturan', icon: Settings, hint: 'Pengaturan akun & preferensi' },
 ]
 
 const activeNavTransition = {
@@ -98,11 +98,10 @@ export default function Sidebar() {
               className="h-6 w-6 shrink-0"
               style={{
                 color: userThemeColor,
-                filter: `drop-shadow(0 0 8px ${userThemeColor}60)`,
               }}
             />
-            <span className="font-bold text-base tracking-wider whitespace-nowrap uppercase text-amber-500">
-              Putra Corp
+            <span className="font-bold text-base whitespace-nowrap text-sidebar-foreground">
+              E-Report
             </span>
           </div>
           <Tooltip>
@@ -175,7 +174,7 @@ export default function Sidebar() {
                             // Colour, glow and scale carry the active state instead of weight.
                             'h-5 w-5 shrink-0 stroke-[1.75] transition-[color,filter] duration-200',
                             isActive
-                              ? 'drop-shadow-[0_0_8px_color-mix(in_srgb,var(--primary-theme)_50%,transparent)]'
+                              ? ''
                               : 'text-sidebar-foreground/60 group-hover:text-sidebar-foreground/90'
                           )}
                           style={{ color: isActive ? userThemeColor : undefined }}
@@ -216,7 +215,6 @@ export default function Sidebar() {
                 className="h-5 w-5"
                 style={{
                   color: userThemeColor,
-                  filter: `drop-shadow(0 0 7px ${userThemeColor}55)`,
                 }}
               />
             </div>

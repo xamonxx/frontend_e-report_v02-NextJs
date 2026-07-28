@@ -32,7 +32,6 @@ import {
   ArrowUpRight,
   Info,
   Activity,
-  Award,
   FileDown,
   FileImage,
   CalendarIcon,
@@ -40,7 +39,6 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   ClipboardList,
 } from 'lucide-react'
 import {
@@ -264,9 +262,8 @@ function StatCard({
         {/* Fixed-height slot: the hero's pill and the others' chip must agree on
             a top and a bottom edge or the whole row's shoulder line breaks. */}
         {isFeature ? (
-          <span className="inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 text-[9px] font-black uppercase text-amber-500 sm:h-9 sm:rounded-xl">
-            <Sparkles className="h-2.5 w-2.5" />
-            Utama
+          <span className="inline-flex h-8 shrink-0 items-center rounded-lg border border-border bg-muted/40 px-2.5 text-[9px] font-bold uppercase text-muted-foreground sm:h-9 sm:rounded-xl">
+            KPI
           </span>
         ) : (
           <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors sm:size-9 sm:rounded-xl', tone.chip)}>
@@ -284,7 +281,7 @@ function StatCard({
             className={cn(
               'font-heading font-bold leading-none tracking-tight tabular-nums',
               isFeature
-                ? 'text-gradient-amber text-3xl sm:text-4xl'
+                ? 'text-3xl text-foreground sm:text-4xl'
                 : 'text-2xl text-foreground sm:text-3xl'
             )}
           >
@@ -1207,26 +1204,26 @@ export default function DashboardPage() {
                 <Card className="border-border/60 bg-card shadow-sm rounded-2xl overflow-hidden dark:border-zinc-800/60 dark:bg-zinc-900/40 dark:shadow-none">
                   <CardHeader>
                     <CardTitle className="text-sm font-bold text-foreground flex items-center gap-1.5">
-                      <Award className="h-4 w-4 text-amber-500" />
-                      Admin Terunggul
+                      <Users className="h-4 w-4 text-amber-500" />
+                      Admin Aktif
                     </CardTitle>
                     <CardDescription className="text-[11px] text-muted-foreground">
-                      Performa closing rate tertinggi bulan ini
+                      Kontribusi closing tertinggi bulan ini
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="flex flex-col items-center justify-center py-6 text-center">
                     <div className="relative mb-4">
-                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-700 flex items-center justify-center text-xl font-black text-white shadow-xl shadow-amber-500/20">
+                      <div className="h-16 w-16 rounded-xl border border-border bg-muted flex items-center justify-center text-xl font-black text-foreground">
                         {dashboard.top_admin.name.slice(0, 2).toUpperCase()}
                       </div>
                       <div className="absolute -bottom-2 left-1/2 -translate-x-1/2">
-                        <Badge className="bg-amber-500 text-white text-[9px] font-black px-2 shadow-lg">
-                          #1 CLOSER
+                        <Badge className="border-amber-500/30 bg-amber-500/10 text-amber-600 text-[9px] font-bold px-2 dark:text-amber-400">
+                          Teratas
                         </Badge>
                       </div>
                     </div>
                     <h4 className="text-sm font-bold text-foreground mt-2">{dashboard.top_admin.name}</h4>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Staff Terbaik</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Kontribusi tertinggi bulan ini</p>
                     <Tooltip>
                       <TooltipTrigger className="mt-4 border border-border bg-muted/40 rounded-xl px-6 py-3 cursor-default hover:border-amber-500/30 hover:bg-muted/60 transition-colors dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-950/60">
                         <span className="block text-xl font-black text-amber-500">

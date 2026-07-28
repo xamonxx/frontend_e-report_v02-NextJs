@@ -24,13 +24,13 @@ export function useFileDownload() {
   const [pendingKey, setPendingKey] = useState<string | null>(null)
 
   const download = useCallback(
-    async (path: string, params?: DownloadParams, successMessage?: string) => {
+    async (path: string, params?: DownloadParams, successMessage?: string, filename?: string) => {
       // Satu unduhan pada satu waktu per key supaya klik ganda tidak menembak dua kali.
       if (pendingKey === path) return
 
       setPendingKey(path)
       try {
-        await api.downloadFile(path, params)
+        await api.downloadFile(path, params, filename)
         if (successMessage) toast.success(successMessage)
       } catch (err: unknown) {
         const message =

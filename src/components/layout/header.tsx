@@ -44,7 +44,7 @@ const PAGE_NAMES: Record<string, string> = {
   '/accounts': 'Akun',
   '/master-data': 'Master Data',
   '/report-attendances': 'Absensi',
-  '/audit-logs': 'Audit Logs',
+  '/audit-logs': 'Audit Log',
   '/settings': 'Pengaturan',
 }
 

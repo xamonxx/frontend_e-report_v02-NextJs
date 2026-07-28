@@ -28,6 +28,28 @@ import { ACCOUNT_GROUP_LABELS, type AccountGroup, type SurveyorRecapDay } from '
 /** Tanggal disimpan sebagai yyyy-MM-dd; parse balik dengan jam tengah hari
  *  supaya pergeseran zona waktu tidak memindahkannya sehari. */
 const toDate = (value: string) => parseISO(`${value}T12:00:00`)
+const MONTH_CODES = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES']
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000
+
+const safeFilePart = (value: string) =>
+  value
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+
+const dateRangeLabel = (start: Date, end: Date) => {
+  const startYear = start.getFullYear() !== end.getFullYear() ? format(start, 'yyyy') : ''
+
+  return `${format(start, 'dd')}${MONTH_CODES[start.getMonth()]}${startYear}-${format(end, 'dd')}${MONTH_CODES[end.getMonth()]}${format(end, 'yyyy')}`
+}
+
+const calendarWeekOfMonth = (date: Date) => {
+  const weekStart = startOfWeek(date, { weekStartsOn: 1 })
+  const firstWeekStart = startOfWeek(new Date(date.getFullYear(), date.getMonth(), 1), { weekStartsOn: 1 })
+
+  return Math.floor((weekStart.getTime() - firstWeekStart.getTime()) / MS_PER_WEEK) + 1
+}
 
 export default function RekapJadwalSurveyorView() {
   const [weekDate, setWeekDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
@@ -73,6 +95,16 @@ export default function RekapJadwalSurveyorView() {
     surveyor: surveyorId || undefined,
   }
 
+  const buildExportFilename = () => {
+    const start = startOfWeek(toDate(weekDate), { weekStartsOn: 1 })
+    const end = addDays(start, 6)
+    const groupLabel = accountGroup ? ACCOUNT_GROUP_LABELS[accountGroup] : ''
+    const surveyorName = surveyorId ? surveyors.find((surveyor) => String(surveyor.id) === surveyorId)?.name : ''
+    const filterSuffix = surveyorName || groupLabel ? `_${safeFilePart(surveyorName || groupLabel)}` : ''
+
+    return `REKAP_JADWAL_${dateRangeLabel(start, end)}_M${calendarWeekOfMonth(start)}${filterSuffix}.xlsx`
+  }
+
   return (
     <div className="min-w-0 space-y-5 pb-8 sm:space-y-6">
       <header className="flex flex-col gap-4 pb-2 sm:flex-row sm:items-start sm:justify-between">
@@ -98,7 +130,7 @@ export default function RekapJadwalSurveyorView() {
           </button>
           <button
             type="button"
-            onClick={() => download(exportPath, exportParams, 'Rekap jadwal berhasil diunduh.')}
+            onClick={() => download(exportPath, exportParams, 'Rekap jadwal berhasil diunduh.', buildExportFilename())}
             disabled={isDownloading(exportPath)}
             className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[var(--primary-theme)] px-3 text-xs font-bold text-[var(--primary-theme-foreground)] transition-[filter,transform] hover:brightness-105 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-wait disabled:opacity-60"
           >

@@ -498,7 +498,7 @@ export default function MasterDataPage() {
   }
 
   return (
-    <div className="min-w-0 space-y-5 pb-8">
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-clip pb-8">
       <div className="flex flex-col gap-4 pt-2 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0">
           <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase text-[var(--primary-theme)]">
@@ -516,7 +516,7 @@ export default function MasterDataPage() {
           </p>
         </div>
 
-        <div className="flex w-full sm:w-auto gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           {activeTab === 'categories' && (
             <Button onClick={handleOpenCatCreate} size="sm" className="h-10 w-full rounded-lg bg-[var(--primary-theme)] px-4 font-semibold text-white shadow-none hover:brightness-110 sm:w-auto">
               <Plus className="h-4 w-4 mr-1.5" />
@@ -726,11 +726,11 @@ export default function MasterDataPage() {
           <CardContent className="p-0">
             <div className="overflow-x-auto scrollbar-thin">
               {/* Column header (mirrors the old table layout) */}
-              <div className="flex items-center bg-muted/20 border-b border-border/40 px-5 py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:bg-zinc-950/40 dark:border-zinc-900/50 min-w-[640px]">
-                <div className="w-[120px]">Urutan</div>
-                <div className="flex-1">Nama Tahap Pipeline</div>
-                <div className="w-[200px]">Warna Aksen</div>
-                <div className="w-[110px] text-right">Aksi</div>
+              <div className="flex items-center bg-muted/20 border-b border-border/40 px-3 py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:bg-zinc-950/40 dark:border-zinc-900/50 sm:px-5">
+                <div className="w-14 shrink-0 sm:w-[120px]">Urutan</div>
+                <div className="min-w-0 flex-1">Nama Tahap</div>
+                <div className="w-14 shrink-0 sm:w-[200px]">Warna</div>
+                <div className="w-[72px] shrink-0 text-right sm:w-[110px]">Aksi</div>
               </div>
 
               {statLoading ? (
@@ -747,7 +747,7 @@ export default function MasterDataPage() {
                   axis="y"
                   values={orderedStatuses}
                   onReorder={handleStatusReorder}
-                  className="list-none min-w-[640px]"
+                  className="list-none"
                 >
                   {orderedStatuses.map((st, index) => (
                     <SortableStatusRow
@@ -772,11 +772,11 @@ export default function MasterDataPage() {
         <Card className="glass-panel border border-border/50 shadow-md rounded-2xl dark:border-zinc-900/60 dark:shadow-none overflow-hidden">
           <CardContent className="p-0">
             <div className="overflow-x-auto scrollbar-thin">
-              <div className="flex min-w-[640px] items-center border-b border-border/40 bg-muted/20 px-5 py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:border-zinc-900/50 dark:bg-zinc-950/40">
-                <div className="w-[120px]">Urutan</div>
-                <div className="flex-1">Status Hasil</div>
-                <div className="w-[200px]">Warna</div>
-                <div className="w-[110px] text-right">Aksi</div>
+              <div className="flex items-center border-b border-border/40 bg-muted/20 px-3 py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:border-zinc-900/50 dark:bg-zinc-950/40 sm:px-5">
+                <div className="w-14 shrink-0 sm:w-[120px]">Urutan</div>
+                <div className="min-w-0 flex-1">Status Hasil</div>
+                <div className="w-14 shrink-0 sm:w-[200px]">Warna</div>
+                <div className="w-[72px] shrink-0 text-right sm:w-[110px]">Aksi</div>
               </div>
               {surveyStatusesLoading ? (
                 <div className="flex h-24 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin text-amber-500" /></div>
@@ -788,7 +788,7 @@ export default function MasterDataPage() {
                   axis="y"
                   values={orderedSurveyStatuses}
                   onReorder={handleSurveyStatusReorder}
-                  className="min-w-[640px] list-none"
+                  className="list-none"
                 >
                   {orderedSurveyStatuses.map((status, index) => (
                     <SortableStatusRow
@@ -842,14 +842,14 @@ export default function MasterDataPage() {
           <Card className="overflow-hidden rounded-xl border-0 bg-card/75 py-0 shadow-none ring-1 ring-border/60">
             <CardContent className="p-0">
               <div className="overflow-x-auto scrollbar-thin">
-                <Table className="min-w-[760px]">
+                <Table className="w-full">
                 <TableHeader className="border-b border-border/45 bg-muted/25">
                   <TableRow className="border-border/40 hover:bg-transparent">
-                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pl-5">Nama Lengkap</TableHead>
+                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pl-3 sm:pl-5">Nama Lengkap</TableHead>
                     <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Email</TableHead>
-                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5">Role</TableHead>
+                    <TableHead className="hidden text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 sm:table-cell">Role</TableHead>
                     <TableHead className="hidden py-3.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground lg:table-cell">Tautan Akun</TableHead>
-                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pr-5 w-[150px] text-right">Aksi</TableHead>
+                    <TableHead className="text-muted-foreground text-[10px] font-bold uppercase tracking-wider py-3.5 pr-3 w-[124px] text-right sm:pr-5 sm:w-[150px]">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -868,18 +868,18 @@ export default function MasterDataPage() {
                   ) : (
                     userResponse?.data?.map((usr) => (
                       <TableRow key={usr.id} className="border-border/35 odd:bg-background/10 transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_6%,transparent)] hover:shadow-[inset_2px_0_0_0_var(--primary-theme)]">
-                        <TableCell className="py-3 pl-5 text-xs font-semibold text-foreground/90">
+                        <TableCell className="py-3 pl-3 text-xs font-semibold text-foreground/90 sm:pl-5">
                           <div className="flex items-center gap-2">
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_11%,transparent)] text-[10px] font-bold text-[var(--primary-theme)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_25%,transparent)]">
                               {usr.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="truncate max-w-[130px]">{usr.name}</span>
+                            <span className="truncate max-w-[92px] sm:max-w-[160px]">{usr.name}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground py-3.5 font-semibold">
+                        <TableCell className="max-w-[150px] truncate text-xs text-muted-foreground py-3.5 font-semibold">
                           {usr.email}
                         </TableCell>
-                        <TableCell className="py-3.5">
+                        <TableCell className="hidden py-3.5 sm:table-cell">
                           <Badge
                             variant="outline"
                             className={cn(
@@ -907,7 +907,7 @@ export default function MasterDataPage() {
                         <TableCell className="hidden py-3 text-xs font-medium text-muted-foreground lg:table-cell">
                           {usr.account?.name || '-'}
                         </TableCell>
-                        <TableCell className="text-right pr-5 py-3.5">
+                        <TableCell className="text-right pr-3 py-3.5 sm:pr-5">
                           <div className="flex justify-end gap-1">
                             <Button
                               size="icon-xs"
@@ -1308,9 +1308,9 @@ function SortableStatusRow({
       dragElastic={0.05}
       dragMomentum={false}
       onDragEnd={onCommit}
-      className="flex items-center border-b border-border/40 bg-card px-5 py-3 transition-colors hover:bg-muted/30 dark:border-zinc-900/40 dark:bg-transparent dark:hover:bg-zinc-800/10"
+      className="flex items-center border-b border-border/40 bg-card px-3 py-3 transition-colors hover:bg-muted/30 dark:border-zinc-900/40 dark:bg-transparent dark:hover:bg-zinc-800/10 sm:px-5"
     >
-      <div className="w-[120px] flex items-center gap-2">
+      <div className="flex w-14 shrink-0 items-center gap-2 sm:w-[120px]">
         <button
           type="button"
           onPointerDown={(e) => controls.start(e)}
@@ -1322,21 +1322,21 @@ function SortableStatusRow({
         </button>
         <span className="text-xs font-bold text-muted-foreground/70">#{index + 1}</span>
       </div>
-      <div className="flex-1 pr-3 text-xs font-bold text-foreground/80">
+      <div className="min-w-0 flex-1 break-words pr-3 text-xs font-bold text-foreground/80">
         {status.name.toUpperCase()}
       </div>
-      <div className="w-[200px]">
+      <div className="w-14 shrink-0 sm:w-[200px]">
         <div className="flex items-center gap-2">
           <span
             className="h-3 w-3 shrink-0 rounded-full"
             style={{ backgroundColor: status.color || '#71717a' }}
           />
-          <span className="font-mono text-[10px] font-semibold text-muted-foreground/70">
+          <span className="hidden font-mono text-[10px] font-semibold text-muted-foreground/70 sm:inline">
             {status.color || '#71717a'}
           </span>
         </div>
       </div>
-      <div className="flex w-[110px] justify-end gap-1.5">
+      <div className="flex w-[72px] shrink-0 justify-end gap-1.5 sm:w-[110px]">
         <Button
           size="icon-xs"
           variant="ghost"

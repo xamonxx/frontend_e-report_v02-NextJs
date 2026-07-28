@@ -41,7 +41,7 @@ import {
   FileDown,
   FileImage,
   Download,
-  Sparkles,
+  Activity,
   Lightbulb,
   Target,
   Percent,
@@ -295,7 +295,7 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Filter panel */}
-      <div className="glass-panel max-w-full p-4 border border-border/60 shadow-lg rounded-2xl dark:border-zinc-800/60 dark:bg-zinc-900/40 sm:p-5">
+      <div className="max-w-full rounded-xl border border-border/60 bg-card p-4 shadow-sm dark:border-zinc-800/60 sm:p-5">
         <div className={cn(
           "grid gap-4 grid-cols-1 sm:grid-cols-2",
           isSuperAdmin
@@ -497,7 +497,7 @@ export default function AnalyticsPage() {
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Total Lead Terkumpul
                 </CardTitle>
-                <Users className="h-4 w-4 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]" />
+                <Users className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-between">
                 <div className="text-2xl font-black text-foreground">{analytics?.totalLeads || 0}</div>
@@ -522,7 +522,7 @@ export default function AnalyticsPage() {
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Survey Terjadwal
                 </CardTitle>
-                <Clock className="h-4 w-4 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]" />
+                <Clock className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-between">
                 <div className="text-2xl font-black text-foreground">{analytics?.totalSurveys || 0}</div>
@@ -544,7 +544,7 @@ export default function AnalyticsPage() {
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Closing Deal
                 </CardTitle>
-                <Target className="h-4 w-4 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]" />
+                <Target className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-between">
                 <div className="text-2xl font-black text-foreground">{analytics?.totalDeals || 0}</div>
@@ -566,7 +566,7 @@ export default function AnalyticsPage() {
                 <CardTitle className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
                   Aktivitas Pengisian
                 </CardTitle>
-                <TrendingUp className="h-4 w-4 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)]" />
+                <TrendingUp className="h-4 w-4 text-amber-500" />
               </CardHeader>
               <CardContent className="flex-1 flex flex-col justify-between">
                 <div className="text-2xl font-black text-foreground">{dataQuality?.active_days || 0} <span className="text-xs text-muted-foreground/70">Hari</span></div>
@@ -1003,7 +1003,7 @@ export default function AnalyticsPage() {
                       Catatan performa dan anomali sistem secara otomatis
                     </CardDescription>
                   </div>
-                  <Lightbulb className="h-4 w-4 text-amber-500 drop-shadow-[0_0_6px_rgba(245,158,11,0.4)] animate-pulse" />
+                  <Lightbulb className="h-4 w-4 text-amber-500" />
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -1011,7 +1011,7 @@ export default function AnalyticsPage() {
                       insights.map((insight: any, index: number) => (
                         <div key={index} className="flex gap-3 bg-muted/30 border border-border/60 rounded-xl p-3 items-start hover:border-border transition-colors duration-200 dark:bg-zinc-950/30 dark:border-zinc-900 dark:hover:border-zinc-800/80">
                           <span className="h-6 w-6 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
-                            <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                            <Activity className="h-3.5 w-3.5 text-amber-500" />
                           </span>
                           <div
                             className="text-xs text-foreground/80 leading-relaxed font-medium [&>mark]:bg-amber-500/15 [&>mark]:text-amber-600 dark:[&>mark]:text-amber-400 [&>mark]:px-1 [&>mark]:py-0.5 [&>mark]:rounded [&>mark]:font-semibold"
@@ -1051,14 +1051,14 @@ export default function AnalyticsPage() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
+                      <table className="w-full table-fixed text-left border-collapse">
                         <thead>
                           <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 dark:border-zinc-900 dark:bg-zinc-950/20">
-                            <th className="py-3 px-5">Akun</th>
-                            <th className="py-3 px-2 text-center">Total Lead</th>
-                            <th className="py-3 px-2 text-center">Survey</th>
-                            <th className="py-3 px-2 text-center">Closing Deal</th>
-                            <th className="py-3 px-5 text-right">Skor Performa</th>
+                            <th className="py-3 pl-3 pr-1 sm:px-5">Akun</th>
+                            <th className="w-12 py-3 px-1 text-center sm:w-auto sm:px-2">Lead</th>
+                            <th className="w-14 py-3 px-1 text-center sm:w-auto sm:px-2">Survey</th>
+                            <th className="w-14 py-3 px-1 text-center sm:w-auto sm:px-2">Deal</th>
+                            <th className="w-12 py-3 pl-1 pr-3 text-right sm:w-auto sm:px-5">Skor</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/30 text-xs dark:divide-zinc-900/30">
@@ -1066,19 +1066,27 @@ export default function AnalyticsPage() {
                             const originalIndex = accountRanking.findIndex((x: any) => x.name === ranking.name)
                             return (
                               <tr key={`${ranking.name}-${index}`} className="hover:bg-muted/30 transition-colors group dark:hover:bg-zinc-900/20">
-                                <td className="py-3 px-5 font-bold text-foreground/80 group-hover:text-foreground flex items-center gap-2">
-                                  <span className={cn(
-                                    "h-4 w-4 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0 border",
-                                    originalIndex === 0 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" : "bg-muted text-muted-foreground border-border dark:bg-zinc-900 dark:border-zinc-800"
-                                  )}>
-                                    {originalIndex + 1}
-                                  </span>
-                                  {ranking.name}
+                                <td className="py-3 pl-3 pr-1 font-bold text-foreground/80 group-hover:text-foreground sm:px-5">
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className={cn(
+                                      "h-4 w-4 rounded-full text-[9px] font-bold flex items-center justify-center shrink-0 border",
+                                      originalIndex === 0 ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" : "bg-muted text-muted-foreground border-border dark:bg-zinc-900 dark:border-zinc-800"
+                                    )}>
+                                      {originalIndex + 1}
+                                    </span>
+                                    <span className="min-w-0 break-words leading-tight">{ranking.name}</span>
+                                  </div>
                                 </td>
-                                <td className="py-3 px-2 text-center text-muted-foreground font-semibold">{ranking.total}</td>
-                                <td className="py-3 px-2 text-center text-muted-foreground">{ranking.surveys} <span className="text-[9px] font-semibold text-foreground/60">({ranking.rate}%)</span></td>
-                                <td className="py-3 px-2 text-center text-muted-foreground">{ranking.deals} <span className="text-[9px] font-semibold text-foreground/60">({ranking.deal_rate}%)</span></td>
-                                <td className="py-3 px-5 text-right font-black text-amber-600 dark:text-amber-500 drop-shadow-[0_0_8px_rgba(245,158,11,0.25)]">
+                                <td className="py-3 px-1 text-center text-muted-foreground font-semibold sm:px-2">{ranking.total}</td>
+                                <td className="py-3 px-1 text-center text-muted-foreground sm:px-2">
+                                  <span className="font-semibold">{ranking.surveys}</span>
+                                  <span className="block text-[9px] font-semibold text-foreground/60">({ranking.rate}%)</span>
+                                </td>
+                                <td className="py-3 px-1 text-center text-muted-foreground sm:px-2">
+                                  <span className="font-semibold">{ranking.deals}</span>
+                                  <span className="block text-[9px] font-semibold text-foreground/60">({ranking.deal_rate}%)</span>
+                                </td>
+                                <td className="py-3 pl-1 pr-3 text-right font-black text-amber-600 dark:text-amber-500 sm:px-5">
                                   {ranking.score}
                                 </td>
                               </tr>
@@ -1086,7 +1094,7 @@ export default function AnalyticsPage() {
                           })}
                           {filteredBranchRanking.length === 0 && (
                             <tr>
-                              <td colSpan={4} className="py-10 text-center text-muted-foreground/50">Belum ada peringkat data</td>
+                              <td colSpan={5} className="py-10 text-center text-muted-foreground/50">Belum ada peringkat data</td>
                             </tr>
                           )}
                         </tbody>
@@ -1161,25 +1169,27 @@ export default function AnalyticsPage() {
                   </CardHeader>
                   <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
+                      <table className="w-full table-fixed text-left border-collapse">
                         <thead>
                           <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 dark:border-zinc-900 dark:bg-zinc-950/20">
-                            <th className="py-3 px-5">Nama Admin</th>
-                            <th className="py-3 px-2">Akun</th>
-                            <th className="py-3 px-5 text-right">Lead Diinput</th>
+                            <th className="w-[38%] py-3 pl-3 pr-1 sm:w-auto sm:px-5">Nama Admin</th>
+                            <th className="py-3 px-1 sm:px-2">Akun</th>
+                            <th className="w-14 py-3 pl-1 pr-3 text-right sm:w-auto sm:px-5">Lead</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-border/30 text-xs dark:divide-zinc-900/30">
                           {paginatedAdminRanking.map((ranking: any, index: number) => (
                             <tr key={`${ranking.name}-${index}`} className="hover:bg-muted/30 transition-colors group dark:hover:bg-zinc-900/20">
-                              <td className="py-3 px-5 font-bold text-foreground/80 group-hover:text-foreground flex items-center gap-2">
-                                <span className="h-5 w-5 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center shrink-0 border border-border dark:bg-zinc-900 dark:border-zinc-800">
-                                  {ranking.name.slice(0, 2).toUpperCase()}
-                                </span>
-                                {ranking.name}
+                              <td className="py-3 pl-3 pr-1 font-bold text-foreground/80 group-hover:text-foreground sm:px-5">
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span className="h-5 w-5 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center shrink-0 border border-border dark:bg-zinc-900 dark:border-zinc-800">
+                                    {ranking.name.slice(0, 2).toUpperCase()}
+                                  </span>
+                                  <span className="min-w-0 break-words leading-tight">{ranking.name}</span>
+                                </div>
                               </td>
-                              <td className="py-3 px-2 text-muted-foreground/70">{ranking.account || '-'}</td>
-                              <td className="py-3 px-5 text-right font-bold text-foreground/80">{ranking.total} lead</td>
+                              <td className="py-3 px-1 text-muted-foreground/70 break-words leading-tight sm:px-2">{ranking.account || '-'}</td>
+                              <td className="py-3 pl-1 pr-3 text-right font-bold text-foreground/80 sm:px-5">{ranking.total} <span className="text-[9px] text-muted-foreground">lead</span></td>
                             </tr>
                           ))}
                           {filteredAdminRanking.length === 0 && (
@@ -1261,48 +1271,51 @@ export default function AnalyticsPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                    <table className="w-full table-fixed text-left border-collapse">
                       <thead>
                         <tr className="border-b border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/30 dark:border-zinc-900 dark:bg-zinc-950/20">
-                          <th className="py-3 px-5">Surveyor</th>
-                          <th className="py-3 px-2 text-right">Selesai</th>
-                          <th className="py-3 px-2 text-right">Durasi Rata²</th>
-                          <th className="py-3 px-2 text-right">Tepat Waktu</th>
-                          <th className="py-3 px-5 text-right">Deal-rate</th>
+                          <th className="py-3 pl-3 pr-1 sm:px-5">Surveyor</th>
+                          <th className="w-12 py-3 px-1 text-right sm:w-auto sm:px-2">Selesai</th>
+                          <th className="w-12 py-3 px-1 text-right sm:w-auto sm:px-2">Durasi</th>
+                          <th className="w-12 py-3 px-1 text-right sm:w-auto sm:px-2">Tepat</th>
+                          <th className="w-14 py-3 pl-1 pr-3 text-right sm:w-auto sm:px-5">Deal</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-border/30 text-xs dark:divide-zinc-900/30">
                         {surveyorLeaderboard.map((r: any, index: number) => (
                           <tr key={r.surveyor_id} className="hover:bg-muted/30 transition-colors group dark:hover:bg-zinc-900/20">
-                            <td className="py-3 px-5 font-bold text-foreground/80 group-hover:text-foreground">
-                              <div className="flex items-center gap-2">
+                            <td className="py-3 pl-3 pr-1 font-bold text-foreground/80 group-hover:text-foreground sm:px-5">
+                              <div className="flex min-w-0 items-center gap-2">
                                 <span className={cn(
                                   'h-5 w-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0',
                                   index === 0 ? 'bg-amber-500 text-zinc-950' : 'bg-muted text-muted-foreground border border-border dark:bg-zinc-900 dark:border-zinc-800'
                                 )}>
                                   {index + 1}
                                 </span>
-                                {r.name}
+                                <span className="min-w-0 break-words leading-tight">{r.name}</span>
                               </div>
                             </td>
-                            <td className="py-3 px-2 text-right font-bold text-foreground/80">{r.completed}</td>
-                            <td className="py-3 px-2 text-right text-muted-foreground/80">
+                            <td className="py-3 px-1 text-right font-bold text-foreground/80 sm:px-2">{r.completed}</td>
+                            <td className="py-3 px-1 text-right text-muted-foreground/80 whitespace-nowrap sm:px-2">
                               {r.avg_duration_min != null ? `${Math.floor(r.avg_duration_min / 60)}j ${r.avg_duration_min % 60}m` : '-'}
                             </td>
-                            <td className="py-3 px-2 text-right">
+                            <td className="py-3 px-1 text-right sm:px-2">
                               {r.on_time_rate != null ? (
                                 <span className={cn('font-semibold', r.on_time_rate >= 80 ? 'text-emerald-500' : r.on_time_rate >= 50 ? 'text-amber-500' : 'text-rose-500')}>
                                   {r.on_time_rate}%
                                 </span>
                               ) : <span className="text-muted-foreground/50">-</span>}
                             </td>
-                            <td className="py-3 px-5 text-right">
+                            <td className="py-3 pl-1 pr-3 text-right sm:px-5">
                               <div className="flex items-center justify-end gap-2">
-                                <span className="text-[10px] text-muted-foreground/70">{r.deals} deal</span>
-                                <div className="h-1.5 w-16 rounded-full bg-muted overflow-hidden dark:bg-zinc-800">
+                                <span className="hidden text-[10px] text-muted-foreground/70 sm:inline">{r.deals} deal</span>
+                                <div className="hidden h-1.5 w-16 overflow-hidden rounded-full bg-muted dark:bg-zinc-800 sm:block">
                                   <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(100, r.deal_rate)}%` }} />
                                 </div>
-                                <span className="font-bold text-emerald-500 w-10 text-right">{r.deal_rate}%</span>
+                                <span className="font-bold text-emerald-500 sm:w-10 sm:text-right">
+                                  {r.deal_rate}%
+                                  <span className="ml-1 text-[9px] font-semibold text-muted-foreground/70 sm:hidden">({r.deals})</span>
+                                </span>
                               </div>
                             </td>
                           </tr>

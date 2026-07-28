@@ -18,7 +18,7 @@ import { cn, formatApiError, formatPhoneInput, isPhoneValid, normalizeRegionName
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Loader2, Tag, Calendar as CalendarIcon } from 'lucide-react'
+import { ArrowLeft, Loader2, Plus, Tag, Calendar as CalendarIcon, X } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { useAuthStore } from '@/lib/stores/authStore'
@@ -51,6 +51,8 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
 
   const [clientName, setClientName] = useState('')
   const [phone, setPhone] = useState('')
+  const [emergencyPhone, setEmergencyPhone] = useState('')
+  const [showEmergencyPhone, setShowEmergencyPhone] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<number | undefined>(undefined)
   const [selectedStatus, setSelectedStatus] = useState<number | undefined>(undefined)
   const [selectedNeeds, setSelectedNeeds] = useState<number[]>([])
@@ -153,6 +155,8 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
     if (consultation) {
       setClientName(consultation.client_name || '')
       setPhone(formatPhoneInput(consultation.phone || ''))
+      setEmergencyPhone(formatPhoneInput(consultation.emergency_phone || ''))
+      setShowEmergencyPhone(Boolean(consultation.emergency_phone))
       setSelectedAccount(consultation.account_id || undefined)
       setSelectedStatus(consultation.status_category_id || undefined)
       setConsultationDate(consultation.consultation_date ? consultation.consultation_date.split('T')[0] : '')
@@ -211,10 +215,15 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
       toast.error('Nomor telepon / WhatsApp tidak valid')
       return
     }
+    if (emergencyPhone.trim() !== '' && !isPhoneValid(emergencyPhone)) {
+      toast.error('Nomor telepon darurat tidak valid')
+      return
+    }
 
     const payload = {
       client_name: clientName.trim() || 'Tidak ada nama',
       phone: phone || undefined,
+      emergency_phone: emergencyPhone || undefined,
       account_id: selectedAccount,
       status_category_id: selectedStatus,
       needs_category_ids: selectedNeeds,
@@ -306,26 +315,78 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
 
                   <div className="space-y-2">
                     <Label htmlFor="client-phone" className="text-xs font-semibold text-muted-foreground">No. Telepon / WhatsApp</Label>
-                    <Input
-                      id="client-phone"
-                      placeholder="+62 812-3456-7890"
-                      value={phone}
-                      onChange={(e) => setPhone((current) => formatPhoneInput(e.target.value, current))}
-                      inputMode="tel"
-                      aria-invalid={phone.trim() !== '' && !isPhoneValid(phone)}
-                      className={cn(
-                        "bg-background/60 dark:bg-zinc-950/60",
-                        phone.trim() !== '' && !isPhoneValid(phone)
-                          ? "border-red-500/60 focus-visible:ring-red-500/40 dark:border-red-500/50"
-                          : "border-border focus-visible:ring-amber-500/50 dark:border-zinc-800"
+                    <div className="flex gap-2">
+                      <Input
+                        id="client-phone"
+                        placeholder="+62 812-3456-7890"
+                        value={phone}
+                        onChange={(e) => setPhone((current) => formatPhoneInput(e.target.value, current))}
+                        inputMode="tel"
+                        aria-invalid={phone.trim() !== '' && !isPhoneValid(phone)}
+                        className={cn(
+                          "bg-background/60 dark:bg-zinc-950/60",
+                          phone.trim() !== '' && !isPhoneValid(phone)
+                            ? "border-red-500/60 focus-visible:ring-red-500/40 dark:border-red-500/50"
+                            : "border-border focus-visible:ring-amber-500/50 dark:border-zinc-800"
+                        )}
+                      />
+                      {!showEmergencyPhone && (
+                        <button
+                          type="button"
+                          onClick={() => setShowEmergencyPhone(true)}
+                          title="Tambah nomor telepon darurat"
+                          aria-label="Tambah nomor telepon darurat"
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-[color-mix(in_srgb,var(--primary-theme)_35%,var(--border))] bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] text-[var(--primary-theme)] transition-[background-color,border-color,transform] hover:border-[color-mix(in_srgb,var(--primary-theme)_58%,var(--border))] hover:bg-[color-mix(in_srgb,var(--primary-theme)_13%,var(--card))] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_32%,transparent)]"
+                        >
+                          <Plus className="size-4" />
+                        </button>
                       )}
-                    />
+                    </div>
                     {phone.trim() !== '' && !isPhoneValid(phone) && (
                       <p className="text-[11px] font-medium text-red-500 dark:text-red-400">
                         Nomor tidak valid. Gunakan format lokal (08xx) atau internasional (+62 / +1 …).
                       </p>
                     )}
                   </div>
+
+                  {showEmergencyPhone && (
+                    <div className="space-y-2 sm:col-start-2">
+                      <Label htmlFor="client-emergency-phone" className="text-xs font-semibold text-muted-foreground">No. Telepon Darurat <span className="font-normal text-muted-foreground/60">(Opsional)</span></Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="client-emergency-phone"
+                          placeholder="+62 812-0000-0000"
+                          value={emergencyPhone}
+                          onChange={(e) => setEmergencyPhone((current) => formatPhoneInput(e.target.value, current))}
+                          inputMode="tel"
+                          aria-invalid={emergencyPhone.trim() !== '' && !isPhoneValid(emergencyPhone)}
+                          className={cn(
+                            "bg-background/60 dark:bg-zinc-950/60",
+                            emergencyPhone.trim() !== '' && !isPhoneValid(emergencyPhone)
+                              ? "border-red-500/60 focus-visible:ring-red-500/40 dark:border-red-500/50"
+                              : "border-border focus-visible:ring-amber-500/50 dark:border-zinc-800"
+                          )}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEmergencyPhone('')
+                            setShowEmergencyPhone(false)
+                          }}
+                          title="Tutup nomor telepon darurat"
+                          aria-label="Tutup nomor telepon darurat"
+                          className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-red-500/25 bg-red-500/10 text-red-400 transition-[background-color,border-color,transform] hover:border-red-500/45 hover:bg-red-500/15 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/30"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                      {emergencyPhone.trim() !== '' && !isPhoneValid(emergencyPhone) && (
+                        <p className="text-[11px] font-medium text-red-500 dark:text-red-400">
+                          Nomor darurat tidak valid. Field ini boleh dikosongkan.
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                    <div className="space-y-2 flex flex-col">
                     <Label htmlFor="cons-date" className="text-xs font-semibold text-muted-foreground">Tanggal Konsultasi</Label>

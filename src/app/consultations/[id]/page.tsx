@@ -218,6 +218,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
   }
 
   const whatsappNumber = consultation.phone ? rawPhoneDigits(consultation.phone) : ''
+  const emergencyWhatsappNumber = consultation.emergency_phone ? rawPhoneDigits(consultation.emergency_phone) : ''
 
   return (
     <div className="consultation-page mx-auto w-full max-w-[1520px] space-y-6 pb-8">
@@ -313,6 +314,27 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                       </a>
                     ) : (
                       <p className="text-xs text-foreground/80 font-medium">-</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* No. Telepon Darurat */}
+                <div className="flex items-start gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">No. Telepon Darurat</p>
+                    {consultation.emergency_phone ? (
+                      <a
+                        href={`https://wa.me/${emergencyWhatsappNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs text-amber-500 font-semibold hover:text-amber-400 transition-colors dark:text-amber-400 dark:hover:text-amber-300"
+                      >
+                        <MessageCircle className="h-3.5 w-3.5" />
+                        {consultation.emergency_phone}
+                      </a>
+                    ) : (
+                      <p className="text-xs text-foreground/80 font-medium">Tidak dicantumkan</p>
                     )}
                   </div>
                 </div>
@@ -443,15 +465,16 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
             </CardContent>
           </Card>
 
+        </div>
+
+        {/* Timeline Notes log & Reminder Schedule */}
+        <div className="space-y-6">
           <SurveyRequestCard
             consultation={consultation}
             isAtSurveyStage={isAtSurveyStage}
             autoOpenSignal={surveyPromptSignal}
           />
-        </div>
 
-        {/* Timeline Notes log & Reminder Schedule */}
-        <div className="space-y-6">
           {/* Timeline Notes */}
           <Card className="consultation-card">
             <CardHeader>

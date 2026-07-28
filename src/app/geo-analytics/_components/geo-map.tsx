@@ -26,6 +26,12 @@ type Props = {
 const ZOOM_LEVEL_SPLIT = 6
 const SCALE = ['#155e75', '#0e7490', '#0891b2', '#06b6d4', '#22d3ee']
 const EMPTY = '#94a3b8'
+const INDONESIA_BOUNDS = {
+  west: 94,
+  east: 142,
+  south: -12,
+  north: 7,
+} as const
 
 // Basemap raster OSM (gratis, tanpa API key). Bila offline, layer polygon tetap.
 const OSM_STYLE: StyleSpecification = {
@@ -47,6 +53,19 @@ function markerColor(ratio: number): string {
   return SCALE[Math.min(SCALE.length - 1, Math.floor(ratio * SCALE.length))]
 }
 
+function markerSize(ratio: number): number {
+  return Math.round(24 + Math.min(1, ratio) * 18)
+}
+
+function isInsideIndonesia([longitude, latitude]: [number, number]): boolean {
+  return Number.isFinite(longitude)
+    && Number.isFinite(latitude)
+    && longitude >= INDONESIA_BOUNDS.west
+    && longitude <= INDONESIA_BOUNDS.east
+    && latitude >= INDONESIA_BOUNDS.south
+    && latitude <= INDONESIA_BOUNDS.north
+}
+
 /**
  * Elemen pin bernomor: lingkaran berwarna berisi angka total.
  * PENTING: MapLibre memasang `transform: translate(...)` pada elemen ROOT marker
@@ -55,9 +74,11 @@ function markerColor(ratio: number): string {
  * pojok. Root cuma jadi anchor posisi; visual + interaksi ada di `inner`.
  */
 function buildMarkerEl(total: number, ratio: number, name: string): HTMLElement {
-  const size = Math.round(28 + Math.min(1, ratio) * 22) // 28–50px
+  const size = markerSize(ratio)
   const el = document.createElement('div')
   el.className = 'geo-pin'
+  el.style.width = `${size}px`
+  el.style.height = `${size}px`
 
   const inner = document.createElement('div')
   inner.style.cssText = `width:${size}px;height:${size}px;display:grid;place-items:center;border-radius:9999px;`
@@ -92,6 +113,17 @@ function buildMarkerEl(total: number, ratio: number, name: string): HTMLElement 
   inner.onmouseleave = () => { inner.style.transform = 'scale(1)'; el.style.zIndex = ''; tip.style.opacity = '0' }
   return el
 }
+
+type MarkerRow = {
+  id: string
+  name: string
+  total: number
+  lngLat: [number, number]
+  provId: string | null
+  provName: string
+  ratio: number
+}
+type RawMarkerRow = Omit<MarkerRow, 'lngLat' | 'ratio'> & { lngLat?: [number, number] }
 
 export default function GeoMap({ kabkota, provinceLines, provinces, cities, selectedProvince, onSelectProvince }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -237,6 +269,9 @@ export default function GeoMap({ kabkota, provinceLines, provinces, cities, sele
     const { cities, selectedProvince } = dataRef.current
 
     const max = cities.reduce((m, c) => Math.max(m, c.total), 0) || 1
+    for (const f of kabkota.features) {
+      map.setFeatureState({ source: 'kabkota', id: f.id }, { total: 0, ratio: 0 })
+    }
     for (const c of cities) {
       map.setFeatureState({ source: 'kabkota', id: c.region_id }, { total: c.total, ratio: c.total / max })
     }
@@ -248,13 +283,13 @@ export default function GeoMap({ kabkota, provinceLines, provinces, cities, sele
   function renderMarkers() {
     const map = mapRef.current
     if (!map || !readyRef.current) return
-    const { provinces, cities, selectedProvince } = dataRef.current
+    const { provinces, cities } = dataRef.current
     const { provCentroid: pc, kabCentroid: kc, kabProvince: kp } = geoRef.current
     markersRef.current.forEach((m) => m.remove())
     markersRef.current = []
 
     const perKab = map.getZoom() >= ZOOM_LEVEL_SPLIT
-    const rows: { id: string; name: string; total: number; lngLat?: [number, number]; provId: string | null; provName: string }[] =
+    const rawRows: RawMarkerRow[] =
       perKab
         ? cities.filter((c) => c.total > 0).map((c) => {
             const p = kp.get(c.region_id)
@@ -262,14 +297,20 @@ export default function GeoMap({ kabkota, provinceLines, provinces, cities, sele
           })
         : provinces.filter((p) => p.total > 0).map((p) => ({ id: p.region_id, name: p.name, total: p.total, lngLat: pc.get(p.region_id), provId: p.region_id, provName: p.name }))
 
-    const max = rows.reduce((m, r) => Math.max(m, r.total), 0) || 1
+    const drawableRows = rawRows.filter(
+      (row): row is Omit<RawMarkerRow, 'lngLat'> & { lngLat: [number, number] } =>
+        Boolean(row.lngLat && isInsideIndonesia(row.lngLat))
+    )
+    const max = drawableRows.reduce((m, r) => Math.max(m, r.total), 0) || 1
+    const rows = drawableRows
+      .map((row) => ({ ...row, ratio: row.total / max }))
+      .sort((a, b) => b.total - a.total)
 
     for (const r of rows) {
-      if (!r.lngLat) continue
-      const el = buildMarkerEl(r.total, r.total / max, r.name)
+      const el = buildMarkerEl(r.total, r.ratio, r.name)
       el.onclick = () => {
         onSelectRef.current(dataRef.current.selectedProvince === r.provId ? null : r.provId, r.provName)
-        map.flyTo({ center: r.lngLat!, zoom: Math.max(map.getZoom(), 6.5), duration: 700 })
+        map.flyTo({ center: r.lngLat, zoom: Math.max(map.getZoom(), 6.5), duration: 700 })
       }
       markersRef.current.push(new maplibregl.Marker({ element: el, anchor: 'center' }).setLngLat(r.lngLat).addTo(map))
     }

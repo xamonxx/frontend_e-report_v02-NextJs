@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { toast } from 'sonner'
 import { format, parseISO } from 'date-fns'
 import { id as idLocale } from 'date-fns/locale'
-import { CalendarClock, Calendar as CalendarIcon, ClipboardCheck, Loader2, MapPinned, Send, UserRoundCheck } from 'lucide-react'
+import { CalendarClock, Calendar as CalendarIcon, ClipboardCheck, Clock, Loader2, MapPinned, Pencil, Save, Send, X, UserRoundCheck } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TimeSearchSelect } from '@/components/ui/time-search-select'
 import { Textarea } from '@/components/ui/textarea'
-import { useRequestSurvey } from '@/lib/hooks/useSurveys'
+import { useRequestSurvey, useUpdateSurveyMaps } from '@/lib/hooks/useSurveys'
 import { cn, formatApiError } from '@/lib/utils'
 import type { Consultation, SurveyState } from '@/types'
 
@@ -38,6 +38,18 @@ function formatSchedule(value?: string | null): string {
   return new Date(value).toLocaleString('id-ID', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   })
+}
+
+function SurveyFact({ icon, label, value }: { icon: ReactNode; label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-start gap-2 rounded-xl border border-border/50 bg-muted/35 p-3 dark:border-zinc-800/60 dark:bg-zinc-950/25">
+      <span className="mt-0.5 shrink-0 text-muted-foreground/70">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">{label}</p>
+        <div className="mt-0.5 break-words text-xs font-semibold text-foreground/85">{value}</div>
+      </div>
+    </div>
+  )
 }
 
 /**
@@ -86,10 +98,13 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
   const survey = consultation.active_survey ?? null
   const [open, setOpen] = useState(false)
   const requestSurvey = useRequestSurvey(consultation.id)
+  const updateSurveyMaps = useUpdateSurveyMaps(survey?.id ?? 0, consultation.id)
 
   const [date, setDate] = useState(todayIso())
   const [time, setTime] = useState('')
   const [mapsUrl, setMapsUrl] = useState('')
+  const [mapsEditOpen, setMapsEditOpen] = useState(false)
+  const [mapsEditUrl, setMapsEditUrl] = useState('')
   const [notes, setNotes] = useState('')
 
   // Buka otomatis hanya ketika induk memberi sinyal DAN lead memang belum
@@ -99,6 +114,10 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
       setOpen(true)
     }
   }, [autoOpenSignal, isAtSurveyStage, survey])
+
+  useEffect(() => {
+    setMapsEditUrl(survey?.google_maps_url ?? '')
+  }, [survey?.google_maps_url])
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -129,6 +148,34 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
   }
 
   const openManually = () => setOpen(true)
+  const openMapsEditor = () => {
+    setMapsEditUrl(survey?.google_maps_url ?? '')
+    setMapsEditOpen(true)
+  }
+  const cancelMapsEditor = () => {
+    setMapsEditUrl(survey?.google_maps_url ?? '')
+    setMapsEditOpen(false)
+  }
+  const submitMapsUpdate = () => {
+    if (!survey) return
+    updateSurveyMaps.mutate(
+      { google_maps_url: normalizeMapsUrl(mapsEditUrl) || null },
+      {
+        onSuccess: () => {
+          toast.success('Link Google Maps survey diperbarui')
+          setMapsEditOpen(false)
+        },
+        onError: (err) => toast.error(formatApiError(err, 'Gagal memperbarui link Maps')),
+      },
+    )
+  }
+  const surveyStatusText = survey
+    ? [
+        STATE_LABEL[survey.state]?.text ?? survey.state,
+        survey.surveyor?.name ? `(${survey.surveyor.name})` : null,
+        survey.state === 'completed' && survey.result_status?.name ? survey.result_status.name : null,
+      ].filter(Boolean).join(' - ')
+    : ''
 
   return (
     <>
@@ -146,44 +193,156 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
         <CardContent className="space-y-3">
           {survey ? (
             <>
-              <p className={cn('text-sm font-semibold', STATE_LABEL[survey.state]?.className)}>
-                {STATE_LABEL[survey.state]?.text ?? survey.state}
-              </p>
-              <div className="grid gap-2 text-xs sm:grid-cols-2">
-                <div className="flex items-start gap-2">
-                  <UserRoundCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Surveyor</p>
-                    <p className="font-medium text-foreground/80">{survey.surveyor?.name ?? 'Belum ditentukan'}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <CalendarClock className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground/70" />
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Jadwal</p>
-                    <p className="font-medium text-foreground/80">{formatSchedule(survey.scheduled_at)}</p>
-                  </div>
-                </div>
+              <div
+                className={cn(
+                  'inline-flex max-w-full items-center rounded-full border px-3 py-1 text-xs font-bold',
+                  STATE_LABEL[survey.state]?.className,
+                )}
+                style={{
+                  borderColor: survey.result_status?.color ? `${survey.result_status.color}45` : undefined,
+                  backgroundColor: survey.result_status?.color ? `${survey.result_status.color}12` : undefined,
+                }}
+              >
+                <span className="truncate">{surveyStatusText}</span>
               </div>
-              {survey.google_maps_url && (
-                <a
-                  href={survey.google_maps_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 underline-offset-2 hover:underline dark:text-amber-400"
-                >
-                  <MapPinned className="h-3.5 w-3.5" />
-                  Buka lokasi di Google Maps
-                </a>
-              )}
-              {survey.result_status && (
-                <div className="flex items-start gap-2 border-t border-border/50 pt-2 text-xs dark:border-zinc-800">
-                  <ClipboardCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Hasil</p>
-                    <p className="font-medium text-foreground/80">{survey.result_status.name}</p>
+
+              <div className="grid gap-2 text-xs sm:grid-cols-2">
+                <SurveyFact
+                  icon={<UserRoundCheck className="h-4 w-4" />}
+                  label="Surveyor"
+                  value={survey.surveyor?.name ?? 'Belum ditentukan'}
+                />
+                <SurveyFact
+                  icon={<CalendarClock className="h-4 w-4" />}
+                  label="Jadwal"
+                  value={formatSchedule(survey.scheduled_at)}
+                />
+                <SurveyFact
+                  icon={<Clock className="h-4 w-4" />}
+                  label="Mulai"
+                  value={formatSchedule(survey.actual_start_at)}
+                />
+                <SurveyFact
+                  icon={<ClipboardCheck className="h-4 w-4" />}
+                  label="Selesai"
+                  value={formatSchedule(survey.actual_finish_at)}
+                />
+              </div>
+              <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/[0.06] p-3.5 text-xs dark:border-cyan-400/15 dark:bg-cyan-400/[0.055]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Link Google Maps</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                      {survey.google_maps_url
+                        ? 'Lokasi siap dibuka oleh tim survey.'
+                        : 'Tambahkan link Maps agar surveyor tidak salah alamat.'}
+                    </p>
                   </div>
+                  {!mapsEditOpen && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={openMapsEditor}
+                      className="h-10 w-full shrink-0 justify-center rounded-xl bg-cyan-500 px-4 text-[12px] font-bold text-slate-950 shadow-[0_12px_28px_-18px_rgba(6,182,212,0.95)] hover:bg-cyan-400 sm:w-auto"
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {survey.google_maps_url ? 'Ubah Link' : 'Isi Link Maps'}
+                    </Button>
+                  )}
                 </div>
+
+                {mapsEditOpen ? (
+                  <div className="mt-3 space-y-2.5">
+                    <Input
+                      type="url"
+                      inputMode="url"
+                      value={mapsEditUrl}
+                      onChange={(event) => setMapsEditUrl(event.target.value)}
+                      placeholder="https://maps.app.goo.gl/..."
+                      className="h-11 rounded-xl border-cyan-500/25 bg-slate-950/55 text-xs focus-visible:ring-cyan-500/25"
+                    />
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={cancelMapsEditor}
+                        disabled={updateSurveyMaps.isPending}
+                        className="h-9 rounded-xl border-slate-700/80 bg-slate-950/40 px-3 text-xs"
+                      >
+                        <X className="mr-1.5 h-3.5 w-3.5" />
+                        Batal
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={submitMapsUpdate}
+                        disabled={updateSurveyMaps.isPending}
+                        className="h-9 rounded-xl bg-cyan-500 px-3 text-xs font-bold text-slate-950 hover:bg-cyan-400"
+                      >
+                        {updateSurveyMaps.isPending ? (
+                          <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Save className="mr-1.5 h-3.5 w-3.5" />
+                        )}
+                        Simpan
+                      </Button>
+                    </div>
+                    <p className="text-[10px] leading-relaxed text-muted-foreground/70">
+                      Boleh dikosongkan jika link Maps belum ada atau perlu dihapus dulu.
+                    </p>
+                  </div>
+                ) : survey.google_maps_url ? (
+                  <a
+                    href={survey.google_maps_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1.5 inline-flex max-w-full items-center gap-1.5 font-semibold text-amber-600 underline-offset-2 hover:underline dark:text-amber-400"
+                  >
+                    <MapPinned className="h-3.5 w-3.5 shrink-0" />
+                    <span className="truncate">Buka lokasi di Google Maps</span>
+                  </a>
+                ) : (
+                  <p className="mt-3 rounded-lg border border-dashed border-cyan-500/25 bg-slate-950/25 px-3 py-2 text-[11px] font-medium text-muted-foreground">
+                    Belum ada link Maps.
+                  </p>
+                )}
+              </div>
+              {survey.result_status && (
+                <div className="rounded-xl border border-border/50 bg-muted/35 p-3 text-xs dark:border-zinc-800/60 dark:bg-zinc-950/25">
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Hasil Survey</p>
+                  <p className="mt-1 font-semibold text-foreground/85">{survey.result_status.name}</p>
+                  {(survey.result_notes || survey.recommendations) && (
+                    <div className="mt-2 space-y-2 border-t border-border/40 pt-2 dark:border-zinc-800/50">
+                      {survey.result_notes && (
+                        <p className="break-words leading-relaxed text-muted-foreground">
+                          {survey.result_notes}
+                        </p>
+                      )}
+                      {survey.recommendations && (
+                        <p className="break-words leading-relaxed text-muted-foreground">
+                          Rekomendasi: {survey.recommendations}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+              {survey.location_notes && (
+                <div className="rounded-xl border border-border/50 bg-muted/35 p-3 text-xs dark:border-zinc-800/60 dark:bg-zinc-950/25">
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Catatan Lokasi</p>
+                  <p className="mt-1 break-words leading-relaxed text-foreground/80">
+                    {survey.location_notes}
+                  </p>
+                </div>
+              )}
+              {survey.admin_notes && (
+                <div className="rounded-xl border border-border/50 bg-muted/35 p-3 text-xs dark:border-zinc-800/60 dark:bg-zinc-950/25">
+                  <p className="text-[10px] font-semibold uppercase text-muted-foreground/70">Catatan Admin</p>
+                  <p className="mt-1 break-words leading-relaxed text-foreground/80">
+                    {survey.admin_notes}
+                  </p>
+                  </div>
               )}
             </>
           ) : isAtSurveyStage ? (

@@ -26,9 +26,11 @@ import {
 import { useSurveys, useSurveyors } from "@/lib/hooks/useSurveys";
 import { useAccounts } from "@/lib/hooks/useMasterData";
 import type { Survey, SurveyState } from "@/types";
+import { isSurveyor } from "@/lib/auth/roles";
+import { useAuthStore } from "@/lib/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn, rawPhoneDigits } from "@/lib/utils";
+import { cn, productCategoryNames, rawPhoneDigits } from "@/lib/utils";
 import { SearchField } from "@/components/ui/search-field";
 import { Input } from "@/components/ui/input";
 import {
@@ -126,7 +128,14 @@ function formatRequestedDate(date?: string | null, time?: string | null) {
   return `${label}${time ? ` - ${time.slice(0, 5)}` : ""}`;
 }
 
+function surveyNeedLabel(survey: Survey) {
+  const categories = productCategoryNames(survey.consultation ?? {});
+  return categories.length > 0 ? categories.join(", ") : "-";
+}
+
 export default function SurveyConsumersView() {
+  const user = useAuthStore((state) => state.user);
+  const surveyorMode = isSurveyor(user);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 400);
   const [state, setState] = useState<SurveyState | "">("");
@@ -144,13 +153,15 @@ export default function SurveyConsumersView() {
   const { data: accounts = [] } = useAccounts();
   const { data: surveyorsResponse } = useSurveyors();
   const surveyors = surveyorsResponse?.data ?? [];
+  const effectiveAccount = surveyorMode && user?.account_id ? String(user.account_id) : account;
+  const effectiveSurveyorId = surveyorMode && user?.id ? String(user.id) : surveyorId;
   const { data, isLoading, isFetching, refetch } = useSurveys({
     page,
     per_page: 10,
     state,
     search: trimmedSearch || undefined,
-    account: account ? Number(account) : undefined,
-    surveyor_id: surveyorId ? Number(surveyorId) : undefined,
+    account: effectiveAccount ? Number(effectiveAccount) : undefined,
+    surveyor_id: effectiveSurveyorId ? Number(effectiveSurveyorId) : undefined,
     start_date: startDate || undefined,
     end_date: endDate || undefined,
   });
@@ -162,14 +173,16 @@ export default function SurveyConsumersView() {
   }, [trimmedSearch, state, account, surveyorId, startDate, endDate]);
 
   const hasActiveFilters = Boolean(
-    search || state || account || surveyorId || startDate || endDate,
+    search || state || (!surveyorMode && account) || (!surveyorMode && surveyorId) || startDate || endDate,
   );
 
   const resetFilters = () => {
     setSearch("");
     setState("");
-    setAccount("");
-    setSurveyorId("");
+    if (!surveyorMode) {
+      setAccount("");
+      setSurveyorId("");
+    }
     setStartDate("");
     setEndDate("");
     setPage(1);
@@ -187,7 +200,9 @@ export default function SurveyConsumersView() {
               Data Konsumen Survey
             </h1>
             <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
-              Satu tabel untuk request, penugasan, jadwal, dan hasil survey.
+              {surveyorMode
+                ? `Data survey konsumen akun ${user?.account?.name ?? "Anda"} yang ditugaskan ke ${user?.name ?? "surveyor"}.`
+                : "Satu tabel untuk request, penugasan, jadwal, dan hasil survey."}
             </p>
           </div>
         </div>
@@ -230,45 +245,49 @@ export default function SurveyConsumersView() {
                 </PopoverContent>
               </Popover>
 
-              <Popover open={accountOpen} onOpenChange={setAccountOpen}>
-                <PopoverTrigger
-                  title="Filter akun"
-                  aria-label="Filter akun"
-                  className={cn(filterIconClass, account && activeFilterClass)}
-                >
-                  <Building2 className="h-4 w-4" />
-                  {account && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full border-2 border-background bg-primary" />}
-                </PopoverTrigger>
-                <PopoverContent className="max-h-[280px] min-w-[220px] overflow-y-auto p-2" align="start">
-                  <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Akun</p>
-                  <FilterOption active={!account} onClick={() => { setAccount(""); setAccountOpen(false); }}>Semua Akun</FilterOption>
-                  {accounts.map((item: { id: number; name: string }) => (
-                    <FilterOption key={item.id} active={account === String(item.id)} onClick={() => { setAccount(String(item.id)); setAccountOpen(false); }}>
-                      {item.name}
-                    </FilterOption>
-                  ))}
-                </PopoverContent>
-              </Popover>
+              {!surveyorMode && (
+                <>
+                  <Popover open={accountOpen} onOpenChange={setAccountOpen}>
+                    <PopoverTrigger
+                      title="Filter akun"
+                      aria-label="Filter akun"
+                      className={cn(filterIconClass, account && activeFilterClass)}
+                    >
+                      <Building2 className="h-4 w-4" />
+                      {account && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full border-2 border-background bg-primary" />}
+                    </PopoverTrigger>
+                    <PopoverContent className="max-h-[280px] min-w-[220px] overflow-y-auto p-2" align="start">
+                      <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Akun</p>
+                      <FilterOption active={!account} onClick={() => { setAccount(""); setAccountOpen(false); }}>Semua Akun</FilterOption>
+                      {accounts.map((item: { id: number; name: string }) => (
+                        <FilterOption key={item.id} active={account === String(item.id)} onClick={() => { setAccount(String(item.id)); setAccountOpen(false); }}>
+                          {item.name}
+                        </FilterOption>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
 
-              <Popover open={surveyorOpen} onOpenChange={setSurveyorOpen}>
-                <PopoverTrigger
-                  title="Filter surveyor"
-                  aria-label="Filter surveyor"
-                  className={cn(filterIconClass, surveyorId && activeFilterClass)}
-                >
-                  <UserRoundCheck className="h-4 w-4" />
-                  {surveyorId && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full border-2 border-background bg-primary" />}
-                </PopoverTrigger>
-                <PopoverContent className="max-h-[280px] min-w-[220px] overflow-y-auto p-2" align="start">
-                  <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Surveyor</p>
-                  <FilterOption active={!surveyorId} onClick={() => { setSurveyorId(""); setSurveyorOpen(false); }}>Semua Surveyor</FilterOption>
-                  {surveyors.map((item) => (
-                    <FilterOption key={item.id} active={surveyorId === String(item.id)} onClick={() => { setSurveyorId(String(item.id)); setSurveyorOpen(false); }}>
-                      {item.name}
-                    </FilterOption>
-                  ))}
-                </PopoverContent>
-              </Popover>
+                  <Popover open={surveyorOpen} onOpenChange={setSurveyorOpen}>
+                    <PopoverTrigger
+                      title="Filter surveyor"
+                      aria-label="Filter surveyor"
+                      className={cn(filterIconClass, surveyorId && activeFilterClass)}
+                    >
+                      <UserRoundCheck className="h-4 w-4" />
+                      {surveyorId && <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full border-2 border-background bg-primary" />}
+                    </PopoverTrigger>
+                    <PopoverContent className="max-h-[280px] min-w-[220px] overflow-y-auto p-2" align="start">
+                      <p className="px-2 pb-1.5 pt-1 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Surveyor</p>
+                      <FilterOption active={!surveyorId} onClick={() => { setSurveyorId(""); setSurveyorOpen(false); }}>Semua Surveyor</FilterOption>
+                      {surveyors.map((item) => (
+                        <FilterOption key={item.id} active={surveyorId === String(item.id)} onClick={() => { setSurveyorId(String(item.id)); setSurveyorOpen(false); }}>
+                          {item.name}
+                        </FilterOption>
+                      ))}
+                    </PopoverContent>
+                  </Popover>
+                </>
+              )}
 
               <Popover open={dateOpen} onOpenChange={setDateOpen}>
                 <PopoverTrigger
@@ -431,6 +450,7 @@ export default function SurveyConsumersView() {
 function SurveyRow({ survey, onOpen }: { survey: Survey; onOpen: () => void }) {
   const c = survey.consultation;
   const meta = META[survey.state];
+  const needLabel = surveyNeedLabel(survey);
   return (
     <tr
       onClick={onOpen}
@@ -493,7 +513,7 @@ function SurveyRow({ survey, onOpen }: { survey: Survey; onOpen: () => void }) {
       </td>
       <td className="max-w-[180px] px-5 py-3.5 align-top">
         <p className="line-clamp-2 text-foreground/80">
-          {survey.requested_item || c?.product_details || "-"}
+          {needLabel}
         </p>
       </td>
       <td className="px-5 py-3.5 align-top">
@@ -525,10 +545,11 @@ function SurveyMobileCard({
 }) {
   const c = survey.consultation;
   const meta = META[survey.state];
+  const needLabel = surveyNeedLabel(survey);
   return (
     <article
       onClick={onOpen}
-      className="cursor-pointer rounded-2xl border border-border/80 bg-background/70 p-4 shadow-sm transition-transform active:scale-[0.99] dark:border-zinc-800 dark:bg-zinc-950/30"
+      className="cursor-pointer rounded-2xl border border-border bg-card p-4 shadow-[0_12px_26px_-22px_rgba(15,23,42,0.45)] transition-transform active:scale-[0.99] dark:border-slate-700/80 dark:bg-[#111a2b] dark:shadow-[0_16px_34px_-26px_rgba(0,0,0,0.85)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -603,7 +624,7 @@ function SurveyMobileCard({
             Kebutuhan
           </p>
           <p className="line-clamp-2 text-foreground/85">
-            {survey.requested_item || c?.product_details || "-"}
+            {needLabel}
           </p>
         </div>
         <div className="col-span-2 hidden">
@@ -636,7 +657,7 @@ function SurveyMobileCard({
           </p>
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border/70 pt-3 dark:border-zinc-800">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 dark:border-slate-700/75">
         <div className="flex items-center gap-2">
           {c?.phone ? (
             <a
@@ -692,6 +713,7 @@ function SurveyDetailDialog({
 }) {
   const c = survey?.consultation;
   const stateMeta = survey ? META[survey.state] : null;
+  const needLabel = survey ? surveyNeedLabel(survey) : "-";
   return (
     <Dialog open={!!survey} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="survey-detail-panel !bottom-0 !left-auto !right-0 !top-0 h-dvh max-h-dvh w-full !max-w-2xl !translate-x-0 !translate-y-0 overflow-y-auto rounded-none border-border/80 bg-card p-0 shadow-2xl sm:!max-w-2xl data-open:animate-in data-open:slide-in-from-right data-closed:animate-out data-closed:slide-out-to-right dark:border-zinc-800/80 [&>[data-slot=dialog-close]]:right-4 [&>[data-slot=dialog-close]]:top-4 [&>[data-slot=dialog-close]]:z-20 [&>[data-slot=dialog-close]]:border [&>[data-slot=dialog-close]]:border-border/70 [&>[data-slot=dialog-close]]:bg-card/80">
@@ -731,13 +753,14 @@ function SurveyDetailDialog({
               <DetailItem label="Akun" value={c?.account?.name ?? "-"} />
               <DetailItem label="Surveyor" value={survey.surveyor?.name ?? "Belum ditentukan"} />
               <DetailItem label="WhatsApp" value={c?.phone ?? "-"} />
+              <DetailItem label="Telepon Darurat" value={c?.emergency_phone ?? "Tidak dicantumkan"} />
               <DetailItem label="Jadwal" value={formatDate(survey.scheduled_at || survey.requested_at)} />
               <DetailItem
                 label="Alamat"
                 value={c?.address || [c?.district, c?.city, c?.province].filter(Boolean).join(", ") || "-"}
                 wide
               />
-              <DetailItem label="Item / Kebutuhan" value={survey.requested_item || c?.product_details || "-"} wide />
+              <DetailItem label="Item / Kebutuhan" value={needLabel} wide />
             </DetailSection>
 
             <DetailSection title="Catatan & Hasil">
