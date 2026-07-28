@@ -80,6 +80,7 @@ export type SurveyFilters = {
   surveyor_id?: number
   start_date?: string
   end_date?: string
+  sort?: 'nearest' | 'latest'
 }
 
 export type SurveyorItem = { id: number; name: string }
@@ -148,6 +149,7 @@ export type Consultation = {
   consultation_id: string
   client_name: string
   phone: string | null
+  emergency_phone: string | null
   province: string | null
   city: string | null
   district: string | null
@@ -159,7 +161,7 @@ export type Consultation = {
   updated_at: string
   account_id?: number
   status_category_id?: number
-  account: { id: number; name: string } | null
+  account: { id: number; name: string; admins?: { id: number; name: string }[] } | null
   status_category: { id: number; name: string; css_class: string } | null
   needs_category: { id: number; name: string } | null
   needs_categories?: { id: number; name: string }[]

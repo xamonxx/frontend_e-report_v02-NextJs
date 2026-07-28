@@ -6,6 +6,7 @@ import { Toaster } from 'sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ThemeProvider } from 'next-themes'
 import { ConfirmProvider } from '@/components/ui/confirm-dialog'
+import { SurveyRealtimeListener } from '@/components/survey-realtime-listener'
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -31,6 +32,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={true}>
         <TooltipProvider>
           <ConfirmProvider>
+            <SurveyRealtimeListener />
             {children}
           </ConfirmProvider>
           <Toaster position="top-right" richColors />

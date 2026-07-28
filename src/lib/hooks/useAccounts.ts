@@ -15,6 +15,7 @@ export type AccountItem = {
   created_at: string
   updated_at: string
   consultations_count?: number
+  surveys_count?: number
   deals_count?: number
   admins?: { id: number; name: string }[]
 }

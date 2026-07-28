@@ -386,18 +386,12 @@
   .consultation-toolbar {
     position: relative;
     overflow: hidden;
-    border: 1px solid color-mix(in srgb, var(--primary-theme) 18%, #cbd5e1) !important;
+    border: 1px solid color-mix(in srgb, var(--border) 88%, transparent) !important;
     border-radius: 1rem;
-    background:
-      linear-gradient(135deg,
-        color-mix(in srgb, var(--primary-theme) 8%, #ffffff) 0%,
-        #f7fdff 42%,
-        color-mix(in srgb, #ecfeff 84%, var(--primary-theme)) 100%
-      ) !important;
+    background: color-mix(in srgb, var(--card) 88%, var(--background)) !important;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.9),
-      0 18px 42px -36px color-mix(in srgb, var(--primary-theme) 34%, transparent);
-    backdrop-filter: blur(14px);
+      inset 0 1px 0 rgba(255, 255, 255, 0.54),
+      0 12px 32px -30px rgba(15, 23, 42, 0.42);
   }
 
   .consultation-toolbar::before {
@@ -411,7 +405,7 @@
     background: linear-gradient(
       90deg,
       transparent,
-      color-mix(in srgb, var(--primary-theme) 34%, transparent),
+      color-mix(in srgb, var(--foreground) 12%, transparent),
       transparent
     );
   }
@@ -423,7 +417,7 @@
     content: "";
     background: radial-gradient(
       circle at 12% 0%,
-      color-mix(in srgb, var(--primary-theme) 7%, transparent),
+      color-mix(in srgb, var(--foreground) 3%, transparent),
       transparent 34%
     );
   }
@@ -434,26 +428,51 @@
   }
 
   .consultation-toolbar :is(button, a, [role="button"], input) {
-    border-color: color-mix(in srgb, var(--primary-theme) 16%, #cbd5e1) !important;
-    background:
-      linear-gradient(135deg,
-        rgba(255, 255, 255, 0.92),
-        color-mix(in srgb, var(--primary-theme) 8%, #f8fafc)
-      ) !important;
+    border-color: color-mix(in srgb, var(--border) 88%, transparent) !important;
+    background: color-mix(in srgb, var(--background) 78%, var(--card)) !important;
     color: #0f172a;
   }
 
   .consultation-toolbar :is(button, a, [role="button"]):hover {
-    border-color: color-mix(in srgb, var(--primary-theme) 32%, #94a3b8) !important;
-    background:
-      linear-gradient(135deg,
-        color-mix(in srgb, var(--primary-theme) 14%, #ffffff),
-        color-mix(in srgb, var(--primary-theme) 8%, #ecfeff)
-      ) !important;
+    border-color: color-mix(in srgb, var(--foreground) 22%, var(--border)) !important;
+    background: color-mix(in srgb, var(--muted) 68%, var(--card)) !important;
   }
 
   .consultation-toolbar svg {
-    color: color-mix(in srgb, var(--primary-theme) 86%, #0284c7);
+    color: color-mix(in srgb, var(--foreground) 58%, var(--muted-foreground));
+  }
+
+  .consultation-toolbar .consultation-pending-action {
+    border-color: rgba(245, 158, 11, 0.28) !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+    color: color-mix(in srgb, #b45309 88%, var(--foreground)) !important;
+  }
+
+  .consultation-toolbar .consultation-pending-action:hover,
+  .consultation-toolbar .consultation-pending-action.is-active {
+    border-color: rgba(245, 158, 11, 0.48) !important;
+    background: rgba(245, 158, 11, 0.14) !important;
+    color: #92400e !important;
+  }
+
+  .consultation-toolbar .consultation-pending-action svg {
+    color: #b45309;
+  }
+
+  .consultation-toolbar .consultation-export-action {
+    border-color: color-mix(in srgb, var(--border) 92%, transparent) !important;
+    background: color-mix(in srgb, var(--muted) 42%, var(--background)) !important;
+    color: color-mix(in srgb, var(--foreground) 70%, var(--muted-foreground)) !important;
+  }
+
+  .consultation-toolbar .consultation-export-action:hover {
+    border-color: color-mix(in srgb, var(--foreground) 24%, var(--border)) !important;
+    background: color-mix(in srgb, var(--muted) 72%, var(--background)) !important;
+    color: var(--foreground) !important;
+  }
+
+  .consultation-toolbar .consultation-export-action svg {
+    color: color-mix(in srgb, var(--muted-foreground) 84%, var(--foreground));
   }
 
   .consultation-toolbar a[href="/consultations/create"] {
@@ -479,12 +498,7 @@
   .dark .consultation-toolbar {
     border-color: rgba(51, 65, 85, 0.58) !important;
     border-top-color: rgba(51, 65, 85, 0.38) !important;
-    background:
-      linear-gradient(135deg,
-        color-mix(in srgb, var(--primary-theme) 4%, #0f172a) 0%,
-        #101827 48%,
-        #07111f 100%
-      ) !important;
+    background: color-mix(in srgb, var(--card) 84%, var(--background)) !important;
     box-shadow: none !important;
   }
 
@@ -495,28 +509,53 @@
   .dark .consultation-toolbar::after {
     background: radial-gradient(
       circle at 12% 0%,
-      color-mix(in srgb, var(--primary-theme) 3%, transparent),
+      color-mix(in srgb, #ffffff 2%, transparent),
       transparent 34%
     );
   }
 
   .dark .consultation-toolbar :is(button, a, [role="button"], input) {
-    border-color: color-mix(in srgb, var(--primary-theme) 8%, var(--border)) !important;
-    background:
-      linear-gradient(135deg,
-        color-mix(in srgb, var(--primary-theme) 4%, var(--card)) 0%,
-        color-mix(in srgb, var(--primary-theme) 2%, var(--background)) 100%
-      ) !important;
+    border-color: color-mix(in srgb, var(--border) 88%, transparent) !important;
+    background: color-mix(in srgb, var(--background) 62%, var(--card)) !important;
     color: var(--foreground);
   }
 
   .dark .consultation-toolbar :is(button, a, [role="button"]):hover {
-    border-color: color-mix(in srgb, var(--primary-theme) 26%, var(--border)) !important;
-    background:
-      linear-gradient(135deg,
-        color-mix(in srgb, var(--primary-theme) 14%, var(--card)) 0%,
-        color-mix(in srgb, var(--primary-theme) 5%, var(--background)) 100%
-      ) !important;
+    border-color: color-mix(in srgb, #94a3b8 28%, var(--border)) !important;
+    background: color-mix(in srgb, var(--muted) 45%, var(--card)) !important;
+  }
+
+  .dark .consultation-toolbar .consultation-pending-action {
+    border-color: rgba(245, 158, 11, 0.26) !important;
+    background: rgba(245, 158, 11, 0.08) !important;
+    color: #fbbf24 !important;
+  }
+
+  .dark .consultation-toolbar .consultation-pending-action:hover,
+  .dark .consultation-toolbar .consultation-pending-action.is-active {
+    border-color: rgba(245, 158, 11, 0.44) !important;
+    background: rgba(245, 158, 11, 0.14) !important;
+    color: #fcd34d !important;
+  }
+
+  .dark .consultation-toolbar .consultation-pending-action svg {
+    color: #fbbf24;
+  }
+
+  .dark .consultation-toolbar .consultation-export-action {
+    border-color: color-mix(in srgb, var(--border) 92%, transparent) !important;
+    background: color-mix(in srgb, var(--background) 68%, var(--card)) !important;
+    color: color-mix(in srgb, var(--foreground) 72%, var(--muted-foreground)) !important;
+  }
+
+  .dark .consultation-toolbar .consultation-export-action:hover {
+    border-color: color-mix(in srgb, #94a3b8 32%, var(--border)) !important;
+    background: color-mix(in srgb, var(--muted) 48%, var(--card)) !important;
+    color: var(--foreground) !important;
+  }
+
+  .dark .consultation-toolbar .consultation-export-action svg {
+    color: color-mix(in srgb, var(--muted-foreground) 82%, var(--foreground));
   }
 
   .dark .consultation-toolbar a[href="/consultations/create"] {

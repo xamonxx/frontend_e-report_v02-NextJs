@@ -67,7 +67,7 @@ export default function GeoAnalyticsView() {
   }
 
   return (
-    <div className="min-w-0 space-y-5 pb-8">
+    <div className="min-w-0 max-w-full space-y-5 overflow-x-clip pb-8">
       {/* Header */}
       <header className="space-y-4">
         <div className="min-w-0">
@@ -84,10 +84,10 @@ export default function GeoAnalyticsView() {
         </div>
 
         {/* Filter bar */}
-        <div className="flex flex-wrap items-end gap-2.5 rounded-xl border border-border/80 bg-card p-3 shadow-sm ring-1 ring-border/40 dark:border-zinc-700/80">
+        <div className="grid grid-cols-2 items-end gap-2.5 rounded-xl border border-border/80 bg-card p-3 shadow-sm ring-1 ring-border/40 sm:flex sm:flex-wrap dark:border-zinc-700/80">
           <FilterField label="Rentang">
             <Select value={periodType} onValueChange={(v) => v && setPeriodType(v as any)}>
-              <SelectTrigger className="h-9 w-32 rounded-lg text-xs"><SelectValue>{periodType === 'monthly' ? 'Bulanan' : 'Tahunan'}</SelectValue></SelectTrigger>
+              <SelectTrigger className="h-9 w-full rounded-lg text-xs sm:w-32"><SelectValue>{periodType === 'monthly' ? 'Bulanan' : 'Tahunan'}</SelectValue></SelectTrigger>
               <SelectContent>
                 <SelectItem value="monthly">Bulanan</SelectItem>
                 <SelectItem value="yearly">Tahunan</SelectItem>
@@ -98,7 +98,7 @@ export default function GeoAnalyticsView() {
           {periodType === 'monthly' && (
             <FilterField label="Bulan">
               <Select value={String(month)} onValueChange={(v) => v && setMonth(Number(v))}>
-                <SelectTrigger className="h-9 w-32 rounded-lg text-xs"><SelectValue>{new Date(2000, month - 1).toLocaleString('id-ID', { month: 'long' })}</SelectValue></SelectTrigger>
+                <SelectTrigger className="h-9 w-full rounded-lg text-xs sm:w-32"><SelectValue>{new Date(2000, month - 1).toLocaleString('id-ID', { month: 'long' })}</SelectValue></SelectTrigger>
                 <SelectContent>
                   {MONTHS.map((m) => (
                     <SelectItem key={m} value={String(m)}>{new Date(2000, m - 1).toLocaleString('id-ID', { month: 'long' })}</SelectItem>
@@ -110,7 +110,7 @@ export default function GeoAnalyticsView() {
 
           <FilterField label="Tahun">
             <Select value={String(year)} onValueChange={(v) => v && setYear(Number(v))}>
-              <SelectTrigger className="h-9 w-24 rounded-lg text-xs"><SelectValue>{year}</SelectValue></SelectTrigger>
+              <SelectTrigger className="h-9 w-full rounded-lg text-xs sm:w-24"><SelectValue>{year}</SelectValue></SelectTrigger>
               <SelectContent>
                 {[currentYear + 1, currentYear, currentYear - 1, currentYear - 2].map((y) => (
                   <SelectItem key={y} value={String(y)}>{y}</SelectItem>
@@ -122,7 +122,7 @@ export default function GeoAnalyticsView() {
           {isSuperAdmin && (
             <FilterField label="Grup Akun">
               <Select value={accountGroup ?? 'all'} onValueChange={(v) => setAccountGroup(v && v !== 'all' ? v : undefined)}>
-                <SelectTrigger className="h-9 w-36 rounded-lg text-xs"><SelectValue>{accountGroup ? groups.find((g) => g.value === accountGroup)?.label ?? accountGroup : 'Semua Grup'}</SelectValue></SelectTrigger>
+                <SelectTrigger className="h-9 w-full rounded-lg text-xs sm:w-36"><SelectValue>{accountGroup ? groups.find((g) => g.value === accountGroup)?.label ?? accountGroup : 'Semua Grup'}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Semua Grup</SelectItem>
                   {groups.map((g) => <SelectItem key={g.value} value={g.value}>{g.label}</SelectItem>)}
@@ -133,7 +133,7 @@ export default function GeoAnalyticsView() {
 
           <FilterField label="Produk">
             <Select value={needsCategory ? String(needsCategory) : 'all'} onValueChange={(v) => setNeedsCategory(v && v !== 'all' ? Number(v) : undefined)}>
-              <SelectTrigger className="h-9 w-40 rounded-lg text-xs"><SelectValue>{needsCategory ? needs.find((n) => n.id === needsCategory)?.name ?? '?' : 'Semua Produk'}</SelectValue></SelectTrigger>
+              <SelectTrigger className="h-9 w-full rounded-lg text-xs sm:w-40"><SelectValue>{needsCategory ? needs.find((n) => n.id === needsCategory)?.name ?? '?' : 'Semua Produk'}</SelectValue></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Produk</SelectItem>
                 {needs.map((n) => <SelectItem key={n.id} value={String(n.id)}>{n.name}</SelectItem>)}
@@ -143,7 +143,7 @@ export default function GeoAnalyticsView() {
 
           <FilterField label="Status">
             <Select value={status ? String(status) : 'all'} onValueChange={(v) => setStatus(v && v !== 'all' ? Number(v) : undefined)}>
-              <SelectTrigger className="h-9 w-40 rounded-lg text-xs"><SelectValue>{status ? statuses.find((s) => s.id === status)?.name ?? '?' : 'Semua Status'}</SelectValue></SelectTrigger>
+              <SelectTrigger className="h-9 w-full rounded-lg text-xs sm:w-40"><SelectValue>{status ? statuses.find((s) => s.id === status)?.name ?? '?' : 'Semua Status'}</SelectValue></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
                 {statuses.map((s) => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
@@ -152,7 +152,7 @@ export default function GeoAnalyticsView() {
           </FilterField>
 
           {(accountGroup || needsCategory || status || selected) && (
-            <button onClick={resetFilters} className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground">
+            <button onClick={resetFilters} className="inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-background/50 px-3 text-[11px] font-semibold text-muted-foreground transition-colors hover:text-foreground sm:w-auto">
               <RotateCcw className="h-3.5 w-3.5" /> Reset
             </button>
           )}
@@ -171,11 +171,11 @@ export default function GeoAnalyticsView() {
       </section>
 
       {/* Peta + sidebar kanan */}
-      <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+      <div className="grid min-w-0 gap-4 lg:grid-cols-[2fr_1fr]">
         {/* Kolom kiri: peta + peringkat akun */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           {/* Peta */}
-          <div className="relative h-[560px] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm lg:h-[620px]">
+          <div className="relative h-[420px] overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm sm:h-[560px] lg:h-[620px]">
             {geoLoading || !provGeo || !kabGeo ? (
               <div className="flex h-full items-center justify-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /></div>
             ) : (
@@ -225,14 +225,14 @@ export default function GeoAnalyticsView() {
           {/* Peringkat Akun — full-width di bawah peta */}
           <Panel title="Peringkat Akun" subtitle="Kontribusi konsultasi per akun">
             <RankTable
-              head={['Akun', 'Konsultasi', 'Survey', 'Deal', 'Closing']}
+              head={['Akun', 'Konsul', 'Survey', 'Deal', 'Closing']}
               rows={(data?.accountRanking ?? []).map((a) => [a.name, a.total, a.surveys, a.deals, `${a.closing_rate}%`])}
             />
           </Panel>
         </div>
 
         {/* Kolom kanan: ranking wilayah + status + kota */}
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Panel title="Peringkat Wilayah" subtitle="Berdasarkan jumlah konsultasi">
             <ol className="space-y-1.5">
               {regions.slice(0, 10).map((r, i) => (
@@ -274,7 +274,7 @@ export default function GeoAnalyticsView() {
 
           <Panel title="Peringkat Kota" subtitle={selected ? `Difilter: ${selected.name}` : 'Semua wilayah'}>
             <RankTable
-              head={['Kota', 'Provinsi', 'Konsultasi', 'Deal']}
+              head={['Kota', 'Provinsi', 'Konsul', 'Deal']}
               rows={(data?.cities ?? []).slice(0, 15).map((c) => [c.name, c.province ?? '-', c.total, c.deals])}
             />
           </Panel>
@@ -286,7 +286,7 @@ export default function GeoAnalyticsView() {
 
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="space-y-1">
+    <div className="min-w-0 space-y-1">
       <Label className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">{label}</Label>
       {children}
     </div>
@@ -303,7 +303,7 @@ function Kpi({ icon: Icon, tint, chip, label, value, loading }: {
         <span className="block text-xl font-black tabular-nums text-foreground">
           {loading ? <Loader2 className="h-4 w-4 animate-spin text-muted-foreground/50" /> : (value ?? 0)}
         </span>
-        <span className="mt-0.5 block truncate text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+        <span className="mt-0.5 block text-[10px] font-bold uppercase leading-tight tracking-wider text-muted-foreground">{label}</span>
       </span>
     </div>
   )
@@ -311,7 +311,7 @@ function Kpi({ icon: Icon, tint, chip, label, value, loading }: {
 
 function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-border/60 bg-card p-4 shadow-sm">
       <div className="mb-3">
         <h3 className="text-sm font-bold text-foreground">{title}</h3>
         {subtitle && <p className="text-[11px] text-muted-foreground">{subtitle}</p>}
@@ -336,14 +336,14 @@ function RankTable({ head, rows }: { head: string[]; rows: (string | number)[][]
       <table className="w-full text-left">
         <thead>
           <tr className="border-b border-border/50 text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-            {head.map((h, i) => <th key={h} className={cn('py-2', i === 0 ? 'pl-1' : 'px-2 text-right last:pr-1')}>{h}</th>)}
+            {head.map((h, i) => <th key={h} className={cn('py-2 whitespace-nowrap', i === 0 ? 'pl-1' : 'px-1.5 text-right last:pr-1')}>{h}</th>)}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/30 text-xs">
           {rows.map((r, ri) => (
             <tr key={ri} className="hover:bg-muted/30">
               {r.map((cell, ci) => (
-                <td key={ci} className={cn('py-2', ci === 0 ? 'pl-1 font-semibold text-foreground/90 truncate max-w-[140px]' : 'px-2 text-right tabular-nums text-muted-foreground last:pr-1')}>{cell}</td>
+                <td key={ci} className={cn('py-2', ci === 0 ? 'break-words pl-1 pr-1.5 font-semibold text-foreground/90' : 'whitespace-nowrap px-1.5 text-right tabular-nums text-muted-foreground last:pr-1')}>{cell}</td>
               ))}
             </tr>
           ))}

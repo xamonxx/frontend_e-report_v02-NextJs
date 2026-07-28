@@ -29,7 +29,7 @@ import { useAuthStore } from '@/lib/stores/authStore'
 import { useLogout } from '@/lib/hooks/useAuth'
 import { prefetchRoute } from '@/lib/prefetch'
 import { cn } from '@/lib/utils'
-import { isManagerSurveyor, isSurveyTeam } from '@/lib/auth/roles'
+import { isManagerSurveyor, isSurveyor, isSurveyTeam } from '@/lib/auth/roles'
 
 type NavItem = {
   href: string
@@ -44,11 +44,17 @@ type NavItem = {
 const PRIMARY_TABS: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/consultations', label: 'Konsultasi', icon: MessagesSquare },
-  { href: '/analytics', label: 'Analisa', icon: ChartNoAxesCombined },
+  { href: '/analytics', label: 'Analitik', icon: ChartNoAxesCombined },
 ]
 
 const SURVEY_TEAM_TABS: NavItem[] = [
   { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
+  { href: '/settings', label: 'Pengaturan', icon: Settings },
+]
+
+const SURVEYOR_TABS: NavItem[] = [
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck },
+  { href: '/survey-consumers', label: 'Data', icon: UsersRound },
   { href: '/settings', label: 'Pengaturan', icon: Settings },
 ]
 
@@ -61,12 +67,13 @@ const MANAGER_SURVEY_TABS: NavItem[] = [
 
 // Overflow items surfaced in the "More" sheet. Role gating mirrors the sidebar.
 const MORE_ITEMS: NavItem[] = [
+  { href: '/surveys', label: 'Survey', icon: ClipboardCheck, hint: 'Penugasan & hasil survey' },
+  { href: '/rekap-jadwal-surveyor', label: 'Rekap Jadwal', icon: CalendarClock, hint: 'Jadwal mingguan surveyor', superOnly: true },
+  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Konsumen & hasil survey', superOnly: true },
   { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', superOnly: true },
   { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Map, hint: 'Persebaran konsumen per wilayah', superOnly: true },
   { href: '/report-attendances', label: 'Absensi', icon: CalendarCheck, hint: 'Laporan absensi harian' },
 ]
-
-// Notch mask is no longer needed since we are using a floating glassmorphism pill layout.
 
 // Items grouped under "Pengaturan" inside the More sheet.
 const SETTINGS_ITEMS: NavItem[] = [
@@ -85,7 +92,7 @@ export default function BottomNav() {
 
   const isSuperAdmin = user?.role === 'super_admin'
   const surveyTeam = isSurveyTeam(user)
-  const primaryTabs = isManagerSurveyor(user) ? MANAGER_SURVEY_TABS : surveyTeam ? SURVEY_TEAM_TABS : PRIMARY_TABS
+  const primaryTabs = isManagerSurveyor(user) ? MANAGER_SURVEY_TABS : isSurveyor(user) ? SURVEYOR_TABS : surveyTeam ? SURVEY_TEAM_TABS : PRIMARY_TABS
   const visible = (item: NavItem) => !item.superOnly || isSuperAdmin
 
   const moreItems = surveyTeam ? [] : MORE_ITEMS.filter(visible)
@@ -93,9 +100,10 @@ export default function BottomNav() {
   // is visible on mobile too. It is only kept in the sheet for super admins,
   // whose settings group holds other entries anyway.
   const settingsItems = SETTINGS_ITEMS.filter(visible).filter((item) => item.href !== '/settings' || isSuperAdmin)
+  const sheetItems = [...moreItems, ...settingsItems]
 
   // Highlight "More" whenever the active route lives inside the sheet.
-  const moreActive = [...moreItems, ...settingsItems].some((i) => pathname.startsWith(i.href))
+  const moreActive = sheetItems.some((i) => pathname.startsWith(i.href))
 
   // With Pengaturan gone, a plain admin's sheet holds a single destination
   // (Absensi). A whole bottom sheet for one link is not worth the tap, so it is
@@ -155,97 +163,53 @@ export default function BottomNav() {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              // Same vibrancy material as the bar, so the two surfaces read as
-              // one system. The accent tint that used to wash the panel and the
-              // radial glow over its top edge are gone: an Apple sheet is a
-              // neutral frosted plane and lets its contents carry the colour.
-              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[28px] border-t border-black/[0.06] bg-white/78 pb-6 shadow-[0_-1px_2px_rgba(0,0,0,0.06),0_-20px_60px_-12px_rgba(0,0,0,0.28)] backdrop-blur-2xl backdrop-saturate-[1.8] touch-none dark:border-white/[0.09] dark:bg-zinc-900/78"
+              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[22px] border-t bg-card pb-6 shadow-[0_-8px_24px_-18px_rgba(15,23,42,0.32)] touch-none dark:shadow-[0_-8px_24px_-18px_rgba(2,6,23,0.72)]"
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
             >
               {/* Grab handle */}
               <div className="flex justify-center pt-2.5 pb-1">
-                <span className="h-1 w-9 rounded-full bg-foreground/25 dark:bg-white/30" />
+                <span className="h-1 w-9 rounded-full bg-foreground/18 dark:bg-white/22" />
               </div>
 
-              <div className="relative flex items-center justify-between px-6 pb-3 pt-2">
-                <h2 className="text-sm font-bold text-foreground/90">
-                  Menu Lainnya
-                </h2>
+              <div className="relative flex items-center justify-between px-4 pb-2.5 pt-1">
+                <div>
+                  <h2 className="text-sm font-bold text-foreground/92">Menu Lainnya</h2>
+                </div>
                 <button
                   onClick={() => setMoreOpen(false)}
-                  className="flex h-8 w-8 items-center justify-center rounded-xl border border-transparent text-muted-foreground/75 transition-[background-color,border-color,color,transform] duration-200 hover:border-border/70 hover:bg-background/45 hover:text-foreground active:scale-95"
+                  className="flex h-8 w-8 items-center justify-center rounded-xl border text-muted-foreground transition-[background-color,border-color,color,transform] duration-200 hover:text-foreground active:scale-95"
+                  style={{
+                    borderColor: 'color-mix(in srgb, var(--border) 84%, transparent)',
+                    background: 'color-mix(in srgb, var(--background) 72%, transparent)',
+                  }}
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              {/* Quick items grid */}
-              {moreItems.length > 0 && (
-                <div className="grid grid-cols-2 gap-3.5 px-6 pb-4">
-                  {moreItems.map((item) => (
-                    <SheetTile
-                      key={item.href}
-                      item={item}
-                      active={pathname.startsWith(item.href)}
-                      themeColor={userThemeColor}
-                      onPrefetch={handlePrefetch}
-                    />
-                  ))}
+              {sheetItems.length > 0 && (
+                <div className="px-4 pb-3">
+                  <div className="grid grid-cols-2 gap-2.5">
+                    {sheetItems.map((item) => (
+                      <SheetTile
+                        key={item.href}
+                        item={item}
+                        active={pathname.startsWith(item.href)}
+                        themeColor={userThemeColor}
+                        onPrefetch={handlePrefetch}
+                      />
+                    ))}
+                  </div>
                 </div>
               )}
 
-              {/* Pengaturan group */}
-              {settingsItems.length > 0 && <div className="relative px-6">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/50">
-                  Pengaturan
-                </p>
-                <div
-                  className="overflow-hidden rounded-2xl border bg-background/42 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl divide-y divide-border/55"
-                  style={{ borderColor: `color-mix(in srgb, ${userThemeColor} 12%, var(--border))` }}
-                >
-                  {settingsItems.map((item) => {
-                    const Icon = item.icon
-                    const active = pathname.startsWith(item.href)
-                    return (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        onTouchStart={() => handlePrefetch(item.href)}
-                        className="group flex items-center gap-4 px-4 py-3.5 transition-[background-color,transform] duration-200 hover:bg-background/55 active:translate-y-px"
-                        style={{
-                          background: active ? `color-mix(in srgb, ${userThemeColor} 10%, transparent)` : undefined,
-                        }}
-                      >
-                        <span
-                          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border bg-background/45 transition-colors"
-                          style={{
-                            borderColor: active ? `${userThemeColor}33` : 'color-mix(in srgb, var(--border) 72%, transparent)',
-                            color: active ? userThemeColor : 'var(--muted-foreground)',
-                          }}
-                        >
-                        <Icon
-                          className="h-[18px] w-[18px] shrink-0 transition-colors"
-                        />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-semibold text-foreground/90">{item.label}</span>
-                          {item.hint && (
-                            <span className="block truncate text-[11px] text-muted-foreground/60 mt-0.5">{item.hint}</span>
-                          )}
-                        </span>
-                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/25" />
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>}
-
               {/* Logout */}
-              <div className="px-6 pt-5">
+              <div className="px-4 pt-4">
                 <button
                   onClick={() => logoutMutation.mutate()}
                   disabled={logoutMutation.isPending}
-                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border border-rose-500/25 bg-rose-500/[0.07] py-3 text-sm font-semibold text-rose-500 transition-[background-color,border-color,transform] duration-200 hover:border-rose-500/40 hover:bg-rose-500/[0.11] active:scale-[0.98] disabled:cursor-wait disabled:opacity-70 dark:border-rose-400/18 dark:bg-rose-400/[0.09] dark:text-rose-300"
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl border py-3 text-sm font-semibold transition-[background-color,border-color,color,transform,box-shadow] duration-200 active:scale-[0.98] disabled:cursor-wait disabled:opacity-70"
+                  style={{ color: '#fda4af' }}
                 >
                   <LogOut className="h-4 w-4" />
                   {logoutMutation.isPending ? 'Keluar...' : 'Keluar dari akun'}
@@ -258,14 +222,14 @@ export default function BottomNav() {
 
       {/* ── Floating pill bar ───────────────────────────────────── */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-50 lg:hidden px-2.5 flex justify-center pointer-events-none sm:px-4"
+        className="fixed inset-x-0 bottom-0 z-50 lg:hidden px-2.5 flex justify-center pointer-events-none sm:px-4 before:pointer-events-none before:absolute before:inset-x-0 before:bottom-0 before:h-24 before:bg-gradient-to-t before:from-background before:via-background/82 before:to-transparent"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
       >
         {/* Vibrancy material: heavy blur with a saturation lift so colour bleeds
             through the way Apple's does, a hairline that is brighter on the top
             edge to read as a lit surface, and a two-stop shadow (tight contact +
             wide ambient) rather than one heavy drop. */}
-        <div className="pointer-events-auto relative flex h-16 w-full max-w-[400px] items-center justify-between rounded-[28px] border border-black/[0.06] bg-white/72 px-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_12px_32px_-8px_rgba(0,0,0,0.18)] backdrop-blur-2xl backdrop-saturate-[1.8] before:pointer-events-none before:absolute before:inset-x-6 before:top-0 before:h-px before:bg-gradient-to-r before:from-transparent before:via-white/70 before:to-transparent sm:h-[68px] sm:px-2 dark:border-white/[0.09] dark:bg-zinc-900/72 dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_16px_40px_-8px_rgba(0,0,0,0.6)] dark:before:via-white/15">
+        <div className="pointer-events-auto relative flex h-[70px] w-full max-w-[400px] items-center justify-between rounded-[24px] border border-slate-300/70 bg-white px-1.5 shadow-[0_10px_26px_-18px_rgba(15,23,42,0.42),0_1px_0_rgba(255,255,255,0.7)_inset] sm:h-[72px] sm:px-2 dark:border-slate-600/55 dark:bg-[#182233] dark:shadow-[0_14px_34px_-20px_rgba(0,0,0,0.78),0_1px_0_rgba(255,255,255,0.05)_inset]">
           {!surveyTeam && <>
           {/* Centre FAB Action Button — floats beautifully above the bar */}
           <div className="absolute left-1/2 bottom-[22px] -translate-x-1/2 z-20 sm:bottom-[24px]">
@@ -285,15 +249,15 @@ export default function BottomNav() {
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.94 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                className="flex size-[52px] cursor-pointer items-center justify-center rounded-full text-zinc-950 sm:size-[56px] dark:text-zinc-900"
+                className="flex size-[52px] cursor-pointer items-center justify-center rounded-full text-zinc-950 ring-[5px] ring-background sm:size-[56px] dark:text-zinc-950"
                 style={{
-                  background: `linear-gradient(180deg, color-mix(in srgb, ${userThemeColor} 88%, white), ${userThemeColor})`,
-                  boxShadow: `inset 0 1px 0 rgba(255,255,255,0.45), 0 1px 2px rgba(0,0,0,0.12), 0 ${fabHovered ? 12 : 8}px ${fabHovered ? 28 : 20}px -6px ${userThemeColor}${fabHovered ? '66' : '4d'}`,
+                  background: userThemeColor,
+                  boxShadow: `0 ${fabHovered ? 12 : 8}px ${fabHovered ? 24 : 18}px -9px ${userThemeColor}aa`,
                   transition: 'box-shadow 0.25s ease',
                 }}
               >
                 <motion.span
-                  animate={{ rotate: fabHovered ? 90 : 0 }}
+                  animate={{ rotate: 0 }}
                   transition={{ type: 'spring', stiffness: 300, damping: 22 }}
                   className="flex items-center justify-center"
                 >
@@ -358,14 +322,16 @@ export default function BottomNav() {
                   onPrefetch={handlePrefetch}
                 />
               ))}
-              <button
-                onClick={() => setMoreOpen(true)}
-                aria-label="Menu lainnya"
-                aria-expanded={moreOpen}
-                className="relative flex flex-1 cursor-pointer items-center justify-center rounded-2xl outline-none transition-transform duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_55%,transparent)]"
-              >
-                <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} themeColor={userThemeColor} />
-              </button>
+              {sheetItems.length > 0 && (
+                <button
+                  onClick={() => setMoreOpen(true)}
+                  aria-label="Menu lainnya"
+                  aria-expanded={moreOpen}
+                  className="relative flex flex-1 cursor-pointer items-center justify-center rounded-2xl outline-none transition-transform duration-150 active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_55%,transparent)]"
+                >
+                  <TabInner icon={MoreHorizontal} label="Lainnya" active={moreActive} themeColor={userThemeColor} />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -423,31 +389,57 @@ function TabInner({
   themeColor: string
 }) {
   return (
-    <div className="relative flex h-full w-full flex-col items-center justify-center gap-[3px] py-1">
+    <div className="relative isolate flex h-full w-full flex-col items-center justify-center gap-[4px] py-1">
       {active && (
-        <motion.span
-          layoutId="active-pill"
-          aria-hidden
-          className="pointer-events-none absolute inset-x-1 inset-y-[7px] -z-10 rounded-[14px]"
-          style={{ backgroundColor: `${themeColor}14` }}
-          transition={{ type: 'spring', stiffness: 420, damping: 34 }}
-        />
+        <>
+          <motion.span
+            layoutId="active-pill"
+            aria-hidden
+            className="pointer-events-none absolute inset-x-1 inset-y-[7px] -z-10 overflow-hidden rounded-[20px] border backdrop-blur-xl"
+            style={{
+              background: `linear-gradient(145deg, color-mix(in srgb, ${themeColor} 24%, rgba(255,255,255,0.10)) 0%, color-mix(in srgb, ${themeColor} 15%, rgba(15,23,42,0.24)) 54%, rgba(15,23,42,0.10) 100%)`,
+              borderColor: `${themeColor}34`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -10px 18px -18px ${themeColor}, 0 13px 28px -18px ${themeColor}cc`,
+            }}
+            transition={{ type: 'spring', stiffness: 310, damping: 25, mass: 0.86 }}
+          >
+            <span
+              aria-hidden
+              className="absolute inset-x-3 top-1 h-px rounded-full opacity-80"
+              style={{ background: `linear-gradient(90deg, transparent, ${themeColor}66, rgba(255,255,255,0.42), transparent)` }}
+            />
+            <motion.span
+              aria-hidden
+              className="absolute -left-4 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full blur-lg"
+              style={{ backgroundColor: `${themeColor}30` }}
+              animate={{ x: [0, 16, 0], scale: [1, 1.14, 1] }}
+              transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            <motion.span
+              aria-hidden
+              className="absolute -right-5 bottom-0 h-10 w-10 rounded-full blur-xl"
+              style={{ backgroundColor: `${themeColor}20` }}
+              animate={{ x: [0, -10, 0], y: [0, -3, 0] }}
+              transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
+            />
+          </motion.span>
+        </>
       )}
 
       <Icon
         aria-hidden
         className={cn(
-          'size-[22px] shrink-0 transition-colors duration-200',
-          !active && 'text-muted-foreground'
+          'relative size-[22px] shrink-0 transition-[color,filter,transform] duration-200',
+          !active && 'text-slate-500 dark:text-slate-400'
         )}
-        strokeWidth={active ? 2.1 : 1.7}
-        style={active ? { color: themeColor } : undefined}
+        strokeWidth={active ? 2.2 : 1.7}
+        style={active ? { color: themeColor, filter: `drop-shadow(0 0 9px ${themeColor}70)`, transform: 'translateY(-1px)' } : undefined}
       />
 
       <span
         className={cn(
-          'max-w-[62px] truncate text-[10px] font-medium leading-none tracking-[-0.01em] transition-colors duration-200 select-none',
-          !active && 'text-muted-foreground'
+          'relative max-w-[62px] truncate text-[10px] font-semibold leading-none transition-colors duration-200 select-none',
+          !active && 'text-slate-500 dark:text-slate-400'
         )}
         style={active ? { color: themeColor } : undefined}
       >
@@ -475,18 +467,18 @@ function SheetTile({
       href={item.href}
       onTouchStart={() => onPrefetch(item.href)}
       className={cn(
-        'relative overflow-hidden flex flex-col items-center justify-center gap-2.5 rounded-[18px] border px-4 py-4.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl transition-[border-color,background-color,box-shadow,transform] duration-200 active:scale-[0.97] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_30%,transparent)]',
+        'relative flex min-h-[76px] items-center gap-2.5 overflow-hidden rounded-2xl border px-3 py-2.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] transition-[border-color,background-color,box-shadow,transform] duration-200 active:scale-[0.97] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_30%,transparent)] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]',
         active
-          ? 'bg-background/58'
-          : 'bg-background/42 hover:bg-background/58'
+          ? 'bg-[color:color-mix(in_srgb,var(--primary-theme)_8%,var(--card))]'
+          : 'bg-[color:color-mix(in_srgb,var(--card)_82%,var(--background))] hover:bg-[color:color-mix(in_srgb,var(--card)_92%,var(--background))]'
       )}
       style={
         active 
           ? {
-              borderColor: `color-mix(in srgb, ${themeColor} 34%, var(--border))`,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.10), 0 14px 28px ${themeColor}12`,
+              borderColor: `color-mix(in srgb, ${themeColor} 42%, var(--border))`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.06), 0 14px 28px ${themeColor}12`,
             }
-          : { borderColor: 'color-mix(in srgb, var(--border) 72%, transparent)' }
+          : { borderColor: 'color-mix(in srgb, var(--border) 84%, transparent)' }
       }
     >
       {active && (
@@ -494,26 +486,29 @@ function SheetTile({
           aria-hidden
           className="pointer-events-none absolute inset-0 opacity-80"
           style={{
-            background: `linear-gradient(135deg, ${themeColor}16, transparent 62%)`,
+            background: `linear-gradient(135deg, ${themeColor}12, transparent 72%)`,
           }}
         />
       )}
       <span
-        className="relative flex h-10 w-10 items-center justify-center rounded-xl border transition-[background-color,border-color,color] duration-200"
+        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-[background-color,border-color,color,box-shadow] duration-200"
         style={{
-          borderColor: active ? `${themeColor}30` : 'transparent',
-          background: active ? `${themeColor}14` : 'color-mix(in srgb, var(--muted) 35%, transparent)',
+          borderColor: active ? `${themeColor}42` : 'rgba(255,255,255,0.06)',
+          background: active ? `${themeColor}16` : 'rgba(255,255,255,0.03)',
           color: active ? themeColor : undefined,
         }}
       >
-        <Icon className={cn('h-5 w-5', !active && 'text-muted-foreground/80')} />
+        <Icon className={cn('h-[18px] w-[18px]', !active && 'text-white/55')} />
       </span>
-      <span
-        className="relative text-xs font-bold transition-colors select-none"
-        style={{ color: active ? themeColor : 'var(--foreground)' }}
-      >
-        {item.label}
+      <span className="relative min-w-0 flex-1">
+        <span
+          className="block text-[13px] font-semibold leading-tight transition-colors select-none sm:text-sm"
+          style={{ color: active ? themeColor : 'color-mix(in srgb, var(--foreground) 90%, transparent)' }}
+        >
+          {item.label}
+        </span>
       </span>
+      <ChevronRight className="relative h-4 w-4 shrink-0 text-muted-foreground/55" />
     </Link>
   )
 }

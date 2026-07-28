@@ -109,6 +109,7 @@ export function useAssignSurvey(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
     },
   })
@@ -131,6 +132,27 @@ export function useRescheduleSurvey(id: number) {
   })
 }
 
+/**
+ * Admin melengkapi/memperbaiki link Google Maps untuk survey yang sudah aktif.
+ */
+export function useUpdateSurveyMaps(id: number, consultationId?: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { google_maps_url?: string | null }) =>
+      api.patch<ApiResponse<Survey>>(`/surveys/${id}/maps`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.surveys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
+      if (consultationId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(consultationId) })
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    },
+  })
+}
+
 /** Manager mengubah jadwal final atau surveyor yang sudah ditugaskan. */
 export function useRescheduleAssignment(id: number) {
   const queryClient = useQueryClient()
@@ -140,6 +162,7 @@ export function useRescheduleAssignment(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
     },
   })
@@ -153,6 +176,7 @@ export function useStartSurvey(id: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
     },
   })

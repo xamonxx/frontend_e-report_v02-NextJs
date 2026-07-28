@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   useAccountsList,
   useAccountCategories,
@@ -89,6 +89,78 @@ function GroupBadge({ value }: { value?: string | null }) {
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.65)]" />
       {value || 'Umum'}
     </span>
+  )
+}
+
+/**
+ * Input grup akun dengan auto-suggest: menampilkan grup yang sudah ada
+ * (kolom `description` akun lain) sambil tetap mengizinkan ketik grup baru.
+ */
+function GroupCombobox({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement>(null)
+  const q = value.trim().toLowerCase()
+  const filtered = options.filter((o) => o.toLowerCase().includes(q))
+  const hasExact = options.some((o) => o.toLowerCase() === q)
+  const showAdd = q.length > 0 && !hasExact
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  const pick = (v: string) => {
+    onChange(v)
+    setOpen(false)
+  }
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <Input
+        id="acc-desc"
+        placeholder="Ketik atau pilih grup, mis. PC, NPP"
+        value={value}
+        autoComplete="off"
+        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
+        onFocus={() => setOpen(true)}
+        className="h-10 rounded-lg border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+      />
+      {open && (filtered.length > 0 || showAdd) && (
+        <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-[0_18px_50px_-24px_rgba(0,0,0,0.55)] dark:border-zinc-800 dark:bg-zinc-950">
+          {filtered.map((o) => {
+            const active = o.toLowerCase() === q
+            return (
+              <button
+                key={o}
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => pick(o)}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted dark:hover:bg-zinc-800/70',
+                  active ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-foreground/90',
+                )}
+              >
+                <span className="truncate">{o}</span>
+              </button>
+            )
+          })}
+          {showAdd && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => pick(value.trim())}
+              className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs font-semibold text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-400"
+            >
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">Tambah &quot;{value.trim()}&quot; sebagai grup baru</span>
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -253,7 +325,7 @@ export default function AccountsPage() {
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">Kelola Akun / Interior</h1>
+              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Kelola Akun / Interior</h1>
               {/* Jumlah dinaikkan ke header supaya skala data terbaca tanpa
                   harus turun ke bar paginasi di bawah tabel. */}
               {!isLoading && meta && meta.total > 0 && (
@@ -271,14 +343,18 @@ export default function AccountsPage() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger
             render={
-              <Button onClick={handleOpenCreate} size="sm" className="bg-amber-500 text-zinc-950 hover:bg-amber-400 font-semibold">
-                <Plus className="h-4 w-4 mr-1.5" />
+              <Button
+                onClick={handleOpenCreate}
+                size="sm"
+                className="h-10 w-full justify-center gap-1.5 rounded-xl bg-amber-500 px-4 text-xs font-semibold text-zinc-950 shadow-[0_10px_24px_-14px_rgba(245,158,11,0.9)] hover:bg-amber-400 lg:w-auto"
+              >
+                <Plus className="h-4 w-4" />
                 Akun Baru
               </Button>
             }
           />
-          <DialogContent className="border-border bg-card text-foreground max-w-md dark:border-zinc-800 dark:bg-zinc-900">
-            <form onSubmit={handleFormSubmit} className="space-y-4">
+          <DialogContent className="border-border bg-card text-foreground max-w-md p-5 sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
+            <form onSubmit={handleFormSubmit} className="space-y-5">
               <DialogHeader>
                 <DialogTitle className="text-foreground">
                   {editAccount ? 'Edit Detail Akun' : 'Tambah Akun Baru'}
@@ -288,7 +364,7 @@ export default function AccountsPage() {
                 </DialogDescription>
               </DialogHeader>
 
-              <div className="space-y-3 py-2">
+              <div className="space-y-4 py-1">
                 <div className="space-y-1.5">
                   <Label htmlFor="acc-name" className="text-xs font-semibold text-muted-foreground">Nama Akun</Label>
                   <Input
@@ -296,18 +372,16 @@ export default function AccountsPage() {
                     placeholder="Contoh: Putra Interior Surabaya"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+                    className="h-10 rounded-lg border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
 
                 <div className="space-y-1.5">
                   <Label htmlFor="acc-desc" className="text-xs font-semibold text-muted-foreground">Grup / Tagline</Label>
-                  <Input
-                    id="acc-desc"
-                    placeholder="Contoh: PC, NPP"
+                  <GroupCombobox
                     value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    className="border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+                    onChange={setDescription}
+                    options={categoryOptions ?? []}
                   />
                 </div>
 
@@ -319,7 +393,7 @@ export default function AccountsPage() {
                     placeholder="Contoh: 150"
                     value={targetLeads}
                     onChange={(e) => setTargetLeads(e.target.value)}
-                    className="border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
+                    className="h-10 rounded-lg border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
 
@@ -502,7 +576,7 @@ export default function AccountsPage() {
                 <div className="flex items-start gap-3">
                   <AccountLogo acc={acc} className="h-11 w-11" />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-foreground">{acc.name}</p>
+                    <p className="break-words font-semibold text-foreground">{acc.name}</p>
                     <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">ID #{acc.id}</p>
                   </div>
                   <div className="flex items-center gap-1">
@@ -517,12 +591,16 @@ export default function AccountsPage() {
 
                 <GroupBadge value={acc.description} />
 
-                <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div>
+                <div className="grid grid-cols-3 gap-3 text-xs">
+                  <div className="text-left">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">Total Leads</p>
                     <p className="font-semibold text-foreground/90">{total}</p>
                   </div>
-                  <div>
+                  <div className="text-center">
+                    <p className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground/70">Request Survey</p>
+                    <p className="font-bold text-blue-500">{acc.surveys_count || 0}</p>
+                  </div>
+                  <div className="text-right">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">Deal</p>
                     <p className="font-bold text-amber-500">{acc.deals_count || 0}</p>
                   </div>
@@ -540,7 +618,7 @@ export default function AccountsPage() {
             <table className="w-full min-w-[980px] text-left text-xs">
               <thead className="sticky top-0 z-10">
                 <tr>
-                  {['Akun / Interior', 'Grup', 'Total Leads', 'Deal', 'Progress Target', 'Admin', 'Aksi'].map((heading) => (
+                  {['Akun / Interior', 'Grup', 'Total Leads', 'Request Survey', 'Deal', 'Progress Target', 'Admin', 'Aksi'].map((heading) => (
                     <th key={heading} className="whitespace-nowrap border-b border-border bg-muted px-5 py-3.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:border-zinc-700/60 dark:bg-zinc-800 dark:text-zinc-300">
                       {heading}
                     </th>
@@ -557,7 +635,7 @@ export default function AccountsPage() {
                         <div className="flex items-center gap-3">
                           <AccountLogo acc={acc} className="h-10 w-10" />
                           <div className="min-w-0">
-                            <p className="max-w-[220px] truncate font-semibold text-foreground">{acc.name}</p>
+                            <p className="break-words font-semibold text-foreground">{acc.name}</p>
                             <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">ID #{acc.id}</p>
                           </div>
                         </div>
@@ -566,6 +644,7 @@ export default function AccountsPage() {
                         <GroupBadge value={acc.description} />
                       </td>
                       <td className="px-5 py-3.5 align-middle font-semibold text-foreground/90">{total}</td>
+                      <td className="px-5 py-3.5 align-middle font-bold text-blue-500">{acc.surveys_count || 0}</td>
                       <td className="px-5 py-3.5 align-middle font-bold text-amber-500">{acc.deals_count || 0}</td>
                       <td className="w-[250px] px-5 py-3.5 align-middle">
                         <ProgressBar percent={percent} label={target > 0 ? `${total} / ${target}` : 'Target belum diatur'} />

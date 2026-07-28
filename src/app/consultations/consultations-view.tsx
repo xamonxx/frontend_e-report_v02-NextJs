@@ -38,6 +38,10 @@ import {
   ArrowDown,
   ArrowUpDown,
   MapPinned,
+  MapPin,
+  Phone,
+  Layers,
+  Info,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
@@ -53,23 +57,22 @@ import { format, parseISO } from 'date-fns'
 import { SearchField } from '@/components/ui/search-field'
 import { Checkbox } from '@/components/ui/checkbox'
 
-const softActionGradientClass = 'bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_7%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_2%,var(--background))_100%)]'
+const softActionGradientClass = 'bg-[color:color-mix(in_srgb,var(--card)_88%,var(--background))]'
 const softActionSurfaceClass = [
-  'border-[color:color-mix(in_srgb,var(--primary-theme)_18%,var(--border))]',
+  'border-border/70',
   softActionGradientClass,
 ].join(' ')
 
 const secondaryFileActionClass = [
-  'group inline-flex h-10 shrink-0 items-center justify-center gap-1 rounded-xl border px-2 text-[11px] font-semibold sm:gap-1.5 sm:px-3 sm:text-xs',
+  'group inline-flex h-9 shrink-0 items-center justify-center gap-1 rounded-xl border px-2 text-[10px] font-semibold sm:h-10 sm:gap-1.5 sm:px-3 sm:text-xs',
   softActionSurfaceClass,
   'text-foreground/70',
   'shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_5px_14px_-12px_rgba(15,23,42,0.4)]',
   'transition-[background-image,border-color,color,box-shadow,transform] duration-200',
-  'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_42%,var(--border))] hover:text-amber-700',
-  'hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_14%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_5%,var(--background))_100%)]',
-  'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_18px_-12px_color-mix(in_srgb,var(--primary-theme)_35%,transparent)]',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 active:translate-y-px',
-  'dark:text-foreground/70 dark:hover:text-amber-300',
+  'hover:border-slate-400/40 hover:text-foreground',
+  'hover:bg-muted/55',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/30 active:translate-y-px',
+  'dark:text-foreground/70 dark:hover:text-foreground',
 ].join(' ')
 
 const filterControlSurfaceClass = [
@@ -77,18 +80,17 @@ const filterControlSurfaceClass = [
   'text-muted-foreground',
   'shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_5px_14px_-12px_rgba(15,23,42,0.42)]',
   'transition-[background-image,border-color,color,box-shadow,transform] duration-200',
-  'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_38%,var(--border))] hover:text-foreground',
-  'hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_13%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_5%,var(--background))_100%)]',
-  'hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_8px_18px_-13px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)]',
-  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/30 active:translate-y-px',
+  'hover:border-slate-400/40 hover:text-foreground',
+  'hover:bg-muted/55',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/30 active:translate-y-px',
 ].join(' ')
 
 const filterIconButtonClass = [
-  'relative inline-flex size-10 shrink-0 items-center justify-center rounded-xl border',
+  'relative inline-flex h-9 flex-1 min-w-0 items-center justify-center rounded-xl border sm:h-10 xl:h-10 xl:w-10 xl:flex-none',
   filterControlSurfaceClass,
 ].join(' ')
 
-const activeFilterControlClass = 'border-amber-500/50 bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_18%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_8%,var(--background))_100%)] text-amber-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_7px_18px_-13px_rgba(245,158,11,0.7)] hover:border-amber-500/65 hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--primary-theme)_24%,var(--card))_0%,color-mix(in_srgb,var(--primary-theme)_11%,var(--background))_100%)] hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300'
+const activeFilterControlClass = 'border-amber-500/55 bg-amber-500/10 text-amber-600 shadow-none hover:border-amber-500/65 hover:bg-amber-500/15 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300'
 
 export default function ConsultationsPage() {
   const confirm = useConfirm()
@@ -129,6 +131,7 @@ export default function ConsultationsPage() {
   const [barAkunOpen, setBarAkunOpen] = useState(false)
   const [barPeriodOpen, setBarPeriodOpen] = useState(false)
   const [barDateOpen, setBarDateOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
 
   // Column header filter popovers
   const [statusPopOpen, setStatusPopOpen] = useState(false)
@@ -232,6 +235,53 @@ export default function ConsultationsPage() {
     if (n.includes('batal') || n.includes('cancel')) return '#dc2626'
     if (n.includes('pending') || n.includes('tunggu')) return '#eab308'
     return '#71717a'
+  }
+
+  const buildSurveyStatusLabel = (lead: any): string => {
+    const statusName = lead.status_category?.name ?? ''
+    const surveyorName = lead.active_survey?.surveyor?.name
+    const resultName = lead.active_survey?.result_status?.name
+
+    if (!statusName.toLowerCase().includes('survey')) return statusName
+
+    return [
+      statusName,
+      surveyorName ? `(${surveyorName})` : null,
+      statusName.toLowerCase().includes('selesai') && resultName ? resultName : null,
+    ].filter(Boolean).join(' - ')
+  }
+
+  const buildStatusProgress = (lead: any): string[] => {
+    const progress = [buildSurveyStatusLabel(lead)].filter(Boolean)
+
+    if (lead.active_survey?.scheduled_at) {
+      progress.push(`Jadwal: ${new Date(lead.active_survey.scheduled_at).toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`)
+    }
+
+    if (lead.active_survey?.actual_start_at) {
+      progress.push(`Mulai: ${new Date(lead.active_survey.actual_start_at).toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`)
+    }
+
+    if (lead.active_survey?.actual_finish_at) {
+      progress.push(`Selesai: ${new Date(lead.active_survey.actual_finish_at).toLocaleString('id-ID', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}`)
+    }
+
+    return progress.length ? progress : ['Status belum tersedia']
   }
   const currentYear = new Date().getFullYear()
   const yearOptions = Array.from({ length: 7 }, (_, index) => currentYear - index)
@@ -346,8 +396,8 @@ export default function ConsultationsPage() {
       </div>
 
       {/* Filters */}
-      <div className={cn('consultation-toolbar max-w-full px-3 py-3 sm:px-4', softActionSurfaceClass)}>
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+      <div className="consultation-toolbar max-w-full px-2.5 py-2.5 sm:px-4 sm:py-3">
+        <div className="flex flex-col gap-1.5 sm:gap-2 xl:flex-row xl:items-center">
 
           {/* Search — full width on mobile, constrained on desktop */}
           <SearchField
@@ -359,10 +409,10 @@ export default function ConsultationsPage() {
             onValueChange={setSearchTerm}
             className={cn(
               filterControlSurfaceClass,
-              'h-10 border-[color:color-mix(in_srgb,var(--primary-theme)_18%,var(--border))] bg-transparent text-xs',
-              'hover:border-[color:color-mix(in_srgb,var(--primary-theme)_38%,var(--border))]',
-              'focus-visible:border-[color:color-mix(in_srgb,var(--primary-theme)_60%,var(--border))] focus-visible:bg-transparent',
-              'focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_18%,transparent)]',
+              'h-9 border-border/70 bg-background/55 text-[11px] sm:h-10 sm:text-xs',
+              'hover:border-slate-400/40',
+              'focus-visible:border-slate-400/70 focus-visible:bg-background/70',
+              'focus-visible:ring-slate-400/20',
             )}
           />
 
@@ -370,28 +420,6 @@ export default function ConsultationsPage() {
           <div className="flex w-full min-w-0 flex-wrap items-center gap-1.5 xl:w-auto xl:flex-nowrap">
 
           <div className="hidden md:block h-5 w-px bg-border mr-0.5 dark:bg-zinc-800/60" />
-
-          {/* Lead sudah di tahap Request Survey tapi belum diajukan ke manager.
-              Hanya muncul bila memang ada, supaya tidak jadi hiasan mati. */}
-          {(pendingSurveyCount > 0 || pendingSurveyOnly) && (
-            <button
-              type="button"
-              onClick={() => setPendingSurveyOnly((v) => !v)}
-              title="Lead yang belum diajukan survey ke Manager Surveyor"
-              className={cn(
-                'inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold transition-colors',
-                pendingSurveyOnly
-                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                  : 'border-border text-muted-foreground hover:border-amber-500/40 hover:text-amber-600 dark:hover:text-amber-400',
-              )}
-            >
-              <MapPinned className="h-3.5 w-3.5" />
-              Belum diajukan
-              <span className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
-                {pendingSurveyCount}
-              </span>
-            </button>
-          )}
 
           {/* Status filter icon */}
           <Popover open={barStatusOpen} onOpenChange={setBarStatusOpen}>
@@ -634,13 +662,34 @@ export default function ConsultationsPage() {
             </PopoverContent>
           </Popover>
 
-          {/* Reset & Refresh — pushed to the right */}
-          <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          {/* Belum diajukan + Reset + Refresh — full-width row on mobile, pushed right on desktop */}
+          <div className="grid w-full grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-1.5 sm:gap-2 xl:ml-auto xl:w-auto xl:flex">
+            {/* Lead sudah di tahap Request Survey tapi belum diajukan ke manager.
+                Hanya muncul bila memang ada, supaya tidak jadi hiasan mati. */}
+            {(pendingSurveyCount > 0 || pendingSurveyOnly) && (
+              <button
+                type="button"
+                onClick={() => setPendingSurveyOnly((v) => !v)}
+                title="Lead yang belum diajukan survey ke Manager Surveyor"
+                className={cn(
+                  'inline-flex h-9 min-w-0 items-center justify-center gap-1.5 rounded-xl border px-2.5 text-[11px] font-semibold transition-colors sm:h-10 xl:flex-none',
+                  pendingSurveyOnly
+                    ? 'consultation-pending-action is-active'
+                    : 'consultation-pending-action',
+                )}
+              >
+                <MapPinned className="h-3.5 w-3.5" />
+                <span className="truncate">Belum diajukan</span>
+                <span className="rounded bg-amber-500/18 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
+                  {pendingSurveyCount}
+                </span>
+              </button>
+            )}
             <Button
               variant="ghost"
               size="sm"
               onClick={() => { setSearchTerm(''); setStatusFilter(''); setAccountFilter(''); setMonthFilter(''); setYearFilter(''); setStartDate(''); setEndDate(''); setPage(1) }}
-              className={cn('h-10 rounded-xl border px-3.5 text-xs', filterControlSurfaceClass)}
+              className={cn('h-9 shrink-0 rounded-xl border px-3 text-[11px] sm:h-10 sm:px-3.5 sm:text-xs', filterControlSurfaceClass)}
             >
               Reset
             </Button>
@@ -650,20 +699,56 @@ export default function ConsultationsPage() {
               onClick={() => refetch()}
               title="Perbarui data"
               aria-label="Perbarui data konsultasi"
-              className={cn('size-10 rounded-xl border p-0', filterControlSurfaceClass)}
+              className={cn('size-9 rounded-xl border p-0 sm:size-10', filterControlSurfaceClass)}
             >
               <RefreshCw className={cn("h-3.5 w-3.5", isRefetching && "animate-spin")} />
             </Button>
           </div>
 
           </div>{/* end icons row */}
-          <div className="flex min-w-0 flex-col gap-2 w-full xl:ml-auto xl:w-auto xl:flex-row xl:items-center">
-            <div className="grid w-full grid-cols-3 gap-1.5 sm:gap-2 xl:flex xl:w-auto xl:items-center">
+          <div className="grid min-w-0 grid-cols-[0.55fr_1fr] gap-1.5 w-full sm:gap-2 xl:ml-auto xl:w-auto xl:flex xl:items-center">
+            <div className="min-w-0 xl:flex xl:w-auto xl:items-center xl:gap-2">
+              <Popover open={exportOpen} onOpenChange={setExportOpen}>
+                <PopoverTrigger className={cn(secondaryFileActionClass, 'consultation-export-action w-full px-3 xl:hidden')}>
+                  <Download className="size-3.5 shrink-0" />
+                  Export
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-44 p-2">
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); setImportOpen(true) }}
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted"
+                    >
+                      <Upload className="h-3.5 w-3.5 text-amber-500" />
+                      Import CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); download('/export/leads/excel', leadsExportParams, 'Excel leads berhasil diunduh.') }}
+                      disabled={isDownloading('/export/leads/excel')}
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <FileSpreadsheet className="h-3.5 w-3.5 text-amber-500" />
+                      Excel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setExportOpen(false); download('/export/leads/pdf', leadsExportParams, 'PDF leads berhasil diunduh.') }}
+                      disabled={isDownloading('/export/leads/pdf')}
+                      className="flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted disabled:cursor-wait disabled:opacity-60"
+                    >
+                      <Download className="h-3.5 w-3.5 text-amber-500" />
+                      PDF
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               {/* CSV Import Dialog */}
               <Dialog open={importOpen} onOpenChange={setImportOpen}>
                 <DialogTrigger
                   render={
-                    <Button variant="ghost" size="sm" className={cn(secondaryFileActionClass, 'w-full xl:w-auto')}>
+                    <Button variant="ghost" size="sm" className={cn(secondaryFileActionClass, 'hidden xl:inline-flex xl:w-auto')}>
                       <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
                       Import CSV
                     </Button>
@@ -734,7 +819,7 @@ export default function ConsultationsPage() {
                 type="button"
                 onClick={() => download('/export/leads/excel', leadsExportParams, 'Excel leads berhasil diunduh.')}
                 disabled={isDownloading('/export/leads/excel')}
-                className={secondaryFileActionClass}
+                className={cn(secondaryFileActionClass, 'hidden xl:inline-flex')}
               >
                 <FileSpreadsheet className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
                 Excel
@@ -743,7 +828,7 @@ export default function ConsultationsPage() {
                 type="button"
                 onClick={() => download('/export/leads/pdf', leadsExportParams, 'PDF leads berhasil diunduh.')}
                 disabled={isDownloading('/export/leads/pdf')}
-                className={secondaryFileActionClass}
+                className={cn(secondaryFileActionClass, 'hidden xl:inline-flex')}
               >
                 <Download className="size-3.5 shrink-0 text-amber-600/75 transition-colors group-hover:text-amber-600 dark:text-amber-400/75 dark:group-hover:text-amber-300" />
                 PDF
@@ -751,7 +836,7 @@ export default function ConsultationsPage() {
             </div>
             <Link
               href="/consultations/create"
-              className="inline-flex items-center justify-center h-10 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-xs rounded-xl transition-all duration-200 shadow-[0_0_16px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)] hover:shadow-[0_0_24px_color-mix(in_srgb,var(--primary-theme)_45%,transparent)] gap-1.5 w-full xl:w-auto shrink-0"
+              className="inline-flex items-center justify-center h-9 px-4 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-zinc-950 font-bold text-xs rounded-xl transition-all duration-200 shadow-[0_0_16px_color-mix(in_srgb,var(--primary-theme)_30%,transparent)] hover:shadow-[0_0_24px_color-mix(in_srgb,var(--primary-theme)_45%,transparent)] gap-1.5 w-full sm:h-10 xl:w-auto shrink-0"
             >
               <Plus className="h-4 w-4 mr-1.5" />
               Lead Baru
@@ -802,7 +887,178 @@ export default function ConsultationsPage() {
         </div>
       )}
 
-      <div className="data-table-shell">
+      <div className="space-y-2 md:hidden">
+        {isLoading ? (
+          <div className="rounded-2xl border border-border/70 bg-card/85 px-4 py-8 text-center text-xs text-muted-foreground">
+            <Loader2 className="mx-auto mb-2 size-5 animate-spin text-amber-500" />
+            Memuat data konsultasi...
+          </div>
+        ) : consultations.length === 0 ? (
+          <div className="rounded-2xl border border-border/70 bg-card/85 px-4 py-8 text-center text-xs text-muted-foreground">
+            <Search className="mx-auto mb-2 size-5 opacity-60" />
+            Tidak ditemukan data konsultasi yang sesuai filter.
+          </div>
+        ) : (
+          sortedConsultations.map((lead) => {
+            const categories = productCategoryNames(lead)
+            const statusName = lead.status_category?.name ?? ''
+            const statusAlreadyShowsSurvey = statusName.toLowerCase().includes('survey')
+            const statusLabel = buildSurveyStatusLabel(lead)
+            const statusColor = lead.status_category
+              ? getStatusColor(statusName, lead.status_category.css_class)
+              : '#71717a'
+            const region = [lead.district, lead.city, lead.province].filter(Boolean).join(' · ')
+            const initial = lead.client_name?.trim()?.charAt(0)?.toUpperCase() || '?'
+
+            return (
+              <article
+                key={lead.id}
+                className={cn(
+                  'rounded-2xl border bg-card/90 p-3 shadow-[0_10px_26px_-24px_rgba(15,23,42,0.65)]',
+                  selectedConsultationIds.has(lead.id)
+                    ? 'border-[color:color-mix(in_srgb,var(--primary-theme)_62%,var(--border))] bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))]'
+                    : 'border-border/70',
+                )}
+              >
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={selectedConsultationIds.has(lead.id)}
+                    disabled={isBulkDeleting}
+                    onCheckedChange={(checked) => toggleConsultationSelection(lead.id, checked)}
+                    aria-label={`Pilih konsultasi ${lead.client_name}`}
+                    className="mt-1 size-[18px] rounded-md border-[color:color-mix(in_srgb,var(--primary-theme)_48%,var(--border))] bg-background/55 data-checked:border-[color:var(--primary-theme)] data-checked:bg-[var(--primary-theme)] data-checked:text-zinc-950"
+                  />
+                  <div className="min-w-0 flex-1">
+                    {/* Identity */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex min-w-0 items-start gap-2.5">
+                        <div className="grid size-9 shrink-0 place-items-center rounded-xl border border-border/60 bg-[color-mix(in_srgb,var(--primary-theme)_14%,var(--card))] text-xs font-bold uppercase text-[color:var(--primary-theme)]">
+                          {initial}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-bold leading-tight text-foreground">{lead.client_name}</p>
+                          <p className="mt-0.5 flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                            <Phone className="size-3 shrink-0" />
+                            <span className="truncate">{lead.phone || '-'}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <span className="shrink-0 rounded-lg border border-border/70 px-2 py-1 font-mono text-[10px] font-semibold text-muted-foreground">
+                        {lead.consultation_id}
+                      </span>
+                    </div>
+
+                    {/* Lokasi lengkap */}
+                    <div className="mt-3 flex items-start gap-1.5 rounded-xl border border-border/60 bg-background/35 px-2.5 py-2 text-[10px]">
+                      <MapPin className="mt-0.5 size-3 shrink-0 text-muted-foreground/70" />
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold text-foreground/85">{region || 'Luar Kota'}</p>
+                        {lead.address && <p className="mt-0.5 line-clamp-1 text-muted-foreground/70">{lead.address}</p>}
+                      </div>
+                    </div>
+
+                    {/* Kebutuhan — semua kategori */}
+                    <div className="mt-2 flex items-start gap-1.5">
+                      <Layers className="mt-1 size-3 shrink-0 text-muted-foreground/70" />
+                      <div className="flex min-w-0 flex-wrap gap-1">
+                        {categories.length > 0 ? (
+                          <>
+                            {categories.slice(0, 4).map((cat, idx) => (
+                              <span key={idx} className="rounded-md border border-border/60 bg-background/35 px-1.5 py-0.5 text-[9px] font-semibold text-foreground/80">
+                                {cat}
+                              </span>
+                            ))}
+                            {categories.length > 4 && (
+                              <span className="rounded-md px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">+{categories.length - 4}</span>
+                            )}
+                          </>
+                        ) : (
+                          <span className="text-[10px] text-muted-foreground/60">Kebutuhan belum diisi</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Detail produk / catatan */}
+                    {lead.product_details && (
+                      <p className="mt-2 line-clamp-2 rounded-xl border border-border/50 bg-background/25 px-2.5 py-1.5 text-[10px] leading-relaxed text-muted-foreground">
+                        {lead.product_details}
+                      </p>
+                    )}
+
+                    {/* Status + survey + akun */}
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      {lead.status_category && (
+                        <span
+                          className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-bold uppercase"
+                          style={{
+                            color: statusColor,
+                            backgroundColor: `${statusColor}14`,
+                            borderColor: `${statusColor}45`,
+                          }}
+                        >
+                          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: statusColor }} />
+                          <span className="truncate">{statusLabel}</span>
+                        </span>
+                      )}
+                      {lead.active_survey?.state && !statusAlreadyShowsSurvey && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-violet-500/40 bg-violet-500/10 px-2 py-1 text-[9px] font-bold uppercase text-violet-500 dark:text-violet-400">
+                          <MapPinned className="size-3 shrink-0" />
+                          <span className="truncate">Survey aktif</span>
+                        </span>
+                      )}
+                      {isSuperAdmin && (
+                        <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-full border border-border/60 px-2.5 py-1 text-[9px] font-semibold text-muted-foreground">
+                          <Building2 className="size-3 shrink-0" />
+                          <span className="truncate">{lead.account?.name || '-'}</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Footer: meta + aksi */}
+                    <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/50 pt-2.5">
+                      <div className="min-w-0 space-y-0.5 text-[10px] text-muted-foreground">
+                        <p className="flex items-center gap-1">
+                          <CalendarDays className="size-3 shrink-0" />
+                          Konsul: {lead.consultation_date
+                            ? new Date(lead.consultation_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                            : 'belum diisi'}
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-1.5">
+                        <Link
+                          href={`/consultations/${lead.id}`}
+                          aria-label={`Lihat detail ${lead.client_name}`}
+                          className={cn(buttonVariants({ size: 'icon-xs', variant: 'ghost' }), 'size-9 rounded-xl border border-border/70 bg-background/45 text-[color:var(--primary-theme)]')}
+                        >
+                          <Eye className="size-4" strokeWidth={2.25} />
+                        </Link>
+                        <Link
+                          href={`/consultations/${lead.id}/edit`}
+                          aria-label={`Edit ${lead.client_name}`}
+                          className={cn(buttonVariants({ size: 'icon-xs', variant: 'ghost' }), 'size-9 rounded-xl border border-border/70 bg-background/45 text-[color:var(--primary-theme)]')}
+                        >
+                          <Edit2 className="size-4" strokeWidth={2.25} />
+                        </Link>
+                        <Button
+                          size="icon-xs"
+                          variant="ghost"
+                          onClick={() => handleDelete(lead.id)}
+                          aria-label={`Hapus ${lead.client_name}`}
+                          className="size-9 rounded-xl border border-border/70 bg-red-500/[0.055] text-red-500/90 hover:bg-red-500/[0.12]"
+                        >
+                          <Trash2 className="size-4" strokeWidth={2.25} />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            )
+          })
+        )}
+      </div>
+
+      <div className="data-table-shell hidden md:block">
         {/* Refetching visual feedback overlay */}
         {isRefetching && (
           <div className="absolute inset-0 bg-background/25 backdrop-blur-[1px] z-30 flex items-center justify-center transition-all duration-300">
@@ -1175,18 +1431,51 @@ export default function ConsultationsPage() {
                     <TableCell className="py-3.5 px-5 text-center">
                       {lead.status_category && (() => {
                         const color = getStatusColor(lead.status_category.name, lead.status_category.css_class)
+                        const statusLabel = buildSurveyStatusLabel(lead)
+                        const progress = buildStatusProgress(lead)
                         return (
-                          <span
-                            className="inline-flex items-center gap-1.5 text-[9.5px] rounded-full font-bold uppercase tracking-wider px-2.5 py-[3px] border whitespace-nowrap"
-                            style={{
-                              color,
-                              backgroundColor: `${color}14`,
-                              borderColor: `${color}45`,
-                            }}
-                          >
-                            <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                            {lead.status_category.name}
-                          </span>
+                          <Tooltip>
+                            <TooltipTrigger
+                              className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-[3px] text-[9.5px] font-bold uppercase tracking-wider whitespace-nowrap outline-none transition-[border-color,background-color,box-shadow] hover:shadow-[0_0_0_3px_rgba(255,255,255,0.04)] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--primary-theme)_45%,transparent)]"
+                              style={{
+                                color,
+                                backgroundColor: `${color}14`,
+                                borderColor: `${color}45`,
+                              }}
+                            >
+                              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                              <span className="max-w-[170px] truncate">{lead.status_category.name}</span>
+                              <Info className="size-3 opacity-65" />
+                            </TooltipTrigger>
+                            <TooltipContent side="top" sideOffset={8} className="flex w-[300px] max-w-[calc(100vw-2rem)] flex-col items-stretch gap-2 rounded-xl border border-slate-700/70 bg-[#111a2b] p-2.5 text-left text-slate-200 shadow-[0_18px_40px_-28px_rgba(0,0,0,0.8)]">
+                              <div
+                                className="rounded-lg border px-2.5 py-2"
+                                style={{
+                                  backgroundColor: `${color}12`,
+                                  borderColor: `${color}35`,
+                                }}
+                              >
+                                <p className="break-words text-[10px] font-black uppercase leading-snug tracking-wide" style={{ color }}>
+                                  {statusLabel}
+                                </p>
+                              </div>
+                              {progress.length > 1 && (
+                                <div className="space-y-1.5">
+                                  {progress.slice(1).map((item, index) => {
+                                    const [label, ...rest] = item.split(': ')
+                                    return (
+                                      <div key={`${item}-${index}`} className="flex items-start justify-between gap-3 text-[10.5px] leading-snug">
+                                        <span className="shrink-0 font-semibold text-slate-500">{label}</span>
+                                        <span className="min-w-0 whitespace-nowrap text-right font-medium text-slate-300">
+                                          {rest.join(': ') || item}
+                                        </span>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </TooltipContent>
+                          </Tooltip>
                         )
                       })()}
                     </TableCell>

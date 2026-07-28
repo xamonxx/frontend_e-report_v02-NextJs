@@ -5,6 +5,12 @@ import { api } from '@/lib/api/client'
 import { queryKeys } from '@/lib/api/queryKeys'
 import type { Consultation, ConsultationFilters, PaginatedResponse, ApiResponse } from '@/types'
 
+function invalidateConsultationDependents(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
+  queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
+  queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+}
+
 /**
  * Hook to fetch paginated and filtered consultations list.
  */
@@ -50,8 +56,7 @@ export function useCreateConsultation() {
     mutationFn: (data: Omit<Consultation, 'id' | 'consultation_id' | 'created_at' | 'updated_at' | 'account' | 'status_category' | 'needs_category' | 'creator'> & { account_id?: number; status_category_id?: number; needs_category_ids?: number[] }) =>
       api.post<ApiResponse<Consultation>>('/consultations', data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      invalidateConsultationDependents(queryClient)
     },
   })
 }
@@ -66,8 +71,7 @@ export function useUpdateConsultation(id: number) {
       api.put<ApiResponse<Consultation>>(`/consultations/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      invalidateConsultationDependents(queryClient)
     },
   })
 }
@@ -85,8 +89,7 @@ export function useUpdateConsultationStatus(id: number) {
       ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(id) })
-      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      invalidateConsultationDependents(queryClient)
     },
   })
 }
@@ -99,8 +102,7 @@ export function useDeleteConsultation() {
   return useMutation({
     mutationFn: (id: number) => api.delete<{ message: string }>(`/consultations/${id}`),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      invalidateConsultationDependents(queryClient)
     },
   })
 }
@@ -114,8 +116,7 @@ export function useImportConsultations() {
     mutationFn: (formData: FormData) =>
       api.postForm<{ message: string }>('/consultations/import', formData),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
-      queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      invalidateConsultationDependents(queryClient)
     },
   })
 }
