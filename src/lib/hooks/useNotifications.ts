@@ -16,7 +16,8 @@ export function useUserActivity(idleTimeout = 60000) {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    let timeoutId: NodeJS.Timeout
+    let timeoutId: ReturnType<typeof setTimeout>
+    let lastHandledAt = 0
 
     const handleActivity = () => {
       // If the document is hidden, consider user inactive
@@ -25,6 +26,9 @@ export function useUserActivity(idleTimeout = 60000) {
         return
       }
 
+      const now = Date.now()
+      if (now - lastHandledAt < 5000) return
+      lastHandledAt = now
       setIsActive(true)
       clearTimeout(timeoutId)
       timeoutId = setTimeout(() => {
@@ -41,9 +45,9 @@ export function useUserActivity(idleTimeout = 60000) {
     }
 
     // Track user input events
-    const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
+    const events = ['pointerdown', 'keydown', 'scroll', 'touchstart']
     events.forEach((event) => {
-      window.addEventListener(event, handleActivity)
+      window.addEventListener(event, handleActivity, { passive: true })
     })
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -65,18 +69,18 @@ export function useUserActivity(idleTimeout = 60000) {
 
 /**
  * Lightweight badge count. Safe to poll continuously.
- * Polling is adjusted dynamically: 3s if active, 30s if idle, paused if hidden.
+ * Realtime events keep this fresh; polling is only a resilient fallback.
  */
 export function useNotificationCount() {
   const isActive = useUserActivity()
 
-  // NOTE: shared-hosting MySQL caps koneksi 500/jam. Polling 3s sebelumnya =
-  // ~1200 koneksi/jam per user dan langsung menyebabkan dashboard nyangkut
-  // "Memuat dashboard interior...". Disetel agar masih responsif tapi aman.
+  // Reverb memberi pembaruan langsung. Interval ini hanya fallback agar tetap
+  // segar ketika websocket diblokir jaringan seluler atau proxy.
   return useQuery({
     queryKey: queryKeys.notifications.count(),
     queryFn: ({ signal }) => api.get<NotificationCount>('/notifications', undefined, signal),
-    refetchInterval: isActive ? 30000 : 120000, // 30s active, 2m idle
+    refetchInterval: isActive ? 30000 : 300000,
+    refetchIntervalInBackground: false,
     // Gratis: hanya berjalan saat user kembali ke tab, tidak menambah polling
     // latar. Ini yang membuat angka terasa segar tanpa menaikkan koneksi DB.
     refetchOnWindowFocus: true,
@@ -89,14 +93,17 @@ export function useNotificationCount() {
  */
 export function useNotificationSummary(enabled = true) {
   const isActive = useUserActivity()
-  const interval = enabled && isActive ? 15000 : (enabled ? 60000 : false)
+  const interval = enabled && isActive ? 30000 : (enabled ? 120000 : false)
 
   return useQuery({
     queryKey: queryKeys.notifications.summary(),
     queryFn: ({ signal }) => api.get<NotificationSummary>('/notifications/summary', undefined, signal),
     enabled,
     refetchInterval: interval,
-    refetchOnWindowFocus: enabled,
+    refetchIntervalInBackground: false,
+    // Opening the panel enables the query and starts polling; focus changes
+    // must not duplicate the same request on top of that interval.
+    refetchOnWindowFocus: false,
   })
 }
 
@@ -136,6 +143,24 @@ export function useDeleteSurveyNotification() {
   return useMutation({
     mutationFn: (notificationId: number) =>
       api.delete<{ success: boolean }>(`/notifications/surveys/${notificationId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+  })
+}
+
+export function useMarkAttendanceRead() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (notificationId: number) =>
+      api.patch<{ success: boolean }>(`/notifications/attendances/${notificationId}/read`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
+  })
+}
+
+export function useDeleteAttendanceNotification() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (notificationId: number) =>
+      api.delete<{ success: boolean }>(`/notifications/attendances/${notificationId}`),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all }),
   })
 }

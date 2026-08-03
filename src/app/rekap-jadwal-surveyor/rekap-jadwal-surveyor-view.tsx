@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import type { ElementType } from 'react'
 import { addDays, format, parseISO, startOfWeek } from 'date-fns'
 import {
   CalendarDays,
+  CalendarCheck,
+  CalendarClock,
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
@@ -23,7 +26,7 @@ import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { ACCOUNT_GROUP_LABELS, type AccountGroup, type SurveyorRecapDay } from '@/types'
+import { ACCOUNT_GROUP_LABELS, type AccountGroup, type SurveyorItem, type SurveyorRecapDay, type SurveyorRecapScheduleItem, type SurveyorRecapSummary } from '@/types'
 
 /** Tanggal disimpan sebagai yyyy-MM-dd; parse balik dengan jam tengah hari
  *  supaya pergeseran zona waktu tidak memindahkannya sehari. */
@@ -77,6 +80,7 @@ export default function RekapJadwalSurveyorView() {
   const currentWeekDate = format(new Date(), 'yyyy-MM-dd')
   const activeFilterCount = Number(Boolean(accountGroup)) + Number(Boolean(surveyorId))
   const hasCustomFilters = activeFilterCount > 0 || weekDate !== currentWeekDate
+  const weeklyLoads = report ? buildWeeklyLoads(surveyors, report.summary) : []
 
   const shiftWeek = (days: number) => {
     setWeekDate(format(addDays(toDate(weekDate), days), 'yyyy-MM-dd'))
@@ -123,7 +127,7 @@ export default function RekapJadwalSurveyorView() {
             type="button"
             onClick={() => refetch()}
             disabled={isFetching}
-            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border/60 bg-card/70 px-3 text-xs font-semibold text-foreground/80 transition-colors hover:border-border hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-60"
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 text-xs font-semibold text-foreground/80 transition-colors hover:border-border hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:opacity-60"
           >
             <RefreshCw className={cn('size-3.5', isFetching && 'animate-spin')} />
             Muat ulang
@@ -141,10 +145,10 @@ export default function RekapJadwalSurveyorView() {
       </header>
 
       {/* Filter */}
-      <section aria-label="Filter rekap jadwal" className="overflow-hidden rounded-xl bg-card/75 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/55 backdrop-blur-sm">
+      <section aria-label="Filter rekap jadwal" className="overflow-hidden rounded-xl bg-card shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/55">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/45 px-3 py-2.5 sm:px-4">
           <div className="flex items-center gap-2">
-            <span className="grid size-7 place-items-center rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_10%,var(--card))] text-[var(--primary-theme)]">
+            <span className="grid size-7 place-items-center rounded-lg bg-muted text-[var(--primary-theme)]">
               <SlidersHorizontal className="size-3.5" />
             </span>
             <div>
@@ -170,11 +174,11 @@ export default function RekapJadwalSurveyorView() {
               Periode Minggu
             </Label>
             <div className="grid grid-cols-[36px_minmax(0,1fr)_36px] gap-1.5">
-              <button type="button" onClick={() => shiftWeek(-7)} className="grid h-10 place-items-center rounded-lg border border-border/55 bg-background/45 text-muted-foreground transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:text-foreground" title="Minggu sebelumnya" aria-label="Minggu sebelumnya">
+              <button type="button" onClick={() => shiftWeek(-7)} className="grid h-10 place-items-center rounded-lg border border-border/55 bg-background text-muted-foreground transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:text-foreground" title="Minggu sebelumnya" aria-label="Minggu sebelumnya">
                 <ChevronLeft className="size-4" />
               </button>
               <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                <PopoverTrigger className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-lg border border-border/55 bg-background/45 px-3 text-sm font-semibold text-foreground/85 transition-colors outline-none hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] focus-visible:ring-2 focus-visible:ring-ring/30">
+                <PopoverTrigger className="inline-flex h-10 min-w-0 items-center justify-center gap-2 rounded-lg border border-border/55 bg-background px-3 text-sm font-semibold text-foreground/85 transition-colors outline-none hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] focus-visible:ring-2 focus-visible:ring-ring/30">
                   <CalendarDays className="size-3.5 shrink-0 text-[var(--primary-theme)]" />
                   <span className="truncate">{format(toDate(weekDate), 'd MMM yyyy')}</span>
                 </PopoverTrigger>
@@ -191,7 +195,7 @@ export default function RekapJadwalSurveyorView() {
                   />
                 </PopoverContent>
               </Popover>
-              <button type="button" onClick={() => shiftWeek(7)} className="grid h-10 place-items-center rounded-lg border border-border/55 bg-background/45 text-muted-foreground transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:text-foreground" title="Minggu berikutnya" aria-label="Minggu berikutnya">
+              <button type="button" onClick={() => shiftWeek(7)} className="grid h-10 place-items-center rounded-lg border border-border/55 bg-background text-muted-foreground transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))] hover:text-foreground" title="Minggu berikutnya" aria-label="Minggu berikutnya">
                 <ChevronRight className="size-4" />
               </button>
             </div>
@@ -250,127 +254,345 @@ export default function RekapJadwalSurveyorView() {
               <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--primary-theme)]">Hasil rekap</p>
               <p className="mt-0.5 text-xs font-semibold text-muted-foreground">{report.subtitle}</p>
             </div>
-            <div className="flex items-baseline gap-1.5 text-muted-foreground">
-              <span className="text-xl font-black tabular-nums text-foreground">{report.total}</span>
-              <span className="text-[11px] font-medium">jadwal minggu ini</span>
-            </div>
           </div>
 
-          <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_260px]">
-            <WeekGrid days={report.days} rowCount={report.rowCount} isFetching={isFetching} />
-            <SummaryTable summary={report.summary} total={report.total} />
-          </div>
+          <SummaryCards total={report.total} weeklyLoads={weeklyLoads} />
+
+          <RecommendationPanel weeklyLoads={weeklyLoads} days={report.days} />
+
+          <WeekGrid days={report.days} isFetching={isFetching} />
+          <SummaryTable summary={report.summary} total={report.total} />
         </>
       )}
     </div>
   )
 }
 
+type WeeklyLoad = {
+  surveyorId: number
+  surveyorName: string
+  count: number
+}
+
+function buildWeeklyLoads(
+  surveyors: SurveyorItem[],
+  summary: SurveyorRecapSummary[]
+): WeeklyLoad[] {
+  const counts = new Map(summary.map((item) => [item.surveyorId, item]))
+  const fromSurveyors = surveyors.map((surveyor) => ({
+    surveyorId: surveyor.id,
+    surveyorName: surveyor.name,
+    count: counts.get(surveyor.id)?.count ?? 0,
+  }))
+
+  const missingFromSurveyors = summary
+    .filter((item) => !fromSurveyors.some((load) => load.surveyorId === item.surveyorId))
+    .map((item) => ({
+      surveyorId: item.surveyorId,
+      surveyorName: item.surveyorName,
+      count: item.count,
+    }))
+
+  return [...fromSurveyors, ...missingFromSurveyors].sort((a, b) => a.count - b.count || a.surveyorName.localeCompare(b.surveyorName))
+}
+
+function SummaryCards({ total, weeklyLoads }: { total: number; weeklyLoads: WeeklyLoad[] }) {
+  const active = weeklyLoads.filter((item) => item.count > 0)
+  const busiest = [...weeklyLoads].sort((a, b) => b.count - a.count || a.surveyorName.localeCompare(b.surveyorName))[0]
+  const quietest = weeklyLoads[0]
+
+  return (
+    <section aria-label="Ringkasan rekap jadwal" className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <MetricCard icon={CalendarCheck} label="Total jadwal" value={total} hint="Minggu terpilih" />
+      <MetricCard icon={Users} label="Surveyor aktif" value={active.length} hint={`${weeklyLoads.length} surveyor terdaftar`} />
+      <MetricCard
+        icon={CalendarClock}
+        label="Paling kosong"
+        value={quietest?.surveyorName ?? '-'}
+        hint={quietest ? `${quietest.count} jadwal minggu ini` : 'Belum ada data'}
+      />
+      <MetricCard
+        icon={Users}
+        label="Tersibuk"
+        value={busiest?.surveyorName ?? '-'}
+        hint={busiest ? `${busiest.count} jadwal minggu ini` : 'Belum ada data'}
+      />
+    </section>
+  )
+}
+
+function MetricCard({
+  icon: Icon,
+  label,
+  value,
+  hint,
+}: {
+  icon: ElementType
+  label: string
+  value: string | number
+  hint: string
+}) {
+  return (
+    <article className="min-w-0 rounded-xl bg-card p-4 ring-1 ring-border/50">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{label}</p>
+          <p className="mt-1 truncate text-xl font-black text-foreground">{value}</p>
+          <p className="mt-1 text-[11px] font-medium text-muted-foreground">{hint}</p>
+        </div>
+        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-[var(--primary-theme)]">
+          <Icon className="size-4" />
+        </span>
+      </div>
+    </article>
+  )
+}
+
+function RecommendationPanel({
+  weeklyLoads,
+  days,
+}: {
+  weeklyLoads: WeeklyLoad[]
+  days: SurveyorRecapDay[]
+}) {
+  const recommended = weeklyLoads.slice(0, 3)
+  const busiest = [...weeklyLoads].sort((a, b) => b.count - a.count || a.surveyorName.localeCompare(b.surveyorName)).slice(0, 3)
+  const quietDays = [...days].sort((a, b) => a.count - b.count || a.date.localeCompare(b.date)).slice(0, 2)
+
+  return (
+    <section className="rounded-xl bg-card p-4 ring-1 ring-border/50">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-sm font-black text-foreground">
+            <CalendarClock className="size-4 text-[var(--primary-theme)]" />
+            Rekomendasi penjadwalan
+          </h2>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Prioritaskan surveyor dengan beban paling ringan, lalu cek jam kosong saat menentukan tanggal.
+          </p>
+        </div>
+        {quietDays.length > 0 && (
+          <div className="rounded-lg bg-muted px-3 py-2 text-right">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Hari paling ringan</p>
+            <p className="text-xs font-bold text-foreground">
+              {quietDays.map((day) => `${day.dayName} (${day.count})`).join(', ')}
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="rounded-lg bg-background p-3 ring-1 ring-border/35">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Kandidat paling aman</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {recommended.map((item) => (
+              <span key={item.surveyorId} className="rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_24%,var(--border))]">
+                {item.surveyorName} <span className="text-muted-foreground">({item.count})</span>
+              </span>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-lg bg-background p-3 ring-1 ring-border/35">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Perlu dihindari kalau bukan prioritas</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {busiest.map((item) => (
+              <span key={item.surveyorId} className="rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground/85">
+                {item.surveyorName} <span className="text-muted-foreground">({item.count})</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 function WeekGrid({
   days,
-  rowCount,
   isFetching,
 }: {
   days: SurveyorRecapDay[]
-  rowCount: number
   isFetching: boolean
 }) {
   const today = format(new Date(), 'yyyy-MM-dd')
-  const rows = Array.from({ length: rowCount }, (_, i) => i)
+  const defaultMobileDay = days.find((day) => day.date === today) ?? days[0]
+  const [selectedMobileDate, setSelectedMobileDate] = useState(defaultMobileDay?.date ?? '')
+  const selectedMobileDay = days.find((day) => day.date === selectedMobileDate) ?? defaultMobileDay
 
   return (
-    <section className="relative min-w-0 overflow-hidden rounded-xl bg-card/75 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50 backdrop-blur-sm">
+    <section className="relative min-w-0 overflow-hidden rounded-xl bg-card shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
       {isFetching && (
         <div className="absolute right-4 top-4 z-10">
           <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
         </div>
       )}
       <div>
-        <div className="space-y-2 p-3 md:hidden">
-          {days.map((day) => (
-            <section key={day.date} className={cn('rounded-lg bg-background/35 p-3 ring-1 ring-border/45', day.isFirstDay && 'bg-amber-500/[0.06]', day.isLastDay && 'bg-red-500/[0.05]')}>
-              <div className="flex items-center justify-between gap-3">
-                <div><p className="text-xs font-bold text-foreground">{day.dayName}</p><p className="text-[10px] text-muted-foreground">{day.dateLabel}</p></div>
-                <span className="rounded-full bg-muted px-2 py-1 text-[10px] font-bold text-muted-foreground dark:bg-zinc-800">{day.count} survey</span>
-              </div>
-              <div className="mt-2 space-y-1 pt-2 ring-1 ring-transparent before:block before:h-px before:bg-border/40">
-                {day.surveyorNames.length > 0 ? day.surveyorNames.map((name, index) => <p key={`${day.date}-${index}`} className="text-xs font-semibold text-foreground/85">{index + 1}. {name}</p>) : <p className="text-xs text-muted-foreground/60">Belum ada survey.</p>}
-              </div>
-            </section>
-          ))}
-        </div>
-        {/* Tabel asli, bukan div-grid: ini data tabular dan pembaca layar
-            perlu hubungan kolom-hari â†” isinya. */}
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[760px] border-collapse text-left">
-            <caption className="sr-only">
-              Jadwal surveyor per hari dalam satu minggu. Satu baris sel = satu survey.
-            </caption>
-            <thead>
-              <tr>
-                <th
-                  scope="col"
-                  className="w-12 border-b border-border/45 bg-muted/20 px-2 py-3 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-                >
-                  No
-                </th>
-                {days.map((day) => (
-                  <th
+        <div className="lg:hidden">
+          <nav aria-label="Pilih hari jadwal" className="border-b border-border/45">
+            <div className="grid w-full grid-cols-7">
+              {days.map((day) => {
+                const isSelected = day.date === selectedMobileDay?.date
+
+                return (
+                  <button
                     key={day.date}
-                    scope="col"
-                    aria-current={day.date === today ? 'date' : undefined}
+                    type="button"
+                    onClick={() => setSelectedMobileDate(day.date)}
+                    aria-pressed={isSelected}
                     className={cn(
-                      'border-b border-border/45 px-3 py-3 text-center',
-                      day.isFirstDay && 'bg-[color-mix(in_srgb,var(--color-warning-500)_14%,transparent)]',
-                      day.isLastDay && 'bg-[color-mix(in_srgb,var(--color-danger-text)_12%,transparent)]',
-                      !day.isFirstDay && !day.isLastDay && 'bg-muted/20',
-                      day.date === today && 'bg-[color-mix(in_srgb,var(--primary-theme)_10%,var(--card))] shadow-[inset_0_-2px_0_var(--primary-theme)]'
+                      'min-w-0 border-b-2 border-r border-r-border/25 px-0.5 py-2.5 text-center transition-colors last:border-r-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring/40',
+                      isSelected
+                        ? 'border-b-[var(--primary-theme)] bg-muted/70 text-foreground'
+                        : 'border-b-transparent text-muted-foreground hover:bg-muted/35 hover:text-foreground'
                     )}
                   >
-                    <span className="block text-xs font-bold text-foreground">{day.dayName}</span>
-                    <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">
-                      {day.dateLabel}
+                    <span className="block truncate text-[10px] font-extrabold sm:text-[11px]">{day.dayName.slice(0, 3)}</span>
+                    <span className="mt-0.5 block text-[8px] font-semibold tabular-nums sm:text-[9px]">{day.dateLabel.slice(0, 5)}</span>
+                    <span className={cn('mt-1 block text-[10px] font-black tabular-nums', isSelected && 'text-[var(--primary-theme)]')}>
+                      {day.count}
                     </span>
-                    <span className="mt-1 inline-block rounded-md bg-background/55 px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
-                      {day.count} survey
+                  </button>
+                )
+              })}
+            </div>
+          </nav>
+
+          {selectedMobileDay && (
+            <section aria-labelledby={`mobile-day-${selectedMobileDay.date}`}>
+              <header className="flex items-center justify-between gap-3 border-b border-border/35 px-4 py-3">
+                <div>
+                  <h2 id={`mobile-day-${selectedMobileDay.date}`} className="text-sm font-black text-foreground">
+                    {selectedMobileDay.dayName}
+                  </h2>
+                  <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{selectedMobileDay.dateLabel}</p>
+                </div>
+                <p className="text-[11px] font-bold tabular-nums text-muted-foreground">
+                  {selectedMobileDay.count} jadwal
+                </p>
+              </header>
+              <div className="divide-y divide-border/35">
+                {selectedMobileDay.count > 0 ? Array.from({ length: selectedMobileDay.count }, (_, index) => (
+                  <ScheduleItemCard
+                    key={`${selectedMobileDay.date}-${index}`}
+                    index={index}
+                    item={selectedMobileDay.scheduleItems?.[index]}
+                    fallbackLabel={selectedMobileDay.surveyorNames[index]}
+                    compact
+                  />
+                )) : (
+                  <p className="px-4 py-10 text-center text-xs font-semibold text-muted-foreground/65">
+                    Belum ada survey pada hari ini.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
+        <div className="hidden overflow-x-auto p-3 lg:block">
+          <div className="grid min-w-[1260px] grid-cols-7 gap-2">
+            {days.map((day) => (
+              <section
+                key={day.date}
+                aria-current={day.date === today ? 'date' : undefined}
+                className={cn(
+                  'min-w-0 overflow-hidden rounded-md bg-background/40',
+                  day.date === today
+                    ? 'bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--background))]'
+                    : day.isFirstDay
+                      ? 'bg-[color-mix(in_srgb,var(--color-warning-500)_5%,var(--background))]'
+                      : day.isLastDay
+                        ? 'bg-[color-mix(in_srgb,var(--color-danger-text)_4%,var(--background))]'
+                        : ''
+                )}
+              >
+                <div
+                  className={cn(
+                    'sticky top-0 z-[1] border-b border-t-2 border-border/45 bg-card/95 px-3 py-3',
+                    day.date === today
+                      ? 'border-t-[var(--primary-theme)]'
+                      : day.isFirstDay
+                        ? 'border-t-amber-500/65'
+                        : day.isLastDay
+                          ? 'border-t-red-500/55'
+                          : 'border-t-border/70'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-black leading-tight text-foreground">{day.dayName}</p>
+                      <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{day.dateLabel}</p>
+                    </div>
+                    <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-[10px] font-black tabular-nums text-muted-foreground">
+                      {day.count}
                     </span>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((rowIndex) => (
-                <tr key={rowIndex} className="border-b border-border/30 transition-colors last:border-b-0 odd:bg-background/[0.08] hover:bg-[color-mix(in_srgb,var(--primary-theme)_5%,var(--card))]">
-                  <th
-                    scope="row"
-                    className="bg-muted/10 px-2 py-2 text-center text-[10px] font-semibold tabular-nums text-muted-foreground"
-                  >
-                    {rowIndex + 1}
-                  </th>
-                  {days.map((day) => {
-                    const name = day.surveyorNames[rowIndex]
-                    return (
-                      <td
-                        key={day.date}
-                        className="px-3 py-2 text-xs"
-                      >
-                        {name ? (
-                          <span className="font-semibold text-foreground/85">{name}</span>
-                        ) : (
-                          <span className="text-muted-foreground/40" aria-hidden="true">
-                            -
-                          </span>
-                        )}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+                <div className="divide-y divide-border/45 [&>article:nth-child(even)]:bg-muted/[0.12]">
+                  {day.count > 0 ? Array.from({ length: day.count }, (_, index) => (
+                    <ScheduleItemCard
+                      key={`${day.date}-${index}`}
+                      index={index}
+                      item={day.scheduleItems?.[index]}
+                      fallbackLabel={day.surveyorNames[index]}
+                    />
+                  )) : (
+                    <p className="px-3 py-8 text-center text-xs font-semibold text-muted-foreground/65">
+                      Belum ada survey.
+                    </p>
+                  )}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
       </div>
     </section>
+  )
+}
+
+function ScheduleItemCard({
+  index,
+  item,
+  fallbackLabel,
+  compact = false,
+}: {
+  index: number
+  item?: SurveyorRecapScheduleItem
+  fallbackLabel?: string
+  compact?: boolean
+}) {
+  if (!item) {
+    return (
+      <p className="break-words text-xs font-semibold leading-snug text-foreground/85">
+        {index + 1}. {fallbackLabel}
+      </p>
+    )
+  }
+
+  return (
+    <article className={cn('group min-w-0 px-3 py-3 transition-colors hover:bg-muted/30', compact && 'px-4 py-3.5')}>
+      <div className="flex min-w-0 items-start justify-between gap-2">
+        <div className="flex min-w-0 items-start gap-2">
+          <span className="grid size-5 shrink-0 place-items-center rounded bg-muted text-[9px] font-black tabular-nums text-muted-foreground">
+            {index + 1}
+          </span>
+          <div className="min-w-0">
+            <p className="break-words text-xs font-black leading-tight text-foreground">{item.surveyorName}</p>
+            <p className="mt-1 break-words text-[11px] font-semibold leading-snug text-foreground/85">{item.clientName}</p>
+            <p className="mt-0.5 font-mono text-[9px] font-semibold leading-tight text-muted-foreground">
+              ID {item.consumerId}
+            </p>
+          </div>
+        </div>
+        <span className="shrink-0 font-mono text-[11px] font-black tabular-nums text-[var(--primary-theme)]">
+          {item.timeLabel}
+        </span>
+      </div>
+      <div className="mt-2 flex min-w-0 items-center gap-1.5 pl-7 text-[10px] font-semibold leading-snug text-muted-foreground">
+        <span className="shrink-0 text-foreground/75">{item.groupLabel}</span>
+        <span aria-hidden="true" className="text-border">/</span>
+        <span className="min-w-0 break-words">{item.city}</span>
+      </div>
+    </article>
   )
 }
 
@@ -384,73 +606,59 @@ function SummaryTable({
   const busiest = summary[0]?.count ?? 0
 
   return (
-    <aside className="h-fit overflow-hidden rounded-xl bg-card/75 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50 backdrop-blur-sm xl:sticky xl:top-4">
-      <div className="px-4 pb-3 pt-4">
-        <h2 className="flex items-center gap-2 text-xs font-bold text-foreground/85">
-          <Users className="size-3.5 text-amber-500" />
-          Jumlah per Surveyor
-        </h2>
-        <p className="mt-1 text-[10px] text-muted-foreground">Distribusi jadwal minggu terpilih</p>
+    <section className="overflow-hidden rounded-xl bg-card shadow-[0_16px_42px_-38px_rgba(2,8,23,0.65)] ring-1 ring-border/35 dark:bg-[#111827]">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/35 px-4 py-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-sm font-bold text-foreground/90">
+            <Users className="size-4 text-[var(--primary-theme)]/80" />
+            Jumlah per Surveyor
+          </h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">Distribusi jadwal minggu terpilih</p>
+        </div>
+        <div className="flex items-baseline gap-2 rounded-md bg-muted px-3 py-1.5 dark:bg-[#0b1220]">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Total</p>
+          <p className="text-base font-black tabular-nums text-[var(--primary-theme)]">{total}</p>
+        </div>
       </div>
-      <div>
+      <div className="px-4 py-2">
         {summary.length === 0 ? (
-          <p className="px-5 pb-5 text-xs text-muted-foreground">
+          <p className="py-3 text-xs text-muted-foreground">
             Belum ada survey terjadwal di minggu ini.
           </p>
         ) : (
-          <table className="w-full border-collapse text-left">
-            <thead>
-              <tr>
-                <th
-                  scope="col"
-                  className="border-b border-border/45 bg-muted/20 px-4 py-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-                >
-                  Surveyor
-                </th>
-                <th
-                  scope="col"
-                  className="w-14 border-b border-border/45 bg-muted/20 px-2 py-2.5 text-center text-[10px] font-bold uppercase tracking-wider text-muted-foreground"
-                >
-                  Jml
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {summary.map((item) => (
-                <tr key={item.surveyorId} className="border-b border-border/30 transition-colors hover:bg-muted/20">
-                  <td className="px-4 py-2.5">
-                    <span className="text-xs font-semibold text-foreground/85">{item.surveyorName}</span>
-                    {/* Bar proporsional: beban relatif langsung terbaca tanpa
-                        mengandalkan warna saja. */}
-                    <span className="mt-1 block h-1 w-full overflow-hidden rounded-full bg-muted dark:bg-zinc-800">
-                      <span
-                        className="block h-full rounded-full bg-amber-500/70"
-                        style={{ width: `${busiest > 0 ? (item.count / busiest) * 100 : 0}%` }}
-                      />
-                    </span>
-                  </td>
-                  <td className="px-2 py-2.5 text-center text-xs font-bold tabular-nums text-foreground">
-                    {item.count}
-                  </td>
-                </tr>
-              ))}
-              <tr className="border-t border-border/50 bg-muted/15">
-                <td className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Total
-                </td>
-                <td className="px-2 py-2.5 text-center text-sm font-black text-amber-500">{total}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-4">
+            {summary.map((item) => (
+              <div
+                key={item.surveyorId}
+                className="flex min-w-0 items-center justify-between gap-3 border-b border-border/25 py-3 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0 xl:[&:nth-last-child(-n+4)]:border-b-0"
+              >
+                <div className="flex min-w-0 items-center gap-2">
+                  <span
+                    className={cn(
+                      'size-1.5 shrink-0 rounded-full',
+                      item.count === busiest ? 'bg-[var(--primary-theme)]' : 'bg-muted-foreground/35'
+                    )}
+                    aria-hidden="true"
+                  />
+                  <p className="min-w-0 truncate text-xs font-semibold text-foreground/85" title={item.surveyorName}>
+                    {item.surveyorName}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-bold tabular-nums text-foreground/90 dark:bg-[#0b1220]">
+                  {item.count}
+                </span>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-    </aside>
+    </section>
   )
 }
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-xl bg-card/70 py-12 text-center text-xs text-muted-foreground ring-1 ring-border/50">
+    <div className="rounded-xl bg-card py-12 text-center text-xs text-muted-foreground ring-1 ring-border/50">
       {message}
     </div>
   )

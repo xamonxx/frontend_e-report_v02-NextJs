@@ -7,6 +7,7 @@ export type ApiResponse<T> = {
 export type ApiError = {
   message: string
   errors?: Record<string, string[]>
+  status?: number
 }
 
 export type PaginatedResponse<T> = {
@@ -41,8 +42,19 @@ export type SurveyorRecapDay = {
   dateLabel: string
   isFirstDay: boolean
   isLastDay: boolean
+  scheduleItems?: SurveyorRecapScheduleItem[]
   surveyorNames: string[]
   count: number
+}
+
+export type SurveyorRecapScheduleItem = {
+  surveyorName: string
+  groupLabel: string
+  consumerId: string
+  clientName: string
+  city: string
+  timeLabel: string
+  displayLabel: string
 }
 
 export type SurveyorRecapSummary = {
@@ -88,6 +100,23 @@ export type SurveyorAvailability = SurveyorItem & {
   email: string
   schedule_count: number
   schedules: string[]
+}
+export type SurveyorAssignmentSuggestion = {
+  surveyor_id: number
+  surveyor_name: string
+  email: string
+  rank: number
+  score: number
+  is_available: boolean
+  has_conflict: boolean
+  day_load: number
+  busy_times: string[]
+  province_count: number
+  city_count: number
+  completed_count: number
+  deal_count: number
+  deal_rate: number
+  reasons: string[]
 }
 export type SurveyActivity = {
   id: number
@@ -140,6 +169,7 @@ export type AuthUser = {
   account_id: number | null
   account: { id: number; name: string; logo: string | null } | null
   primary_color: string | null
+  avatar: string | null
   last_login_at: string | null
 }
 
@@ -255,6 +285,7 @@ export type NotificationCount = {
   unread_notes: number
   upcoming_reminders: number
   unread_surveys?: number
+  unread_attendances?: number
   /** Lead sudah berstatus Request Survey tapi belum diajukan ke manager. */
   pending_survey_requests?: number
   total: number
@@ -265,6 +296,7 @@ export type NotificationSummary = NotificationCount & {
   notes: NoteNotification[]
   reminders: ReminderNotification[]
   surveys?: SurveyNotification[]
+  attendances?: AttendanceNotification[]
 }
 
 export type SurveyNotification = {
@@ -303,4 +335,19 @@ export type ReminderNotification = {
   overdue: boolean
   remind_human: string
   remind_label: string
+}
+
+export type AttendanceNotification = {
+  id: number
+  title: string
+  message: string
+  is_read: boolean
+  created_human?: string
+  admin_name: string
+  account_name?: string | null
+  report_date?: string | null
+  report_date_label?: string | null
+  report_category: string
+  report_category_label: string
+  url: string
 }

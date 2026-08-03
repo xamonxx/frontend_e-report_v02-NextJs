@@ -262,8 +262,12 @@ function StatCard({
         {/* Fixed-height slot: the hero's pill and the others' chip must agree on
             a top and a bottom edge or the whole row's shoulder line breaks. */}
         {isFeature ? (
-          <span className="inline-flex h-8 shrink-0 items-center rounded-lg border border-border bg-muted/40 px-2.5 text-[9px] font-bold uppercase text-muted-foreground sm:h-9 sm:rounded-xl">
-            KPI
+          <span
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-muted text-muted-foreground sm:size-9 sm:rounded-xl"
+            aria-label="KPI utama"
+            title="KPI utama"
+          >
+            <Icon className="size-4" strokeWidth={2} />
           </span>
         ) : (
           <div className={cn('flex size-8 shrink-0 items-center justify-center rounded-lg border transition-colors sm:size-9 sm:rounded-xl', tone.chip)}>
@@ -303,10 +307,27 @@ export default function DashboardPage() {
   const today = format(new Date(), "EEEE, d MMMM yyyy", { locale: idLocale })
   const isSuperAdmin = user?.role === 'super_admin'
 
-  const [isMounted, setIsMounted] = useState(false)
+  const isMounted = true
+
+  // Jam berjalan (WIB) untuk kartu pengingat absensi.
+  const [now, setNow] = useState<Date | null>(null)
   useEffect(() => {
-    setIsMounted(true)
+    setNow(new Date())
+    const id = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(id)
   }, [])
+  const clock = useMemo(() => {
+    if (!now) return { hh: '--', mm: '--', ss: '--' }
+    const parts = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Jakarta',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(now)
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '--'
+    return { hh: get('hour'), mm: get('minute'), ss: get('second') }
+  }, [now])
 
   // Ref to the trend card; PNG/PDF export helpers live in @/lib/export-card.
   const trendCardRef = useRef<HTMLDivElement>(null)
@@ -470,10 +491,6 @@ export default function DashboardPage() {
                   {analyticsResponse.data.periodLabel}
                 </span>
               )}
-              <div className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] px-3 py-2">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Live</span>
-              </div>
             </div>
           </div>
         </header>
@@ -482,23 +499,48 @@ export default function DashboardPage() {
         {needsAttendance && (
           <Link
             href="/report-attendances"
-            className="dash-rise group flex items-center gap-3 rounded-2xl border border-amber-500/35 bg-amber-500/[0.07] px-4 py-3.5 transition-colors hover:border-amber-500/55 hover:bg-amber-500/[0.11] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 sm:gap-4"
+            aria-label="Isi absensi hari ini — belum kamu lapor"
+            className="dash-rise group relative flex flex-col overflow-hidden rounded-2xl border border-amber-500/25 bg-[radial-gradient(130%_150%_at_0%_0%,color-mix(in_srgb,var(--primary-theme)_13%,var(--card))_0%,var(--card)_46%)] shadow-[0_22px_55px_-40px_var(--primary-theme)] transition-colors duration-200 hover:border-amber-500/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/45 sm:flex-row sm:items-stretch"
             style={{ animationDelay: '30ms' }}
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-600 dark:text-amber-400">
-              <Clock className="size-5" strokeWidth={2} />
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-sm font-bold text-foreground">
-                Anda belum absen hari ini
+            {/* Isi utama. */}
+            <span className="flex min-w-0 flex-1 flex-col gap-3.5 px-4 py-4 sm:flex-row sm:items-center sm:gap-5 sm:px-5">
+              {/* Jam berjalan + status pill — punch clock. */}
+              <span className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2">
+                <span className="flex items-baseline font-mono text-[2.25rem] font-black leading-none tabular-nums tracking-tighter text-foreground sm:text-[2.5rem]">
+                  {clock.hh}
+                  <span className="mx-0.5 animate-pulse text-amber-500">:</span>
+                  {clock.mm}
+                  <span className="ml-1 self-end text-base font-bold text-muted-foreground">
+                    {clock.ss}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-amber-600 dark:text-amber-300">
+                  <span className="inline-block size-1.5 animate-pulse rounded-full bg-amber-500" />
+                  Belum lapor · WIB
+                </span>
               </span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">
-                Laporkan status chat WhatsApp masuk sebelum jam operasional berakhir.
+
+              {/* Divider halus (desktop lebar). */}
+              <span aria-hidden className="hidden h-11 w-px shrink-0 bg-gradient-to-b from-transparent via-border to-transparent lg:block" />
+
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-black tracking-tight text-foreground sm:text-[15px]">
+                  Absen hari ini belum kamu lapor
+                </span>
+                <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                  Rekap status chat WhatsApp hari ini biar laporan operasional tetap lengkap.
+                </span>
               </span>
             </span>
-            <span className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-2 text-[11px] font-bold text-slate-950 transition-transform group-hover:translate-x-0.5">
-              Absen
-              <ArrowUpRight className="size-3.5" strokeWidth={2.5} />
+
+            {/* CTA — bar full-width di mobile, stub vertikal di desktop. */}
+            <span className="relative flex items-center justify-center gap-2 border-t border-amber-500/20 bg-amber-500/[0.07] px-5 py-3 text-xs font-black uppercase tracking-wide text-amber-600 transition-colors duration-200 group-hover:bg-amber-500/[0.13] dark:text-amber-300 sm:shrink-0 sm:self-stretch sm:border-t-0 sm:border-l sm:border-dashed sm:border-amber-500/30 sm:bg-transparent sm:px-6 sm:py-0 sm:group-hover:bg-amber-500/[0.06]">
+              Lapor Absen
+              <ArrowUpRight
+                className="size-4 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                strokeWidth={2.6}
+              />
             </span>
           </Link>
         )}
@@ -842,9 +884,9 @@ export default function DashboardPage() {
                       <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
                       <ChartTooltip content={<CustomAreaTooltip />} />
                       <Legend verticalAlign="top" height={36} iconSize={8} iconType="circle" wrapperStyle={{ fontSize: '9px', color: '#94a3b8' }} />
-                      <Area name="Total Lead" type="monotone" dataKey="total" stroke="var(--primary-theme)" strokeWidth={2} fill="url(#totalG)" animationDuration={400} />
-                      <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" animationDuration={400} animationBegin={30} />
-                      <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" animationDuration={400} animationBegin={60} />
+                      <Area name="Total Lead" type="monotone" dataKey="total" stroke="var(--primary-theme)" strokeWidth={2} fill="url(#totalG)" isAnimationActive={false} />
+                      <Area name="Survey" type="monotone" dataKey="surveys" stroke="#3b82f6" strokeWidth={1.5} fill="url(#surveysG)" isAnimationActive={false} />
+                      <Area name="Deal" type="monotone" dataKey="deals" stroke="#10b981" strokeWidth={1.5} fill="url(#dealsG)" isAnimationActive={false} />
                     </AreaChart>
                   </ChartBox>
                 ) : (
@@ -907,7 +949,7 @@ export default function DashboardPage() {
                             tickFormatter={(v: string) => v.length > 14 ? v.slice(0, 14) + '...' : v}
                           />
                           <ChartTooltip content={<CustomBarTooltip />} />
-                          <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]} maxBarSize={16} animationDuration={450}>
+                          <Bar dataKey="count" name="Jumlah" radius={[0, 4, 4, 0]} maxBarSize={16} isAnimationActive={false}>
                             {topNeeds.map((_: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}

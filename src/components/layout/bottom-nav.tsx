@@ -2,9 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, motion } from 'framer-motion'
 import {
   LayoutDashboard,
   MessagesSquare,
@@ -29,7 +28,8 @@ import { useAuthStore } from '@/lib/stores/authStore'
 import { useLogout } from '@/lib/hooks/useAuth'
 import { prefetchRoute } from '@/lib/prefetch'
 import { cn } from '@/lib/utils'
-import { isManagerSurveyor, isSurveyor, isSurveyTeam } from '@/lib/auth/roles'
+import { canAccess, isManagerSurveyor, isSurveyor, isSurveyTeam } from '@/lib/auth/roles'
+import type { UserRole } from '@/types'
 
 type NavItem = {
   href: string
@@ -37,6 +37,7 @@ type NavItem = {
   icon: LucideIcon
   hint?: string
   superOnly?: boolean
+  roles?: UserRole[]
 }
 
 // The four tabs that flank the centre (+) FAB. Identical for every role so the
@@ -69,7 +70,7 @@ const MANAGER_SURVEY_TABS: NavItem[] = [
 const MORE_ITEMS: NavItem[] = [
   { href: '/surveys', label: 'Survey', icon: ClipboardCheck, hint: 'Penugasan & hasil survey' },
   { href: '/rekap-jadwal-surveyor', label: 'Rekap Jadwal', icon: CalendarClock, hint: 'Jadwal mingguan surveyor', superOnly: true },
-  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Konsumen & hasil survey', superOnly: true },
+  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Konsumen & hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', superOnly: true },
   { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Map, hint: 'Persebaran konsumen per wilayah', superOnly: true },
   { href: '/report-attendances', label: 'Absensi', icon: CalendarCheck, hint: 'Laporan absensi harian' },
@@ -89,11 +90,14 @@ export default function BottomNav() {
   const logoutMutation = useLogout()
   const [moreOpen, setMoreOpen] = useState(false)
   const [fabHovered, setFabHovered] = useState(false)
+  // Swipe-turun untuk menutup More sheet — pengganti ringan drag framer lama,
+  // tanpa menarik runtime animasi ke bundle shell.
+  const sheetTouchStartY = useRef<number | null>(null)
 
   const isSuperAdmin = user?.role === 'super_admin'
   const surveyTeam = isSurveyTeam(user)
   const primaryTabs = isManagerSurveyor(user) ? MANAGER_SURVEY_TABS : isSurveyor(user) ? SURVEYOR_TABS : surveyTeam ? SURVEY_TEAM_TABS : PRIMARY_TABS
-  const visible = (item: NavItem) => !item.superOnly || isSuperAdmin
+  const visible = (item: NavItem) => (!item.superOnly || isSuperAdmin) && canAccess(user, item.roles)
 
   const moreItems = surveyTeam ? [] : MORE_ITEMS.filter(visible)
   // Pengaturan already sits in the header profile menu (alongside Keluar), which
@@ -134,14 +138,12 @@ export default function BottomNav() {
   return (
     <>
       {/* ── More sheet ─────────────────────────────────────────── */}
-      <AnimatePresence>
-        {moreOpen && (
-          <motion.div
-            className="fixed inset-0 z-[60] lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+      {/* Dulu pakai framer (AnimatePresence + drag-to-dismiss). Diganti render
+          bersyarat + slide tw-animate agar framer-motion tak ikut ke bundle shell
+          yang dimuat tiap halaman. Tutup lewat tap backdrop, tombol X, atau
+          swipe turun (handler touch ringan di bawah). */}
+      {moreOpen && (
+          <div className="fixed inset-0 z-[60] lg:hidden duration-200 animate-in fade-in">
             {/* Backdrop */}
             <button
               aria-label="Tutup menu"
@@ -150,20 +152,20 @@ export default function BottomNav() {
             />
 
             {/* Panel */}
-            <motion.div
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={{ top: 0.05, bottom: 0.75 }}
-              onDragEnd={(event, info) => {
-                if (info.offset.y > 80 || info.velocity.y > 400) {
+            <div
+              onTouchStart={(e) => {
+                sheetTouchStartY.current = e.touches[0]?.clientY ?? null
+              }}
+              onTouchEnd={(e) => {
+                const start = sheetTouchStartY.current
+                sheetTouchStartY.current = null
+                const end = e.changedTouches[0]?.clientY
+                // Swipe turun cukup jauh menutup sheet, meniru gesture drag lama.
+                if (start !== null && end !== undefined && end - start > 60) {
                   setMoreOpen(false)
                 }
               }}
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 360 }}
-              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[22px] border-t bg-card pb-6 shadow-[0_-8px_24px_-18px_rgba(15,23,42,0.32)] touch-none dark:shadow-[0_-8px_24px_-18px_rgba(2,6,23,0.72)]"
+              className="absolute inset-x-0 bottom-0 overflow-hidden rounded-t-[22px] border-t bg-card pb-6 shadow-[0_-8px_24px_-18px_rgba(15,23,42,0.32)] duration-300 animate-in slide-in-from-bottom dark:shadow-[0_-8px_24px_-18px_rgba(2,6,23,0.72)]"
               style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
             >
               {/* Grab handle */}
@@ -215,10 +217,9 @@ export default function BottomNav() {
                   {logoutMutation.isPending ? 'Keluar...' : 'Keluar dari akun'}
                 </button>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      )}
 
       {/* ── Floating pill bar ───────────────────────────────────── */}
       <nav
@@ -243,27 +244,19 @@ export default function BottomNav() {
                   controls sit still until touched. Emphasis now comes from the
                   fill and an elevation shadow, and motion only answers a press.
                   The inner top highlight is the standard glossy-button read. */}
-              <motion.div
+              <div
                 onMouseEnter={() => setFabHovered(true)}
                 onMouseLeave={() => setFabHovered(false)}
-                whileHover={{ scale: 1.04 }}
-                whileTap={{ scale: 0.94 }}
-                transition={{ type: 'spring', stiffness: 400, damping: 26 }}
-                className="flex size-[52px] cursor-pointer items-center justify-center rounded-full text-zinc-950 ring-[5px] ring-background sm:size-[56px] dark:text-zinc-950"
+                className="flex size-[52px] cursor-pointer items-center justify-center rounded-full text-zinc-950 ring-[5px] ring-background transition-[transform,box-shadow] duration-200 hover:scale-[1.04] active:scale-[0.94] sm:size-[56px] dark:text-zinc-950"
                 style={{
                   background: userThemeColor,
                   boxShadow: `0 ${fabHovered ? 12 : 8}px ${fabHovered ? 24 : 18}px -9px ${userThemeColor}aa`,
-                  transition: 'box-shadow 0.25s ease',
                 }}
               >
-                <motion.span
-                  animate={{ rotate: 0 }}
-                  transition={{ type: 'spring', stiffness: 300, damping: 22 }}
-                  className="flex items-center justify-center"
-                >
+                <span className="flex items-center justify-center">
                   <Plus className="size-6" strokeWidth={2.25} />
-                </motion.span>
-              </motion.div>
+                </span>
+              </div>
             </Link>
           </div>
 
@@ -391,39 +384,21 @@ function TabInner({
   return (
     <div className="relative isolate flex h-full w-full flex-col items-center justify-center gap-[4px] py-1">
       {active && (
-        <>
-          <motion.span
-            layoutId="active-pill"
+          <span
             aria-hidden
-            className="pointer-events-none absolute inset-x-1 inset-y-[7px] -z-10 overflow-hidden rounded-[20px] border backdrop-blur-xl"
+            className="pointer-events-none absolute inset-x-1 inset-y-[7px] -z-10 overflow-hidden rounded-[20px] border backdrop-blur-xl duration-200 animate-in fade-in"
             style={{
-              background: `linear-gradient(145deg, color-mix(in srgb, ${themeColor} 24%, rgba(255,255,255,0.10)) 0%, color-mix(in srgb, ${themeColor} 15%, rgba(15,23,42,0.24)) 54%, rgba(15,23,42,0.10) 100%)`,
-              borderColor: `${themeColor}34`,
-              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -10px 18px -18px ${themeColor}, 0 13px 28px -18px ${themeColor}cc`,
+              background: `linear-gradient(145deg, color-mix(in srgb, ${themeColor} 18%, var(--card)) 0%, color-mix(in srgb, ${themeColor} 10%, var(--background)) 58%, color-mix(in srgb, ${themeColor} 7%, var(--card)) 100%)`,
+              borderColor: `color-mix(in srgb, ${themeColor} 28%, var(--border))`,
+              boxShadow: `inset 0 1px 0 rgba(255,255,255,0.56), inset 0 -10px 18px -18px ${themeColor}, 0 12px 24px -20px ${themeColor}`,
             }}
-            transition={{ type: 'spring', stiffness: 310, damping: 25, mass: 0.86 }}
           >
             <span
               aria-hidden
-              className="absolute inset-x-3 top-1 h-px rounded-full opacity-80"
-              style={{ background: `linear-gradient(90deg, transparent, ${themeColor}66, rgba(255,255,255,0.42), transparent)` }}
+              className="absolute inset-x-3 top-1 h-px rounded-full opacity-70"
+              style={{ background: `linear-gradient(90deg, transparent, color-mix(in srgb, ${themeColor} 45%, transparent), rgba(255,255,255,0.72), transparent)` }}
             />
-            <motion.span
-              aria-hidden
-              className="absolute -left-4 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full blur-lg"
-              style={{ backgroundColor: `${themeColor}30` }}
-              animate={{ x: [0, 16, 0], scale: [1, 1.14, 1] }}
-              transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
-            />
-            <motion.span
-              aria-hidden
-              className="absolute -right-5 bottom-0 h-10 w-10 rounded-full blur-xl"
-              style={{ backgroundColor: `${themeColor}20` }}
-              animate={{ x: [0, -10, 0], y: [0, -3, 0] }}
-              transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
-            />
-          </motion.span>
-        </>
+          </span>
       )}
 
       <Icon
@@ -433,7 +408,7 @@ function TabInner({
           !active && 'text-slate-500 dark:text-slate-400'
         )}
         strokeWidth={active ? 2.2 : 1.7}
-        style={active ? { color: themeColor, filter: `drop-shadow(0 0 9px ${themeColor}70)`, transform: 'translateY(-1px)' } : undefined}
+        style={active ? { color: themeColor, filter: `drop-shadow(0 0 5px ${themeColor}45)`, transform: 'translateY(-1px)' } : undefined}
       />
 
       <span
@@ -491,14 +466,17 @@ function SheetTile({
         />
       )}
       <span
-        className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-[background-color,border-color,color,box-shadow] duration-200"
+        className={cn(
+          'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border transition-[background-color,border-color,color,box-shadow] duration-200',
+          !active && 'text-slate-500 dark:text-slate-400'
+        )}
         style={{
-          borderColor: active ? `${themeColor}42` : 'rgba(255,255,255,0.06)',
-          background: active ? `${themeColor}16` : 'rgba(255,255,255,0.03)',
+          borderColor: active ? `${themeColor}42` : 'color-mix(in srgb, var(--border) 88%, transparent)',
+          background: active ? `${themeColor}16` : 'color-mix(in srgb, var(--muted) 45%, transparent)',
           color: active ? themeColor : undefined,
         }}
       >
-        <Icon className={cn('h-[18px] w-[18px]', !active && 'text-white/55')} />
+        <Icon className="h-[18px] w-[18px]" />
       </span>
       <span className="relative min-w-0 flex-1">
         <span

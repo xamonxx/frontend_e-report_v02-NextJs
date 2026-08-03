@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { useDebounce } from 'use-debounce'
 import {
@@ -14,6 +14,7 @@ import {
   XCircle,
   FileText,
   Calendar as CalendarIcon,
+  ChevronLeft,
   ChevronRight,
   CheckCircle2,
   Timer,
@@ -31,15 +32,12 @@ import { useAuthStore } from '@/lib/stores/authStore'
 import { isAdmin, isManagerSurveyor, isSurveyor as isSurveyorRole } from '@/lib/auth/roles'
 import {
   useSurveys,
-  useSurveyors,
   useSurveyStatuses,
-  useAssignSurvey,
-  useRescheduleAssignment,
   useRescheduleSurvey,
   useStartSurvey,
   useSubmitSurveyResult,
   useSurveyHistory,
-  useSurveyorAvailability,
+  useCancelSurvey,
 } from '@/lib/hooks/useSurveys'
 import type { Survey, SurveyActivity, SurveyState } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
@@ -50,8 +48,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { TimeSearchSelect } from '@/components/ui/time-search-select'
+import { SurveyAssignmentDialog } from '@/components/surveys/survey-assignment-form'
 import {
   Dialog,
   DialogContent,
@@ -59,6 +57,12 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog'
+import {
+  formatDateLabel,
+  requestedScheduleParts,
+  SURVEY_TIME_OPTIONS,
+  toLocalInput,
+} from '@/lib/survey-scheduling'
 import { cn, PENDING_NEEDS_CATEGORY_LABEL, productCategoryNames, rawPhoneDigits } from '@/lib/utils'
 
 // ── State metadata ─────────────────────────────────────────────
@@ -68,24 +72,6 @@ const STATE_META: Record<SurveyState, { label: string; color: string; icon: type
   in_progress: { label: 'Sedang Survey',    color: '#8b5cf6', icon: Timer },
   completed:   { label: 'Selesai',          color: '#10b981', icon: CheckCircle2 },
   cancelled:   { label: 'Dibatalkan',        color: '#71717a', icon: XCircle },
-}
-
-const SURVEY_TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
-  const value = `${String(Math.floor(index / 2)).padStart(2, '0')}:${index % 2 === 0 ? '00' : '30'}`
-  return { value, label: `${value} WIB` }
-})
-
-function combineLocalDateTime(date: string, time: string): string {
-  return date && time ? `${date}T${time}` : ''
-}
-
-function formatDateLabel(value: string): string {
-  if (!value) return 'Pilih tanggal'
-  return new Date(`${value}T00:00:00`).toLocaleDateString('id-ID', {
-    day: '2-digit',
-    month: 'long',
-    year: 'numeric',
-  })
 }
 
 function formatDateTime(value?: string | null): string {
@@ -143,13 +129,6 @@ function compactNeedsLabel(categories: string[]): string {
 function displayValue(value?: string | null): string {
   const normalized = (value || '').trim()
   return normalized ? normalized : '-'
-}
-
-function requestedScheduleParts(s: Survey): { date: string; time: string } | null {
-  if (!s.requested_date) return null
-  const time = (s.requested_time || '').slice(0, 5)
-  const datePart = s.requested_date.includes('T') ? s.requested_date.slice(0, 10) : s.requested_date
-  return { date: datePart, time }
 }
 
 function requestedSurveyLabel(s: Survey): string {
@@ -294,6 +273,7 @@ function DetailLine({ label, value, children }: {
 
 // ── MAIN PAGE ──────────────────────────────────────────────────
 export default function SurveysView() {
+  const router = useRouter()
   const user = useAuthStore((s) => s.user)
   const surveyorMode = isSurveyorRole(user)
   const adminMode = isAdmin(user)
@@ -304,6 +284,7 @@ export default function SurveysView() {
         { key: 'scheduled', label: 'Terjadwal', mobileLabel: 'Terjadwal' },
         { key: 'in_progress', label: 'Sedang Survey', mobileLabel: 'Berlangsung' },
         { key: 'completed', label: 'Selesai', mobileLabel: 'Selesai' },
+        { key: 'cancelled', label: 'Dibatalkan', mobileLabel: 'Batal' },
       ]
       : adminMode
       ? [
@@ -311,21 +292,29 @@ export default function SurveysView() {
           { key: 'scheduled', label: 'Menunggu Survey', mobileLabel: 'Terjadwal' },
           { key: 'in_progress', label: 'Sedang Survey', mobileLabel: 'Berlangsung' },
           { key: 'completed', label: 'Selesai', mobileLabel: 'Selesai' },
+          { key: 'cancelled', label: 'Dibatalkan', mobileLabel: 'Batal' },
         ]
       : [
         { key: 'requested', label: 'Request Survey', mobileLabel: 'Request' },
         { key: 'scheduled', label: 'Terjadwal', mobileLabel: 'Terjadwal' },
         { key: 'in_progress', label: 'Sedang Survey', mobileLabel: 'Berlangsung' },
         { key: 'completed', label: 'Selesai', mobileLabel: 'Selesai' },
+        { key: 'cancelled', label: 'Dibatalkan', mobileLabel: 'Batal' },
       ]
 
   const [activeTab, setActiveTab] = useState<SurveyState>(tabs[0].key)
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
   const [sortMode, setSortMode] = useState<'nearest' | 'latest'>('nearest')
-  const { data, isLoading, isFetching } = useSurveys({
+  const [page, setPage] = useState(1)
+  useEffect(() => {
+    setPage(1)
+  }, [activeTab, debouncedSearch, sortMode])
+
+  const { data, isLoading } = useSurveys({
     state: activeTab,
-    per_page: 50,
+    page,
+    per_page: 12,
     search: debouncedSearch.trim() || undefined,
     sort: sortMode,
   })
@@ -336,6 +325,14 @@ export default function SurveysView() {
   const [resultTarget, setResultTarget] = useState<Survey | null>(null)
   const [historyTarget, setHistoryTarget] = useState<Survey | null>(null)
   const [detailTarget, setDetailTarget] = useState<Survey | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<Survey | null>(null)
+  const openAssignment = (survey: Survey) => {
+    if (window.matchMedia('(max-width: 639px)').matches) {
+      router.push(`/surveys/${survey.id}/assign`)
+      return
+    }
+    setAssignTarget(survey)
+  }
   const sortLabel = activeTab === 'requested'
     ? 'Antrian terlama'
     : activeTab === 'in_progress'
@@ -381,51 +378,45 @@ export default function SurveysView() {
               )}
             >
               {active && (
-                <motion.span
-                  layoutId="survey-tab-pill"
+                <span
                   className="absolute inset-0 -z-10 overflow-hidden rounded-xl border backdrop-blur-xl"
                   style={{
-                    background: `linear-gradient(145deg, color-mix(in srgb, ${meta.color} 28%, rgba(255,255,255,0.10)) 0%, color-mix(in srgb, ${meta.color} 16%, rgba(15,23,42,0.22)) 56%, rgba(15,23,42,0.08) 100%)`,
-                    borderColor: `${meta.color}3d`,
-                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -10px 18px -18px ${meta.color}, 0 14px 26px -19px ${meta.color}cc`,
+                    background: `linear-gradient(145deg, color-mix(in srgb, ${meta.color} 18%, var(--card)) 0%, color-mix(in srgb, ${meta.color} 10%, var(--background)) 58%, color-mix(in srgb, ${meta.color} 7%, var(--card)) 100%)`,
+                    borderColor: `color-mix(in srgb, ${meta.color} 28%, var(--border))`,
+                    boxShadow: `inset 0 1px 0 rgba(255,255,255,0.56), inset 0 -10px 18px -18px ${meta.color}, 0 12px 24px -20px ${meta.color}`,
                   }}
-                  transition={{ type: 'spring', stiffness: 310, damping: 25, mass: 0.86 }}
                 >
                   <span
                     aria-hidden
-                    className="absolute inset-x-3 top-1 h-px rounded-full opacity-80"
-                    style={{ background: `linear-gradient(90deg, transparent, ${meta.color}66, rgba(255,255,255,0.42), transparent)` }}
+                    className="absolute inset-x-3 top-1 h-px rounded-full opacity-70"
+                    style={{ background: `linear-gradient(90deg, transparent, color-mix(in srgb, ${meta.color} 45%, transparent), rgba(255,255,255,0.72), transparent)` }}
                   />
-                  <motion.span
+                  <span
                     aria-hidden
                     className="absolute -left-4 top-1/2 h-12 w-12 -translate-y-1/2 rounded-full blur-lg"
-                    style={{ backgroundColor: `${meta.color}30` }}
-                    animate={{ x: [0, 18, 0], scale: [1, 1.12, 1] }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 15%, transparent)` }}
                   />
-                  <motion.span
+                  <span
                     aria-hidden
                     className="absolute -right-5 bottom-0 h-10 w-10 rounded-full blur-xl"
-                    style={{ backgroundColor: `${meta.color}20` }}
-                    animate={{ x: [0, -10, 0], y: [0, -3, 0] }}
-                    transition={{ duration: 3.8, repeat: Infinity, ease: 'easeInOut' }}
+                    style={{ backgroundColor: `color-mix(in srgb, ${meta.color} 10%, transparent)` }}
                   />
-                </motion.span>
+                </span>
               )}
               <span className="relative z-10 flex min-w-0 items-center justify-center gap-1 sm:gap-1.5">
                 <Icon
                   className={cn('size-3 shrink-0 transition-[color,filter,transform] duration-200 sm:size-3.5', !active && 'text-slate-500/75 dark:text-slate-400/75')}
-                  style={active ? { color: meta.color, filter: `drop-shadow(0 0 8px ${meta.color}66)`, transform: 'translateY(-1px)' } : undefined}
+                  style={active ? { color: meta.color, filter: `drop-shadow(0 0 5px ${meta.color}45)`, transform: 'translateY(-1px)' } : undefined}
                 />
                 <span
                   className="min-w-0 truncate sm:hidden"
-                  style={active ? { color: meta.color, textShadow: `0 0 14px ${meta.color}55` } : undefined}
+                  style={active ? { color: meta.color } : undefined}
                 >
                   {tab.mobileLabel}
                 </span>
                 <span
                   className="hidden min-w-0 truncate sm:inline"
-                  style={active ? { color: meta.color, textShadow: `0 0 14px ${meta.color}55` } : undefined}
+                  style={active ? { color: meta.color } : undefined}
                 >
                   {tab.label}
                 </span>
@@ -487,12 +478,7 @@ export default function SurveysView() {
       ) : surveys.length === 0 ? (
         <EmptyState state={activeTab} surveyorMode={surveyorMode} search={debouncedSearch.trim()} />
       ) : (
-        <div
-          className={cn(
-            'grid min-w-0 grid-cols-1 gap-3 transition-opacity duration-200 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-3',
-            isFetching && 'pointer-events-none opacity-60'
-          )}
-        >
+        <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4 xl:gap-3">
           {surveys.map((survey) => (
             <SurveyCard
               key={survey.id}
@@ -500,19 +486,48 @@ export default function SurveysView() {
               surveyorMode={surveyorMode}
               managerMode={managerMode}
               adminMode={adminMode}
-              onAssign={() => setAssignTarget(survey)}
+              onAssign={() => openAssignment(survey)}
               onAdminReschedule={() => setAdminRescheduleTarget(survey)}
               onResult={() => setResultTarget(survey)}
               onHistory={() => setHistoryTarget(survey)}
               onDetail={() => setDetailTarget(survey)}
+              onCancel={() => setCancelTarget(survey)}
             />
           ))}
         </div>
       )}
 
       {/* ── DIALOGS ──────────────────────────────────────────── */}
+      {(data?.meta.last_page ?? 1) > 1 && (
+        <nav className="mx-auto flex w-full max-w-md items-center justify-between gap-3" aria-label="Halaman daftar survey">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page <= 1 || isLoading}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+          >
+            <ChevronLeft className="size-4" />
+            Sebelumnya
+          </Button>
+          <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+            {data?.meta.current_page ?? page} / {data?.meta.last_page ?? 1}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={page >= (data?.meta.last_page ?? 1) || isLoading}
+            onClick={() => setPage((current) => Math.min(data?.meta.last_page ?? current, current + 1))}
+          >
+            Berikutnya
+            <ChevronRight className="size-4" />
+          </Button>
+        </nav>
+      )}
+
       {assignTarget && (
-        <AssignDialog survey={assignTarget} onClose={() => setAssignTarget(null)} />
+        <SurveyAssignmentDialog survey={assignTarget} onClose={() => setAssignTarget(null)} />
       )}
       {adminRescheduleTarget && (
         <AdminRescheduleDialog survey={adminRescheduleTarget} onClose={() => setAdminRescheduleTarget(null)} />
@@ -525,6 +540,9 @@ export default function SurveysView() {
       )}
       {detailTarget && (
         <SurveyDetailDialog survey={detailTarget} onClose={() => setDetailTarget(null)} />
+      )}
+      {cancelTarget && (
+        <CancelSurveyDialog survey={cancelTarget} onClose={() => setCancelTarget(null)} />
       )}
     </div>
   )
@@ -541,6 +559,7 @@ function SurveyCard({
   onResult,
   onHistory,
   onDetail,
+  onCancel,
 }: {
   survey: Survey
   surveyorMode: boolean
@@ -551,6 +570,7 @@ function SurveyCard({
   onResult: () => void
   onHistory: () => void
   onDetail: () => void
+  onCancel: () => void
 }) {
   const c = survey.consultation
   const phone = c?.phone ? rawPhoneDigits(c.phone) : ''
@@ -560,11 +580,13 @@ function SurveyCard({
   const schedule = primaryScheduleParts(survey)
   const tone = scheduleTone(survey)
   const meta = STATE_META[survey.state]
+  const StateIcon = meta.icon
   const clientName = (c?.client_name || '').trim() || 'Tidak ada nama'
   const hasPrimaryAction =
     (managerMode && (survey.state === 'requested' || survey.state === 'scheduled')) ||
     (adminMode && (survey.state === 'requested' || survey.state === 'scheduled')) ||
     (surveyorMode && (survey.state === 'scheduled' || survey.state === 'in_progress'))
+  const canCancel = survey.state !== 'completed' && survey.state !== 'cancelled'
 
   const startSurvey = () => {
     startMutation.mutate(undefined, {
@@ -575,29 +597,27 @@ function SurveyCard({
 
   return (
     <article className="min-w-0">
-      <Card className="group h-full min-w-0 overflow-hidden border-slate-200/85 bg-white shadow-[0_18px_40px_-30px_rgba(15,23,42,0.38)] transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_24px_48px_-30px_rgba(15,23,42,0.46)] dark:border-slate-700/75 dark:bg-[#172031] dark:shadow-[0_20px_44px_-34px_rgba(0,0,0,0.72)] dark:hover:border-slate-600/85">
+      <Card className="group h-full min-w-0 overflow-hidden border-slate-200/85 bg-white shadow-[0_18px_40px_-30px_rgba(15,23,42,0.38)] dark:border-slate-700/75 dark:bg-[#172031] dark:shadow-[0_20px_44px_-34px_rgba(0,0,0,0.72)]">
         <CardContent className="flex h-full min-h-[438px] flex-col gap-4 p-4 xl:min-h-[410px] xl:gap-3 xl:p-3">
-          <section className={cn('min-h-[104px] rounded-xl border p-3.5 xl:min-h-[94px] xl:p-3', tone.panel)}>
-            <div className="flex min-w-0 items-start justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                  {schedule.caption}
-                </p>
-                <p className="mt-1 truncate text-[15px] font-black leading-tight text-foreground sm:text-base xl:text-sm">
-                  {schedule.date}
-                </p>
-              </div>
-              <div className="shrink-0 text-right">
-                <p className="text-lg font-black leading-none tabular-nums text-foreground">
-                  {schedule.time}
-                </p>
-                <p className="mt-1 text-[9px] font-bold uppercase text-muted-foreground">WIB</p>
-              </div>
+          <section className={cn('min-h-[88px] rounded-lg border p-3', tone.panel)}>
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <p className="truncate text-xs font-semibold text-muted-foreground">
+                {schedule.caption}
+              </p>
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-xs font-semibold text-foreground/75">
+                <StateIcon className="size-3.5" style={{ color: meta.color }} />
+                {meta.label}
+              </span>
             </div>
-            <span className={cn('mt-3 inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase', tone.badge)}>
-              <span className={cn('size-1.5 shrink-0 rounded-full', tone.dot)} />
-              <span className="truncate">{meta.label}</span>
-            </span>
+            <div className="mt-2 flex min-w-0 items-end justify-between gap-3">
+              <p className="truncate text-sm font-black leading-5 text-foreground">
+                {schedule.date}
+              </p>
+              <p className="shrink-0 text-xl font-black leading-none tabular-nums text-foreground">
+                {schedule.time}
+                <span className="ml-1 text-xs font-semibold text-muted-foreground">WIB</span>
+              </p>
+            </div>
           </section>
 
           <section className="min-w-0">
@@ -688,9 +708,12 @@ function SurveyCard({
                 )}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2">
+            <div className={cn('grid gap-2', canCancel ? 'grid-cols-3' : 'grid-cols-2')}>
               <ActionButton icon={Eye} label="Lihat Detail" onClick={onDetail} subtle />
               <ActionButton icon={History} label="Riwayat" onClick={onHistory} subtle />
+              {canCancel && (
+                <ActionButton icon={XCircle} label="Batal" onClick={onCancel} danger />
+              )}
             </div>
           </div>
         </CardContent>
@@ -707,6 +730,7 @@ function ActionButton({
   primary,
   warning,
   subtle,
+  danger,
 }: {
   icon: React.ElementType
   label: string
@@ -715,6 +739,7 @@ function ActionButton({
   primary?: boolean
   warning?: boolean
   subtle?: boolean
+  danger?: boolean
 }) {
   return (
     <button
@@ -722,19 +747,21 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        'inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl px-3 text-xs font-bold transition-all duration-150 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none xl:h-9',
+        'inline-flex h-10 w-full min-w-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 text-xs font-bold transition-all duration-150 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none sm:gap-2 sm:px-3 xl:h-9',
         primary &&
           'bg-amber-500 text-zinc-950 hover:bg-amber-400 disabled:opacity-50',
         warning &&
           'border border-amber-500/35 bg-amber-500/8 text-amber-700 hover:bg-amber-500/15 dark:text-amber-300',
         subtle &&
           'border border-border/70 bg-background/35 text-muted-foreground hover:bg-muted/60 hover:text-foreground',
-        !primary && !warning && !subtle &&
+        danger &&
+          'border border-rose-500/25 bg-rose-500/8 text-rose-700 hover:bg-rose-500/14 dark:text-rose-300',
+        !primary && !warning && !subtle && !danger &&
           'border border-border/70 bg-background/35 text-foreground/80 hover:bg-muted/60 dark:border-zinc-700'
       )}
     >
-      <Icon className="size-3.5" />
-      {label}
+      <Icon className="size-3.5 shrink-0" />
+      <span className="min-w-0 truncate">{label}</span>
     </button>
   )
 }
@@ -896,11 +923,7 @@ function EmptyState({
     cancelled: 'Tidak ada survey dibatalkan.',
   }
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/80 py-20 text-center dark:border-zinc-800"
-    >
+    <div className="flex flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-border/80 py-20 text-center duration-300 animate-in fade-in slide-in-from-bottom-2 dark:border-zinc-800">
       <span
         className="flex size-14 items-center justify-center rounded-2xl"
         style={{ backgroundColor: `${meta.color}15`, color: meta.color }}
@@ -910,7 +933,7 @@ function EmptyState({
       <p className="max-w-xs text-sm font-medium text-muted-foreground/70">
         {search ? `Tidak ada survey yang cocok dengan "${search}".` : messages[state]}
       </p>
-    </motion.div>
+    </div>
   )
 }
 
@@ -991,182 +1014,6 @@ function SurveyActivityRow({ activity, isLast }: { activity: SurveyActivity; isL
 }
 
 // ── ASSIGN DIALOG ──────────────────────────────────────────────
-function AssignDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
-  const { data: surveyorsResp, isLoading } = useSurveyors()
-  const surveyors = surveyorsResp?.data ?? []
-  const assignMutation = useAssignSurvey(survey.id)
-  const rescheduleMutation = useRescheduleAssignment(survey.id)
-  const isReschedule = survey.state === 'scheduled'
-
-  const [surveyorId, setSurveyorId] = useState<string>(
-    survey.surveyor_id ? String(survey.surveyor_id) : ''
-  )
-  const [scheduledAt, setScheduledAt] = useState<string>(
-    survey.scheduled_at ? toLocalInput(survey.scheduled_at) : ''
-  )
-  const [scheduledDate, setScheduledDate] = useState<string>(() => scheduledAt.slice(0, 10))
-  const [scheduledTime, setScheduledTime] = useState<string>(() => scheduledAt.slice(11, 16))
-  const [locationNotes, setLocationNotes] = useState<string>(survey.location_notes ?? '')
-  const [managerNotes, setManagerNotes] = useState<string>('')
-  const availabilityDate = scheduledDate || undefined
-  const requestedSchedule = requestedScheduleParts(survey)
-  const { data: availabilityResponse } = useSurveyorAvailability(availabilityDate)
-  const availability = new Map(
-    (availabilityResponse?.data ?? []).map((item) => [item.id, item])
-  )
-  const setScheduleDatePart = (date: string) => {
-    const nextTime = scheduledTime || '09:00'
-    setScheduledDate(date)
-    setScheduledTime(nextTime)
-    setScheduledAt(combineLocalDateTime(date, nextTime))
-  }
-  const setScheduleTimePart = (time: string) => {
-    setScheduledTime(time)
-    setScheduledAt(combineLocalDateTime(scheduledDate, time))
-  }
-
-  const submit = () => {
-    if (!surveyorId) return toast.error('Pilih surveyor terlebih dahulu.')
-    const finalDate = scheduledDate || requestedSchedule?.date || ''
-    const finalTime = scheduledTime || requestedSchedule?.time || '09:00'
-    const finalScheduledAt = combineLocalDateTime(finalDate, finalTime)
-    if (!finalScheduledAt) {
-      return toast.error('Tanggal survey belum dipilih dan jadwal awal belum tersedia.')
-    }
-    const mutation = isReschedule ? rescheduleMutation : assignMutation
-    mutation.mutate(
-      {
-        surveyor_id: Number(surveyorId),
-        scheduled_at: finalScheduledAt,
-        location_notes: locationNotes || undefined,
-        ...(isReschedule ? { manager_notes: managerNotes || undefined } : {}),
-      },
-      {
-        onSuccess: () => {
-          toast.success('Surveyor & jadwal ditetapkan - status jadi Masuk Survey')
-          onClose()
-        },
-        onError: (err: any) => toast.error(err.message || 'Gagal menjadwalkan survey'),
-      }
-    )
-  }
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="border-slate-700/70 bg-[#131b2e] text-foreground shadow-[0_24px_70px_-40px_rgba(0,188,212,0.5)] sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400">
-              <UserCheck className="size-4" />
-            </span>
-            {isReschedule ? 'Reschedule Survey' : 'Jadwalkan Survey'}
-          </DialogTitle>
-          <DialogDescription>
-            {survey.consultation?.client_name} &middot; {survey.consultation?.consultation_id}
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-1">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground/80">Surveyor</Label>
-            <CustomSelect
-              value={surveyorId}
-              onChange={setSurveyorId}
-              placeholder={isLoading ? 'Memuat surveyor...' : 'Pilih surveyor'}
-              options={surveyors.map((s) => {
-                const scheduleCount = availability.get(s.id)?.schedule_count ?? 0
-                return {
-                  value: String(s.id),
-                  label: scheduleCount > 0 ? `${s.name} (${scheduleCount} jadwal)` : s.name,
-                }
-              })}
-              className="h-11 w-full rounded-xl border-slate-700/80 bg-slate-950/65 px-3 text-xs font-semibold text-foreground hover:border-cyan-500/35 focus:outline-none focus:ring-2 focus:ring-cyan-500/25"
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-[1fr_128px]">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground/80">Tanggal Survey</Label>
-              <Popover>
-                <PopoverTrigger
-                  type="button"
-                  className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-700/80 bg-slate-950/65 px-3 text-left text-xs font-semibold text-foreground/90 outline-none transition-colors hover:border-cyan-500/35 hover:bg-slate-950/80 focus-visible:ring-2 focus-visible:ring-cyan-500/25"
-                >
-                  {formatDateLabel(scheduledDate)}
-                  <CalendarIcon className="size-4 text-cyan-400/80" />
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-auto border-slate-700/80 bg-slate-950 p-0 text-foreground shadow-2xl">
-                  <CalendarComponent
-                    mode="single"
-                    selected={scheduledDate ? new Date(`${scheduledDate}T00:00:00`) : undefined}
-                    disabled={{ before: new Date(new Date().setHours(0, 0, 0, 0)) }}
-                    onSelect={(picked) => {
-                      if (!picked) return
-                      const yyyy = picked.getFullYear()
-                      const mm = String(picked.getMonth() + 1).padStart(2, '0')
-                      const dd = String(picked.getDate()).padStart(2, '0')
-                      setScheduleDatePart(`${yyyy}-${mm}-${dd}`)
-                    }}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground/80">Jam</Label>
-              <TimeSearchSelect
-                value={scheduledTime}
-                onChange={setScheduleTimePart}
-                options={SURVEY_TIME_OPTIONS}
-                placeholder="09:00 WIB"
-                className="h-11"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-semibold text-muted-foreground/80">Catatan Lokasi (opsional)</Label>
-            <Textarea
-              value={locationNotes}
-              onChange={(e) => setLocationNotes(e.target.value)}
-              placeholder="Patokan lokasi, akses, jam temu klien..."
-              className="min-h-[72px] rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25"
-            />
-          </div>
-
-          {isReschedule && (
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold text-muted-foreground/80">Catatan Reschedule (opsional)</Label>
-              <Textarea
-                value={managerNotes}
-                onChange={(e) => setManagerNotes(e.target.value)}
-                placeholder="Alasan perubahan jadwal untuk surveyor..."
-                className="min-h-[72px] rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25"
-              />
-            </div>
-          )}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" size="sm" onClick={onClose} className="border-slate-700/80 bg-slate-950/40 hover:bg-slate-800/60">
-            Batal
-          </Button>
-          <Button
-            size="sm"
-            onClick={submit}
-            disabled={assignMutation.isPending || rescheduleMutation.isPending}
-            className="bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400"
-          >
-            {assignMutation.isPending || rescheduleMutation.isPending ? (
-              <Loader2 className="mr-1.5 size-3.5 animate-spin" />
-            ) : null}
-            {isReschedule ? 'Simpan Reschedule' : 'Tetapkan'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
-  )
-}
-
 // ── ADMIN RESCHEDULE DIALOG ────────────────────────────────────
 function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
   const rescheduleMutation = useRescheduleSurvey(survey.id)
@@ -1175,6 +1022,7 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
     : survey.scheduled_at ? toLocalInput(survey.scheduled_at) : ''
   const [requestedDate, setRequestedDate] = useState(() => suggested.slice(0, 10))
   const [requestedTime, setRequestedTime] = useState(() => suggested.slice(11, 16))
+  const [requestedCalendarOpen, setRequestedCalendarOpen] = useState(false)
   const [notes, setNotes] = useState(survey.admin_notes ?? '')
   const setRequestedDatePart = (date: string) => {
     const nextTime = requestedTime || '09:00'
@@ -1201,10 +1049,10 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="border-slate-700/70 bg-[#131b2e] text-foreground shadow-[0_24px_70px_-40px_rgba(0,188,212,0.5)] sm:max-w-md">
+      <DialogContent className="!max-h-none !overflow-visible border-border/75 bg-card text-card-foreground shadow-[0_24px_70px_-42px_rgba(15,23,42,0.45)] sm:max-w-md dark:border-white/10 dark:bg-[#131b2e] dark:shadow-[0_24px_70px_-40px_rgba(0,188,212,0.45)] [&>[data-slot=dialog-close]]:text-muted-foreground [&>[data-slot=dialog-close]]:hover:bg-muted [&>[data-slot=dialog-close]]:hover:text-foreground">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <span className="grid size-8 place-items-center rounded-lg bg-cyan-500/10 text-cyan-400">
+            <span className="grid size-8 place-items-center rounded-lg border border-cyan-500/20 bg-cyan-500/10 text-cyan-600 dark:text-cyan-300">
               <RotateCcw className="size-4" />
             </span>
             Reschedule Survey
@@ -1213,17 +1061,19 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
         </DialogHeader>
         <div className="space-y-4 py-1">
           <div className="grid gap-3 sm:grid-cols-[1fr_128px]">
-            <div className="space-y-1.5">
+            <div className="relative space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground/80">Usulan Tanggal</Label>
-              <Popover>
-                <PopoverTrigger
-                  type="button"
-                  className="flex h-11 w-full items-center justify-between rounded-xl border border-slate-700/80 bg-slate-950/65 px-3 text-left text-xs font-semibold text-foreground/90 outline-none transition-colors hover:border-cyan-500/35 hover:bg-slate-950/80 focus-visible:ring-2 focus-visible:ring-cyan-500/25"
-                >
-                  {formatDateLabel(requestedDate)}
-                  <CalendarIcon className="size-4 text-cyan-400/80" />
-                </PopoverTrigger>
-                <PopoverContent align="start" className="w-auto border-slate-700/80 bg-slate-950 p-0 text-foreground shadow-2xl">
+              <button
+                type="button"
+                aria-expanded={requestedCalendarOpen}
+                onClick={() => setRequestedCalendarOpen((open) => !open)}
+                className="flex h-11 w-full items-center justify-between rounded-xl border border-border/75 bg-background/70 px-3 text-left text-xs font-semibold text-foreground/90 shadow-inner shadow-black/[0.03] outline-none transition-colors hover:border-cyan-500/45 hover:bg-muted/40 focus-visible:ring-2 focus-visible:ring-cyan-500/20 dark:border-white/10 dark:bg-slate-950/65 dark:hover:border-cyan-400/35 dark:hover:bg-slate-950/80"
+              >
+                {formatDateLabel(requestedDate)}
+                <CalendarIcon className="size-4 text-cyan-600/80 dark:text-cyan-400/80" />
+              </button>
+              {requestedCalendarOpen && (
+                <div className="absolute left-0 top-[calc(100%+0.5rem)] z-50 w-fit rounded-xl border border-border/75 bg-popover p-0 text-popover-foreground shadow-2xl dark:border-white/10 dark:bg-slate-950">
                   <CalendarComponent
                     mode="single"
                     selected={requestedDate ? new Date(`${requestedDate}T00:00:00`) : undefined}
@@ -1234,10 +1084,11 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
                       const mm = String(picked.getMonth() + 1).padStart(2, '0')
                       const dd = String(picked.getDate()).padStart(2, '0')
                       setRequestedDatePart(`${yyyy}-${mm}-${dd}`)
+                      setRequestedCalendarOpen(false)
                     }}
                   />
-                </PopoverContent>
-              </Popover>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold text-muted-foreground/80">Jam</Label>
@@ -1252,12 +1103,12 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground/80">Catatan untuk Manager (opsional)</Label>
-            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alasan perubahan jadwal atau informasi dari klien..." className="min-h-[88px] rounded-xl border-slate-700/80 bg-slate-950/65 text-xs focus-visible:ring-cyan-500/25" />
+            <Textarea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Alasan perubahan jadwal atau informasi dari klien..." className="min-h-[88px] rounded-xl border-border/75 bg-background/70 text-xs text-foreground placeholder:text-muted-foreground/65 shadow-inner shadow-black/[0.03] focus-visible:border-cyan-500/45 focus-visible:ring-cyan-500/20 dark:border-white/10 dark:bg-slate-950/65 dark:focus-visible:border-cyan-400/35" />
           </div>
         </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <Button variant="outline" size="sm" onClick={onClose} className="border-slate-700/80 bg-slate-950/40 hover:bg-slate-800/60">Batal</Button>
-          <Button size="sm" onClick={submit} disabled={rescheduleMutation.isPending} className="bg-cyan-500 font-semibold text-slate-950 hover:bg-cyan-400">
+        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+          <Button variant="outline" size="sm" onClick={onClose} className="h-10 rounded-xl border-border/75 bg-background/60 px-4 text-sm font-semibold text-foreground/80 hover:bg-muted hover:text-foreground dark:border-white/10 dark:bg-slate-950/40 dark:hover:bg-slate-800/60">Batal</Button>
+          <Button size="sm" onClick={submit} disabled={rescheduleMutation.isPending} className="h-10 rounded-xl bg-cyan-500 px-4 text-sm font-bold text-slate-950 shadow-sm shadow-cyan-500/20 hover:bg-cyan-400">
             {rescheduleMutation.isPending ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <RotateCcw className="mr-1.5 size-3.5" />}
             Kirim Reschedule
           </Button>
@@ -1268,6 +1119,94 @@ function AdminRescheduleDialog({ survey, onClose }: { survey: Survey; onClose: (
 }
 
 // ── RESULT DIALOG ──────────────────────────────────────────────
+function CancelSurveyDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
+  const cancelMutation = useCancelSurvey(survey.id, survey.consultation?.id)
+  const [reason, setReason] = useState('')
+  const clientName = (survey.consultation?.client_name || '').trim() || 'Tidak ada nama'
+  const meta = STATE_META[survey.state]
+
+  const submit = () => {
+    cancelMutation.mutate(
+      { cancellation_reason: reason.trim() || undefined },
+      {
+        onSuccess: () => {
+          toast.success('Survey dibatalkan dan role terkait diberi notifikasi')
+          onClose()
+        },
+        onError: (err: any) => toast.error(err.message || 'Gagal membatalkan survey'),
+      },
+    )
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="border-border/75 bg-card text-card-foreground shadow-[0_24px_70px_-42px_rgba(15,23,42,0.45)] sm:max-w-md dark:border-white/10 dark:bg-[#131b2e] dark:shadow-[0_24px_70px_-40px_rgba(244,63,94,0.34)] [&>[data-slot=dialog-close]]:text-muted-foreground [&>[data-slot=dialog-close]]:hover:bg-muted [&>[data-slot=dialog-close]]:hover:text-foreground">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <span className="grid size-8 place-items-center rounded-lg border border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-300">
+              <XCircle className="size-4" />
+            </span>
+            Batalkan Survey
+          </DialogTitle>
+          <DialogDescription>
+            Survey akan masuk tab Dibatalkan dan lead dapat diajukan ulang bila dibutuhkan.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="rounded-xl border border-border/70 bg-muted/35 p-3 text-xs dark:border-zinc-800/70 dark:bg-zinc-950/25">
+          <p className="font-bold text-foreground">{clientName}</p>
+          <p className="mt-1 font-mono text-[11px] text-muted-foreground">
+            {displayValue(survey.consultation?.consultation_id)}
+          </p>
+          <div
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase"
+            style={{ borderColor: `${meta.color}35`, color: meta.color, backgroundColor: `${meta.color}12` }}
+          >
+            <span className="size-1.5 rounded-full" style={{ backgroundColor: meta.color }} />
+            {meta.label}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-semibold text-muted-foreground/80">
+            Alasan pembatalan <span className="text-muted-foreground/60">(opsional)</span>
+          </Label>
+          <Textarea
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            placeholder="Contoh: konsumen minta batal, alamat belum valid, jadwal tidak cocok..."
+            className="min-h-[96px] rounded-xl border-border/75 bg-background/70 text-sm text-foreground placeholder:text-muted-foreground/65 shadow-inner shadow-black/[0.03] focus-visible:border-rose-500/45 focus-visible:ring-rose-500/20 dark:border-white/10 dark:bg-slate-950/65 dark:focus-visible:border-rose-400/35"
+          />
+          <p className="text-[11px] leading-relaxed text-muted-foreground">
+            Alasan ini masuk riwayat dan notifikasi agar admin, manager, dan surveyor tidak kehilangan konteks.
+          </p>
+        </div>
+
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={cancelMutation.isPending}
+            className="h-10 rounded-xl border-border/75 bg-background/60 px-4 text-sm font-semibold text-foreground/80 hover:bg-muted hover:text-foreground dark:border-white/10 dark:bg-slate-950/40 dark:hover:bg-slate-800/60"
+          >
+            Jangan batalkan
+          </Button>
+          <Button
+            type="button"
+            onClick={submit}
+            disabled={cancelMutation.isPending}
+            className="h-10 rounded-xl bg-rose-500 px-4 text-sm font-bold text-white shadow-sm shadow-rose-500/20 hover:bg-rose-400"
+          >
+            {cancelMutation.isPending ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <XCircle className="mr-1.5 size-4" />}
+            Batalkan Survey
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 function ResultDialog({ survey, onClose }: { survey: Survey; onClose: () => void }) {
   const { data: statusesResp, isLoading } = useSurveyStatuses()
   const statuses = statusesResp?.data ?? []
@@ -1346,8 +1285,3 @@ function ResultDialog({ survey, onClose }: { survey: Survey; onClose: () => void
 }
 
 // ── HELPERS ────────────────────────────────────────────────────
-function toLocalInput(value: string): string {
-  const d = new Date(value)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-}

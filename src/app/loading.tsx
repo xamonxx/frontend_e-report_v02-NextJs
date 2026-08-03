@@ -1,7 +1,6 @@
 'use client'
 
 import { Loader2 } from 'lucide-react'
-import { motion } from 'framer-motion'
 
 export default function Loading() {
   return (
@@ -14,19 +13,14 @@ export default function Loading() {
           style={{ color: 'var(--primary-theme, #f59e0b)', filter: 'drop-shadow(0 0 8px var(--primary-theme, #f59e0b))' }}
         />
       </div>
-      <motion.div
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: [0.4, 1, 0.4], y: 0 }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-        className="flex flex-col items-center gap-1 text-center"
-      >
+      <div className="flex animate-pulse flex-col items-center gap-1 text-center">
         <span className="text-xs font-black tracking-widest uppercase text-zinc-400 dark:text-zinc-500">
           Memuat Halaman
         </span>
         <span className="text-[10px] text-zinc-500 dark:text-zinc-600">
           Menghubungkan ke API...
         </span>
-      </motion.div>
+      </div>
     </div>
   )
 }

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Smartphone, Download, Share, Plus, X, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { HEADER_ACTION_CLASS } from './header-action'
@@ -136,26 +135,18 @@ export default function PwaInstallButton() {
 
       {/* Manual Installation Guide Modal / Dialog — portaled to body so it
           escapes the header's z-20 backdrop-blur stacking context. */}
-      {createPortal(
-        <AnimatePresence>
-          {showModal && (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto px-4 py-4">
+      {showModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto px-4 py-4 duration-200 animate-in fade-in">
             {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div
               onClick={() => setShowModal(false)}
               className="absolute inset-0 bg-black/60 backdrop-blur-sm cursor-pointer"
             />
 
             {/* Modal Box */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl"
+            <div
+              className="relative my-auto max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto rounded-2xl border border-border bg-card p-6 shadow-2xl duration-200 animate-in fade-in zoom-in-95 slide-in-from-bottom-1"
             >
               {/* Close Button */}
               <button
@@ -218,12 +209,10 @@ export default function PwaInstallButton() {
               >
                 Selesai
               </button>
-            </motion.div>
-          </div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   )
 }

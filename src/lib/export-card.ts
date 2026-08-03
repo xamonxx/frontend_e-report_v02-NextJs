@@ -1,4 +1,3 @@
-import { toPng } from 'html-to-image'
 import { toast } from 'sonner'
 
 /**
@@ -43,8 +42,14 @@ export async function saveCardAsPng(el: HTMLElement | null, filename: string): P
   el.style.setProperty('-webkit-backdrop-filter', 'none')
 
   try {
+    // Library rasterisasi cukup besar dan hanya dibutuhkan saat tombol ditekan.
+    // Muat terpisah agar dashboard harian Admin tidak ikut membawanya.
+    const { toPng } = await import('html-to-image')
+    const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory
+    const useLowMemoryMode = (deviceMemory !== undefined && deviceMemory <= 4)
+      || Math.max(el.offsetWidth, el.offsetHeight) > 1200
     const dataUrl = await toPng(el, {
-      pixelRatio: 2,
+      pixelRatio: useLowMemoryMode ? 1 : 2,
       cacheBust: true,
       // Transparent canvas → the card's border-radius stays rounded in the PNG.
       backgroundColor: undefined,

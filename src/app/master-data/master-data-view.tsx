@@ -26,7 +26,7 @@ import {
   useAccounts,
   UserItem
 } from '@/lib/hooks/useMasterData'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Table,
   TableBody,
@@ -87,7 +87,7 @@ export default function MasterDataPage() {
   const [catSearch, setCatSearch] = useState('')
   const [debouncedCatSearch] = useDebounce(catSearch, 400)
   const [categoriesPage, setCategoriesPage] = useState(1)
-  const [statusesPage, setStatusesPage] = useState(1)
+  const [statusesPage] = useState(1)
   const [usersPage, setUsersPage] = useState(1)
 
   // Reset to first page when search changes
@@ -123,7 +123,6 @@ export default function MasterDataPage() {
   }, [accountsResponse])
 
   const createCat = useCreateCategory()
-  const updateCat = useUpdateCategory(0)
   const deleteCat = useDeleteCategory()
 
   const createStat = useCreateStatus()

@@ -1,16 +1,18 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useRouter } from 'next/navigation'
-import { api, setAuthToken, removeAuthToken, getAuthToken } from '@/lib/api/client'
+import { toast } from 'sonner'
+import { api } from '@/lib/api/client'
 import { queryKeys } from '@/lib/api/queryKeys'
+import { disablePush } from '@/lib/push'
 import { useAuthStore } from '@/lib/stores/authStore'
-import type { AuthUser } from '@/types'
+import type { ApiError, AuthUser } from '@/types'
 
 /**
  * Fetch current authenticated user. Called on app mount.
- * Only calls /auth/me if a Bearer token exists in localStorage.
+ * The server validates the HttpOnly session cookie.
  */
 export function useCurrentUser() {
   const setUser = useAuthStore((s) => s.setUser)
@@ -22,15 +24,6 @@ export function useCurrentUser() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hasToken = !!getAuthToken()
-      if (!hasToken) {
-        if (!storeIsAuthenticated) {
-          localStorage.setItem('e_report_logged_in', 'false')
-          clearUser()
-        }
-        setIsChecking(false)
-        return
-      }
       setShouldFetch(true)
     }
   }, [storeIsAuthenticated, clearUser])
@@ -38,9 +31,6 @@ export function useCurrentUser() {
   const query = useQuery({
     queryKey: queryKeys.auth.me,
     queryFn: async ({ signal }) => {
-      if (!getAuthToken()) {
-        throw new Error('No auth token')
-      }
       const res = await api.get<{ user: AuthUser }>('/auth/me', undefined, signal)
       return res.user
     },
@@ -66,7 +56,6 @@ export function useCurrentUser() {
       const isNetworkError = query.error instanceof TypeError
       if (!isNetworkError) {
         clearUser()
-        removeAuthToken()
         localStorage.setItem('e_report_logged_in', 'false')
       }
     }
@@ -79,7 +68,7 @@ export function useCurrentUser() {
 }
 
 /**
- * Login mutation. Authenticates and stores Bearer token.
+ * Login mutation. Laravel stores the session in an HttpOnly cookie.
  */
 export function useLogin() {
   const queryClient = useQueryClient()
@@ -88,12 +77,18 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: async (credentials: { email: string; password: string; remember?: boolean }) => {
-      const res = await api.post<{ user: AuthUser; token: string; message: string }>('/auth/login', credentials)
-      return res
+      await api.getCsrfCookie()
+      try {
+        return await api.post<{ user: AuthUser; message: string }>('/auth/login', credentials)
+      } catch (error) {
+        if ((error as ApiError)?.status !== 419) throw error
+
+        // Cookie lama setelah pergantian host/config dipulihkan otomatis.
+        await api.getCsrfCookie(true)
+        return api.post<{ user: AuthUser; message: string }>('/auth/login', credentials)
+      }
     },
     onSuccess: (data) => {
-      // Store the Bearer token FIRST
-      setAuthToken(data.token)
       // Set user in zustand store
       setUser(data.user)
       localStorage.setItem('e_report_logged_in', 'true')
@@ -106,24 +101,50 @@ export function useLogin() {
 }
 
 /**
- * Logout mutation. Revokes token and redirects to login.
+ * Logout mutation. Invalidates the server-side session.
  */
 export function useLogout() {
   const queryClient = useQueryClient()
-  const router = useRouter()
   const clearUser = useAuthStore((s) => s.clearUser)
 
-  const cleanup = useCallback(() => {
-    removeAuthToken()
+  const finishLogout = () => {
     clearUser()
     localStorage.setItem('e_report_logged_in', 'false')
     queryClient.clear()
-    router.push('/login')
-  }, [clearUser, queryClient, router])
+    window.location.replace('/login')
+  }
 
   return useMutation({
-    mutationFn: () => api.post<{ message: string }>('/auth/logout'),
-    onSuccess: cleanup,
-    onError: cleanup,
+    mutationFn: async () => {
+      // Prevent an in-flight /auth/me response from restoring the old user
+      // while the server-side session is being invalidated.
+      await queryClient.cancelQueries({ queryKey: queryKeys.auth.me })
+
+      try {
+        // Langganan push membawa isi notifikasi akun. Cabut sebelum sesi
+        // berakhir agar perangkat bersama tidak menerima pesan setelah logout.
+        await disablePush().catch(() => {})
+        return await api.post<{ message: string }>('/auth/logout')
+      } catch (error) {
+        const status = (error as ApiError)?.status
+
+        // A stale CSRF cookie must not turn logout into a client-only action.
+        if (status === 419) {
+          await api.getCsrfCookie(true)
+          return api.post<{ message: string }>('/auth/logout')
+        }
+
+        // An absent session already represents the desired logout state.
+        if (status === 401) {
+          return { message: 'Logout berhasil.' }
+        }
+
+        throw error
+      }
+    },
+    onSuccess: finishLogout,
+    onError: () => {
+      toast.error('Gagal keluar dari akun. Periksa koneksi lalu coba lagi.')
+    },
   })
 }

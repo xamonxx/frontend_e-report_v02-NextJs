@@ -94,7 +94,10 @@ function buildMarkerEl(total: number, ratio: number, name: string): HTMLElement 
     + 'background:rgba(15,23,42,0.92);color:#f1f5f9;font-size:11px;font-weight:600;'
     + 'box-shadow:0 4px 12px rgba(0,0,0,0.25);backdrop-filter:blur(4px);'
     + 'opacity:0;transition:opacity .15s;z-index:50;'
-  tip.innerHTML = `<span style="color:#67e8f9">${total}</span> konsultasi`
+  const totalEl = document.createElement('span')
+  totalEl.style.color = '#67e8f9'
+  totalEl.textContent = String(total)
+  tip.append(totalEl, document.createTextNode(' konsultasi'))
 
   const arrow = document.createElement('div')
   arrow.style.cssText = 'position:absolute;bottom:-4px;left:50%;transform:translateX(-50%) rotate(45deg);'
@@ -146,17 +149,21 @@ export default function GeoMap({ kabkota, provinceLines, provinces, cities, sele
     const prov = new Map<string, [number, number]>()
     const kab = new Map<string, [number, number]>()
     const kabProv = new Map<string, { id: string | null; name: string }>()
+    const activeProvinceIds = new Set(provinces.filter((p) => p.total > 0).map((p) => p.region_id))
+    const activeCityIds = new Set(cities.filter((c) => c.total > 0).map((c) => c.region_id))
     for (const f of provinceLines.features) {
+      if (!activeProvinceIds.has(f.id)) continue
       const c = pointOnFeature(f as any).geometry.coordinates as [number, number]
       prov.set(f.id, c)
     }
     for (const f of kabkota.features) {
+      if (!activeCityIds.has(f.id)) continue
       const c = pointOnFeature(f as any).geometry.coordinates as [number, number]
       kab.set(f.id, c)
       kabProv.set(f.id, { id: f.properties.province_id ?? null, name: f.properties.province ?? '' })
     }
     return { provCentroid: prov, kabCentroid: kab, kabProvince: kabProv }
-  }, [provinceLines, kabkota])
+  }, [provinceLines, kabkota, provinces, cities])
   const geoRef = useRef(geoLookup)
   geoRef.current = geoLookup
 

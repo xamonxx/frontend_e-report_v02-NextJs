@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Bug, X, ImagePlus, Loader2, Send, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -137,45 +136,31 @@ export default function BugReportWidget() {
     <>
       {/* ─── Floating trigger ─── */}
       <div className="fixed bottom-6 left-6 z-40">
-        <motion.button
+        <button
           type="button"
           onClick={() => setOpen(true)}
           aria-label="Laporkan bug"
           className={cn(
-            'group flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold shadow-lg backdrop-blur-md transition-colors cursor-pointer',
+            'group flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-semibold shadow-lg backdrop-blur-md transition-[color,transform] duration-200 hover:scale-[1.04] active:scale-95 cursor-pointer',
             'border-zinc-200 bg-white/90 text-zinc-600 hover:text-amber-600 shadow-black/5',
             'dark:border-white/10 dark:bg-zinc-900/80 dark:text-zinc-300 dark:hover:text-amber-400 dark:shadow-black/40'
           )}
-          whileHover={{ scale: 1.04 }}
-          whileTap={{ scale: 0.96 }}
         >
           <Bug className="h-4 w-4 text-amber-500 transition-transform group-hover:rotate-12" />
           <span className="hidden sm:inline">Laporkan Bug</span>
-        </motion.button>
+        </button>
       </div>
 
       {/* ─── Modal ─── */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            key="bug-overlay"
-            className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
+      {open && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 py-8 duration-200 animate-in fade-in">
             <div className="absolute inset-0 bg-zinc-950/55 backdrop-blur-sm" onClick={close} />
 
-            <motion.div
+            <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="bug-title"
-              className="relative w-full max-w-[460px] max-h-[90vh] overflow-y-auto rounded-[24px] border border-zinc-200 bg-white shadow-2xl shadow-black/20 dark:border-zinc-800 dark:bg-[#12121a] dark:shadow-black/70"
-              initial={{ opacity: 0, y: 24, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+              className="relative w-full max-w-[460px] max-h-[90vh] overflow-y-auto rounded-[24px] border border-zinc-200 bg-white shadow-2xl shadow-black/20 duration-300 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 dark:border-zinc-800 dark:bg-[#12121a] dark:shadow-black/70"
             >
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent dark:via-amber-500/50" />
 
@@ -284,7 +269,6 @@ export default function BugReportWidget() {
                             key={p.url}
                             className="group relative aspect-square overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50"
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={p.url} alt={`Lampiran ${i + 1}`} className="h-full w-full object-cover" />
                             <button
                               type="button"
@@ -330,17 +314,16 @@ export default function BugReportWidget() {
                     >
                       Batal
                     </button>
-                    <motion.button
+                    <button
                       type="submit"
                       disabled={isSubmitting}
                       className={cn(
                         'relative flex flex-[1.4] items-center justify-center gap-2 overflow-hidden rounded-xl px-4 py-3 text-sm font-bold text-zinc-950 cursor-pointer',
                         'bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600',
                         'shadow-md shadow-amber-500/20 transition-all duration-250 hover:shadow-lg hover:shadow-amber-500/30',
+                        'enabled:hover:scale-[1.015] enabled:active:scale-[0.985]',
                         'disabled:opacity-60 disabled:cursor-not-allowed'
                       )}
-                      whileHover={{ scale: isSubmitting ? 1 : 1.015 }}
-                      whileTap={{ scale: isSubmitting ? 1 : 0.985 }}
                     >
                       {isSubmitting ? (
                         <>
@@ -353,14 +336,13 @@ export default function BugReportWidget() {
                           Kirim Laporan
                         </>
                       )}
-                    </motion.button>
+                    </button>
                   </div>
                 </form>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      )}
     </>
   )
 }

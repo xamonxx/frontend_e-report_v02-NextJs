@@ -152,6 +152,56 @@ export function useDeleteNote(consultationId: number) {
 }
 
 /**
+ * Hook to update a consultation chat message.
+ */
+export function useUpdateNote(consultationId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ noteId, body }: { noteId: number; body: string }) =>
+      api.patch<ApiResponse<any>>(`/consultations/${consultationId}/notes/${noteId}`, { body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(consultationId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    },
+  })
+}
+
+/**
+ * Hook to delete selected consultation chat messages.
+ */
+export function useDeleteNotes(consultationId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (noteIds: number[]) =>
+      api.delete<{ deleted: number; message: string }>(
+        `/consultations/${consultationId}/notes`,
+        { note_ids: noteIds }
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(consultationId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    },
+  })
+}
+
+/**
+ * Hook to clear messages the current user is allowed to remove.
+ */
+export function useClearNotes(consultationId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () =>
+      api.delete<{ deleted: number; message: string }>(
+        `/consultations/${consultationId}/notes/clear`
+      ),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(consultationId) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
+    },
+  })
+}
+
+/**
  * Hook to create a consultation reminder.
  */
 export function useCreateReminder(consultationId: number) {

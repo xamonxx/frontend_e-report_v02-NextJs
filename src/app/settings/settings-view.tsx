@@ -1,15 +1,24 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '@/lib/stores/authStore'
-import { useUpdateProfile, useUpdateTheme } from '@/lib/hooks/useSettings'
+import { useUpdateProfile, useUpdateTheme, useUpdateAvatar } from '@/lib/hooks/useSettings'
+import { api } from '@/lib/api/client'
+import { getErrorMessage } from '@/lib/api/errors'
+import { AvatarCropper } from '@/components/settings/avatar-cropper'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Loader2, Save, Palette, ShieldAlert, Eye, EyeOff } from 'lucide-react'
+import { Loader2, Save, Palette, ShieldAlert, Eye, EyeOff, Camera, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
+
+const MAX_AVATAR_BYTES = 2 * 1024 * 1024 // 2 MB — samakan dengan backend
+
+function getInitials(name: string): string {
+  return name.split(' ').map((w) => w.charAt(0)).join('').toUpperCase().slice(0, 2)
+}
 
 const PRESET_COLORS = [
   { name: 'Amber', hex: '#f59e0b' },
@@ -24,6 +33,10 @@ export default function SettingsPage() {
   const user = useAuthStore((s) => s.user)
   const updateProfileMutation = useUpdateProfile()
   const updateThemeMutation = useUpdateTheme()
+  const updateAvatarMutation = useUpdateAvatar()
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [cropSrc, setCropSrc] = useState<string | null>(null)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -116,6 +129,46 @@ export default function SettingsPage() {
     })
   }
 
+  const handleAvatarPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // reset supaya pilih file sama lagi tetap memicu onChange
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Berkas harus berupa gambar.')
+      return
+    }
+    if (file.size > MAX_AVATAR_BYTES) {
+      toast.error('Ukuran foto maksimal 2 MB.')
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (evt) => setCropSrc(evt.target?.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const handleCropConfirm = (blob: Blob) => {
+    const formData = new FormData()
+    formData.append('avatar', blob, 'avatar.png')
+    updateAvatarMutation.mutate(formData, {
+      onSuccess: (res) => {
+        toast.success(res.message || 'Foto profil berhasil diperbarui.')
+        setCropSrc(null)
+      },
+      onError: (err) => toast.error(getErrorMessage(err, 'Gagal memperbarui foto profil.')),
+    })
+  }
+
+  const handleAvatarRemove = () => {
+    const formData = new FormData()
+    formData.append('remove_avatar', '1')
+    updateAvatarMutation.mutate(formData, {
+      onSuccess: (res) => toast.success(res.message || 'Foto profil berhasil dihapus.'),
+      onError: (err) => toast.error(getErrorMessage(err, 'Gagal menghapus foto profil.')),
+    })
+  }
+
   const handleThemeSubmit = (hex: string) => {
     setPrimaryColor(hex)
     updateThemeMutation.mutate(hex, {
@@ -146,7 +199,15 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <AvatarCropper
+        imageSrc={cropSrc}
+        open={cropSrc !== null}
+        saving={updateAvatarMutation.isPending}
+        onCancel={() => setCropSrc(null)}
+        onConfirm={handleCropConfirm}
+      />
+
+      <div className="grid items-start gap-6 md:grid-cols-3">
         {/* Profile and Password edit form */}
         <div className="md:col-span-2">
           <Card className="border-border bg-card shadow-sm dark:border-zinc-800 dark:bg-zinc-900/40">
@@ -158,13 +219,79 @@ export default function SettingsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleProfileSubmit} className="space-y-4">
+                {/* Foto profil */}
+                <div className="flex items-center gap-4 border-b border-border/80 pb-4 dark:border-zinc-800/80">
+                  <div className="relative shrink-0">
+                    {user.avatar ? (
+                      <img
+                        src={`${api.baseUrl}/storage/${user.avatar}`}
+                        alt={user.name}
+                        className="size-16 rounded-full object-cover ring-2 ring-border"
+                      />
+                    ) : (
+                      <div
+                        className="flex size-16 items-center justify-center rounded-full text-lg font-bold text-white ring-2 ring-border"
+                        style={{ backgroundColor: primaryColor }}
+                      >
+                        {getInitials(user.name)}
+                      </div>
+                    )}
+                    {updateAvatarMutation.isPending && (
+                      <div className="absolute inset-0 grid place-items-center rounded-full bg-black/40">
+                        <Loader2 className="size-5 animate-spin text-white" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground">Foto Profil</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">
+                      JPG, PNG, GIF, atau WEBP. Maksimal 2 MB.
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={updateAvatarMutation.isPending}
+                        className="text-xs"
+                      >
+                        <Camera className="size-3.5" />
+                        {user.avatar ? 'Ganti Foto' : 'Unggah Foto'}
+                      </Button>
+                      {user.avatar && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleAvatarRemove}
+                          disabled={updateAvatarMutation.isPending}
+                          className="text-xs text-red-500 hover:bg-red-500/10 hover:text-red-600"
+                        >
+                          <Trash2 className="size-3.5" />
+                          Hapus
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleAvatarPick}
+                  className="hidden"
+                />
+
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor="name" className="text-xs font-semibold text-muted-foreground">Nama Lengkap</Label>
                     <Input
                       id="name"
                       value={name}
-                      onChange={(e) => setName(e.target.value)}
+                      onChange={(e) => setName(e.target.value.replace(/[<>]/g, ''))}
+                      maxLength={255}
                       className="border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
                     />
                   </div>
@@ -176,6 +303,7 @@ export default function SettingsPage() {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      maxLength={255}
                       className="border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
                     />
                   </div>

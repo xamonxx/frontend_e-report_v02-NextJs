@@ -32,6 +32,7 @@ import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { useClearLogs } from '@/lib/hooks/useDebug'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/errors'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 
 export default function AuditLogsPage() {
@@ -77,7 +78,7 @@ export default function AuditLogsPage() {
       {
         loading: 'Membersihkan log sistem...',
         success: (data: any) => data.message || 'Log sistem berhasil dibersihkan!',
-        error: (err: any) => err?.response?.data?.message || 'Gagal membersihkan log sistem.',
+        error: (err: unknown) => getErrorMessage(err, 'Gagal membersihkan log sistem.'),
       },
     )
   }

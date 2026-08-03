@@ -12,6 +12,7 @@ import { useEffect } from 'react'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   const isLoginPage = pathname === '/login'
+  const isSurveyAssignmentPage = /^\/surveys\/\d+\/assign$/.test(pathname)
   const close = useSidebarStore((s) => s.close)
   const user = useAuthStore((s) => s.user)
 
@@ -31,6 +32,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [close])
 
   if (isLoginPage) {
+    return <AuthGuard>{children}</AuthGuard>
+  }
+
+  if (isSurveyAssignmentPage) {
     return <AuthGuard>{children}</AuthGuard>
   }
 

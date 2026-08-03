@@ -30,7 +30,7 @@ self.addEventListener('push', (event) => {
   let data = {}
   try {
     data = event.data ? event.data.json() : {}
-  } catch (e) {
+  } catch {
     data = { title: 'E-Report', body: event.data ? event.data.text() : '' }
   }
 
@@ -49,7 +49,17 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/'
+  const requestedUrl = (event.notification.data && event.notification.data.url) || '/'
+  let targetUrl = '/'
+
+  try {
+    const parsedUrl = new URL(requestedUrl, self.location.origin)
+    if (parsedUrl.origin === self.location.origin) {
+      targetUrl = `${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`
+    }
+  } catch {
+    targetUrl = '/'
+  }
 
   event.waitUntil(
     self.clients

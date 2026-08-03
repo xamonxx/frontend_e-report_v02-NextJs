@@ -31,6 +31,10 @@ export const queryKeys = {
     detail: (id: number) => [...queryKeys.surveys.all, 'detail', id] as const,
     recap: (filters: Record<string, unknown>) =>
       [...queryKeys.surveys.all, 'recap', filters] as const,
+    availability: (date?: string, excludeSurveyId?: number) =>
+      [...queryKeys.surveys.all, 'availability', date, excludeSurveyId] as const,
+    assignmentSuggestions: (id: number, date?: string, time?: string) =>
+      [...queryKeys.surveys.all, 'assignment-suggestions', id, date, time] as const,
   },
   bugReports: {
     all: ['bug-reports'] as const,

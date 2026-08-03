@@ -53,7 +53,7 @@ export const ROUTE_ROLES: { prefix: string; roles: UserRole[] }[] = [
   // startsWith dengan first-match-wins, jadi '/surveys/rekap' akan mewarisi
   // role /surveys dan meloloskan surveyor biasa.
   { prefix: '/rekap-jadwal-surveyor', roles: ['manager_surveyor'] },
-  { prefix: '/survey-consumers', roles: ['manager_surveyor', 'surveyor'] },
+  { prefix: '/survey-consumers', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { prefix: '/surveys', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { prefix: '/consultations', roles: ['admin'] },
   { prefix: '/analytics', roles: ['admin'] },
