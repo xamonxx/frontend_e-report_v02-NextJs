@@ -1,33 +1,23 @@
 import type { ApiError } from '@/types'
+import { friendlyApiMessage } from './errors'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000'
-
-const TOKEN_KEY = 'e_report_auth_token'
+// Production can proxy private API traffic through the frontend origin. Keep
+// direct API mode as the local/development-compatible default.
+const API_BASE =
+  process.env.NEXT_PUBLIC_SAME_ORIGIN_API === 'true'
+    ? ''
+    : (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000')
 
 /**
- * Get stored auth token from localStorage.
+ * Read Laravel's non-sensitive CSRF cookie. The authentication session itself
+ * lives in an HttpOnly cookie and is intentionally inaccessible to JavaScript.
  */
-export function getAuthToken(): string | null {
+export function getXsrfToken(): string | null {
   if (typeof window === 'undefined') return null
-  return localStorage.getItem(TOKEN_KEY)
-}
-
-/**
- * Set auth token in localStorage.
- */
-export function setAuthToken(token: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(TOKEN_KEY, token)
-  }
-}
-
-/**
- * Remove auth token from localStorage.
- */
-export function removeAuthToken(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(TOKEN_KEY)
-  }
+  const match = document.cookie
+    .split('; ')
+    .find((cookie) => cookie.startsWith('XSRF-TOKEN='))
+  return match ? decodeURIComponent(match.slice('XSRF-TOKEN='.length)) : null
 }
 
 /**
@@ -44,9 +34,8 @@ export function removeAuthToken(): void {
  */
 function handleUnauthorized(path: string): void {
   if (typeof window === 'undefined') return
-  if (path.startsWith('/auth/login')) return
+  if (path.startsWith('/auth/login') || path.startsWith('/auth/logout')) return
 
-  removeAuthToken()
   localStorage.setItem('e_report_logged_in', 'false')
 
   if (window.location.pathname !== '/login') {
@@ -55,8 +44,7 @@ function handleUnauthorized(path: string): void {
 }
 
 /**
- * Base API client with Sanctum token-based auth.
- * Uses Bearer token stored in localStorage for cross-domain compatibility.
+ * Base API client with Sanctum cookie-based SPA authentication.
  */
 class ApiClient {
   private rawBaseUrl: string
@@ -87,12 +75,24 @@ class ApiClient {
   }
 
   /**
-   * Initialize Sanctum CSRF cookie. Kept for backward compatibility.
+   * Initialize Sanctum's CSRF cookie before login.
    */
-  async getCsrfCookie(): Promise<void> {
-    await fetch(`${this.baseUrl}/sanctum/csrf-cookie`, {
+  async getCsrfCookie(reset = false): Promise<void> {
+    if (reset && typeof document !== 'undefined') {
+      // Hapus token JS lama. Session HttpOnly memakai nama development baru,
+      // sehingga pasangan cookie lama tidak dapat ikut dipilih browser.
+      document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/; SameSite=Lax'
+      document.cookie = 'XSRF-TOKEN=; Max-Age=0; Path=/; Domain=localhost; SameSite=Lax'
+    }
+
+    const response = await fetch(`${this.baseUrl}/sanctum/csrf-cookie`, {
       credentials: 'include',
+      cache: 'no-store',
     })
+
+    if (!response.ok) {
+      throw new Error('Gagal menyiapkan sesi keamanan. Coba lagi.')
+    }
   }
 
   private async request<T>(
@@ -122,10 +122,12 @@ class ApiClient {
       Accept: 'application/json',
     }
 
-    // Add Bearer token if available
-    const token = getAuthToken()
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method)) {
+      const xsrfToken = getXsrfToken()
+      if (xsrfToken) {
+        headers['X-XSRF-TOKEN'] = xsrfToken
+      }
+      headers['X-Requested-With'] = 'XMLHttpRequest'
     }
 
     let fetchBody: BodyInit | undefined
@@ -136,20 +138,38 @@ class ApiClient {
       fetchBody = JSON.stringify(options.body)
     }
 
-    const response = await fetch(url, {
-      method,
-      headers,
-      body: fetchBody,
-      credentials: 'include',
-      signal: options.signal,
-    })
+    let response: Response
+    try {
+      response = await fetch(url, {
+        method,
+        headers,
+        body: fetchBody,
+        credentials: 'include',
+        signal: options.signal,
+      })
+    } catch (networkError) {
+      // Pembatalan react-query — teruskan apa adanya, bukan error yang tampil ke pengguna.
+      if (networkError instanceof DOMException && networkError.name === 'AbortError') {
+        throw networkError
+      }
+      // Server tak terjangkau / koneksi putus. `status: 0` memicu pesan koneksi.
+      const error: ApiError = { message: friendlyApiMessage(0), status: 0 }
+      throw error
+    }
 
     // Handle 204 No Content
     if (response.status === 204) {
       return {} as T
     }
 
-    const data = await response.json()
+    // Body mungkin bukan JSON (mis. halaman error 500/502 dari proxy). Jangan
+    // biarkan SyntaxError "Unexpected token '<'" bocor jadi pesan ke pengguna.
+    let data: { message?: string; errors?: Record<string, string[]> } | null = null
+    try {
+      data = await response.json()
+    } catch {
+      data = null
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -157,8 +177,9 @@ class ApiClient {
       }
 
       const error: ApiError = {
-        message: data.message || 'Terjadi kesalahan.',
-        errors: data.errors,
+        message: friendlyApiMessage(response.status, data?.message, data?.errors),
+        errors: data?.errors,
+        status: response.status,
       }
       throw error
     }
@@ -182,8 +203,8 @@ class ApiClient {
     return this.request<T>('PATCH', path, { body })
   }
 
-  delete<T>(path: string) {
-    return this.request<T>('DELETE', path)
+  delete<T>(path: string, body?: unknown) {
+    return this.request<T>('DELETE', path, { body })
   }
 
   postForm<T>(path: string, formData: FormData) {
@@ -191,7 +212,7 @@ class ApiClient {
   }
 
   /**
-   * Download a file from the API. Handles auth token and triggers browser download.
+   * Download a file using the HttpOnly session cookie.
    * Used for Excel/PDF/CSV export endpoints.
    */
   async downloadFile(path: string, params?: Record<string, string | number | undefined>, filename?: string): Promise<void> {
@@ -213,25 +234,29 @@ class ApiClient {
       Accept: 'application/octet-stream',
     }
 
-    // Add Bearer token
-    const token = getAuthToken()
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`
+    let response: Response
+    try {
+      response = await fetch(url, {
+        method: 'GET',
+        headers,
+        credentials: 'include',
+      })
+    } catch {
+      const error: ApiError = { message: friendlyApiMessage(0), status: 0 }
+      throw error
     }
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers,
-      credentials: 'include',
-    })
 
     if (!response.ok) {
       if (response.status === 401) {
         handleUnauthorized(path)
       }
 
-      const errorData = await response.json().catch(() => ({ message: 'Gagal mengunduh file.' }))
-      throw { message: errorData.message || `Download failed: ${response.status}` }
+      const errorData = await response.json().catch(() => null)
+      const error: ApiError = {
+        message: friendlyApiMessage(response.status, errorData?.message),
+        status: response.status,
+      }
+      throw error
     }
 
     // Extract filename from Content-Disposition header if not provided
@@ -254,18 +279,3 @@ class ApiClient {
 }
 
 export const api = new ApiClient(API_BASE)
-
-/*
- * `buildExportUrl()` dihapus 2026-07-27.
- *
- * Fungsi itu menempelkan token auth ke query string supaya unduhan lewat
- * `window.open` / `<a href>` bisa menembus auth. Akibatnya URL bertoken tertulis
- * ke DOM sebagai `href`, ikut masuk riwayat browser saat diklik, terkirim
- * sebagai `Referer`, dan bisa disalin lewat "copy link address" — padahal token
- * Sanctum di aplikasi ini tidak punya masa berlaku.
- *
- * Semua export sekarang lewat `useFileDownload()` → `api.downloadFile()`, yang
- * mengirim token di header `Authorization` dan menyimpan hasilnya dari blob.
- * Untuk aset statis `/storage/...` cukup sambung ke `api.baseUrl` — tidak ada
- * auth di sana.
- */

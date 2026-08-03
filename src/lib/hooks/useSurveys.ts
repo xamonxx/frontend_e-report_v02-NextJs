@@ -9,6 +9,7 @@ import type {
   SurveyStatusItem,
   SurveyorItem,
   SurveyorAvailability,
+  SurveyorAssignmentSuggestion,
   SurveyActivity,
   PaginatedResponse,
   ApiResponse,
@@ -18,10 +19,20 @@ import type {
  * Daftar survey (manager: semua, surveyor: miliknya). Server-side filter + paginasi.
  */
 export function useSurveys(filters: SurveyFilters) {
+  const liveStates = ['requested', 'scheduled', 'in_progress']
+  const shouldRefreshInPlace = liveStates.includes(String(filters.state ?? ''))
+
   return useQuery({
     queryKey: queryKeys.surveys.list(filters),
     queryFn: ({ signal }) => api.get<PaginatedResponse<Survey>>('/surveys', filters as any, signal),
     placeholderData: (previousData) => previousData,
+    staleTime: shouldRefreshInPlace ? 15 * 1000 : 60 * 1000,
+    refetchOnWindowFocus: shouldRefreshInPlace,
+    refetchOnReconnect: shouldRefreshInPlace,
+    // Websocket menjadi jalur utama; polling 30 detik hanya fallback ketika
+    // koneksi realtime diblokir jaringan perangkat.
+    refetchInterval: shouldRefreshInPlace ? 30 * 1000 : false,
+    refetchIntervalInBackground: false,
   })
 }
 
@@ -41,11 +52,29 @@ export function useSurveyHistory(id: number) {
   })
 }
 
-export function useSurveyorAvailability(date?: string) {
+export function useSurveyorAvailability(date?: string, excludeSurveyId?: number) {
   return useQuery({
-    queryKey: [...queryKeys.surveys.all, 'availability', date],
-    queryFn: ({ signal }) => api.get<ApiResponse<SurveyorAvailability[]>>('/surveys/availability', { date }, signal),
+    queryKey: queryKeys.surveys.availability(date, excludeSurveyId),
+    queryFn: ({ signal }) =>
+      api.get<ApiResponse<SurveyorAvailability[]>>(
+        '/surveys/availability',
+        { date, exclude_survey_id: excludeSurveyId },
+        signal
+      ),
     enabled: Boolean(date),
+  })
+}
+
+export function useSurveyorAssignmentSuggestions(surveyId: number, date?: string, time?: string) {
+  return useQuery({
+    queryKey: queryKeys.surveys.assignmentSuggestions(surveyId, date, time),
+    queryFn: ({ signal }) =>
+      api.get<ApiResponse<SurveyorAssignmentSuggestion[]>>(
+        `/surveys/${surveyId}/assignment-suggestions`,
+        { date, time, limit: 5 },
+        signal
+      ),
+    enabled: Boolean(surveyId && date),
   })
 }
 
@@ -111,6 +140,7 @@ export function useAssignSurvey(id: number) {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })
 }
@@ -118,7 +148,7 @@ export function useAssignSurvey(id: number) {
 /**
  * Admin mengubah jadwal survey yang diajukan (reschedule) â†’ notif ke manager.
  */
-export function useRescheduleSurvey(id: number) {
+export function useRescheduleSurvey(id: number, consultationId?: number) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (data: { requested_date: string; requested_time?: string; admin_notes?: string }) =>
@@ -127,7 +157,11 @@ export function useRescheduleSurvey(id: number) {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.detail(id) })
       queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
+      if (consultationId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(consultationId) })
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })
 }
@@ -199,16 +233,23 @@ export function useSubmitSurveyResult(id: number) {
 }
 
 /**
- * Batalkan survey (manager/super_admin).
+ * Batalkan survey sebelum selesai. Bisa oleh admin akun terkait, manager
+ * surveyor, atau surveyor yang ditugaskan.
  */
-export function useCancelSurvey(id: number) {
+export function useCancelSurvey(id: number, consultationId?: number) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: () => api.patch<ApiResponse<Survey>>(`/surveys/${id}/cancel`),
+    mutationFn: (data?: { cancellation_reason?: string }) =>
+      api.patch<ApiResponse<Survey>>(`/surveys/${id}/cancel`, data ?? {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.consultations.all })
+      if (consultationId) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.consultations.detail(consultationId) })
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.all })
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all })
     },
   })
 }

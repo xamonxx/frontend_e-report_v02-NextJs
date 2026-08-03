@@ -27,6 +27,23 @@ export function useUpdateProfile() {
   })
 }
 
+export function useUpdateAvatar() {
+  const queryClient = useQueryClient()
+  const setUser = useAuthStore((s) => s.setUser)
+  const user = useAuthStore((s) => s.user)
+
+  return useMutation({
+    mutationFn: (formData: FormData) =>
+      api.postForm<{ message: string; avatar: string | null }>('/settings/avatar', formData),
+    onSuccess: (response) => {
+      if (user) {
+        setUser({ ...user, avatar: response.avatar })
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.auth.me })
+    },
+  })
+}
+
 export function useUpdateTheme() {
   const queryClient = useQueryClient()
   const setUser = useAuthStore((s) => s.setUser)

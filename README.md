@@ -90,6 +90,22 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_APP_NAME="Home Putra Interior — E-Report"
 ```
 
+Untuk production, gunakan proxy same-origin agar halaman privat tidak mengunduh
+bundle sebelum sesi tervalidasi di server:
+
+```env
+NEXT_PUBLIC_SAME_ORIGIN_API=true
+NEXT_PUBLIC_AUTH_GATE=true
+NEXT_PUBLIC_API_URL=
+API_PROXY_TARGET=https://api.example.com
+```
+
+`API_PROXY_TARGET` adalah konfigurasi server Next.js, bukan secret dan tidak
+perlu diekspos ke browser. Backend harus tetap menggunakan cookie Sanctum
+HttpOnly dan mengizinkan domain frontend pada `SANCTUM_STATEFUL_DOMAINS`.
+Mode ini memvalidasi `auth/me` pada navigasi halaman privat dan gagal tertutup
+ke `/login` bila sesi tidak ada atau API tidak tersedia.
+
 > [!IMPORTANT]
 > When running the frontend and backend on different ports or IP addresses (e.g. local area network), make sure the Laravel API `.env` includes:
 > - `SANCTUM_STATEFUL_DOMAINS=localhost:3000,127.0.0.1:3000` (or the respective frontend IP/port)

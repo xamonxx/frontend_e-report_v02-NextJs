@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/artifacts/
 
 # next.js
 /.next/
@@ -57,5 +58,7 @@ next-env.d.ts
 
 # python and temp scripts
 *.py
+!/scripts/
+!/scripts/*.py
 /public/sw-v2.js
 /public/sw-v2.js.map

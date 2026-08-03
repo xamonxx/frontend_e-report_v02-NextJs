@@ -26,7 +26,7 @@ import {
 import { useSurveys, useSurveyors } from "@/lib/hooks/useSurveys";
 import { useAccounts } from "@/lib/hooks/useMasterData";
 import type { Survey, SurveyState } from "@/types";
-import { isSurveyor } from "@/lib/auth/roles";
+import { isAdmin, isSurveyor } from "@/lib/auth/roles";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -136,6 +136,7 @@ function surveyNeedLabel(survey: Survey) {
 export default function SurveyConsumersView() {
   const user = useAuthStore((state) => state.user);
   const surveyorMode = isSurveyor(user);
+  const restrictedMode = surveyorMode || isAdmin(user);
   const [search, setSearch] = useState("");
   const [debouncedSearch] = useDebounce(search, 400);
   const [state, setState] = useState<SurveyState | "">("");
@@ -153,7 +154,7 @@ export default function SurveyConsumersView() {
   const { data: accounts = [] } = useAccounts();
   const { data: surveyorsResponse } = useSurveyors();
   const surveyors = surveyorsResponse?.data ?? [];
-  const effectiveAccount = surveyorMode && user?.account_id ? String(user.account_id) : account;
+  const effectiveAccount = restrictedMode && user?.account_id ? String(user.account_id) : account;
   const effectiveSurveyorId = surveyorMode && user?.id ? String(user.id) : surveyorId;
   const { data, isLoading, isFetching, refetch } = useSurveys({
     page,
@@ -173,13 +174,13 @@ export default function SurveyConsumersView() {
   }, [trimmedSearch, state, account, surveyorId, startDate, endDate]);
 
   const hasActiveFilters = Boolean(
-    search || state || (!surveyorMode && account) || (!surveyorMode && surveyorId) || startDate || endDate,
+    search || state || (!restrictedMode && account) || (!restrictedMode && surveyorId) || startDate || endDate,
   );
 
   const resetFilters = () => {
     setSearch("");
     setState("");
-    if (!surveyorMode) {
+    if (!restrictedMode) {
       setAccount("");
       setSurveyorId("");
     }
@@ -202,6 +203,8 @@ export default function SurveyConsumersView() {
             <p className="mt-1 max-w-xl text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
               {surveyorMode
                 ? `Data survey konsumen akun ${user?.account?.name ?? "Anda"} yang ditugaskan ke ${user?.name ?? "surveyor"}.`
+                : restrictedMode
+                  ? "Data konsumen survey yang Anda ajukan, tanpa menampilkan jadwal admin lain."
                 : "Satu tabel untuk request, penugasan, jadwal, dan hasil survey."}
             </p>
           </div>
@@ -245,7 +248,7 @@ export default function SurveyConsumersView() {
                 </PopoverContent>
               </Popover>
 
-              {!surveyorMode && (
+              {!restrictedMode && (
                 <>
                   <Popover open={accountOpen} onOpenChange={setAccountOpen}>
                     <PopoverTrigger

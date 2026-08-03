@@ -1,0 +1,25 @@
+{
+  "projectId": "c30c1b24-85fb-43b3-8582-970344a91b0d",
+  "type": "frontend",
+  "name": "Login page smoke",
+  "description": "Verify the public E-REPORT entry redirects to the login experience and renders without a runtime crash.",
+  "priority": "p1",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Open the project target URL."
+    },
+    {
+      "type": "assertion",
+      "description": "The app redirects to or displays the login page."
+    },
+    {
+      "type": "assertion",
+      "description": "The page shows email and password fields and a submit button."
+    },
+    {
+      "type": "assertion",
+      "description": "No visible application error, blank screen, or uncaught runtime exception appears."
+    }
+  ]
+}

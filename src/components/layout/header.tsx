@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuthStore } from '@/lib/stores/authStore'
+import { api } from '@/lib/api/client'
 import { useLogout } from '@/lib/hooks/useAuth'
 import { usePathname } from 'next/navigation'
 import NotificationCenter from './notification-center'
@@ -84,12 +85,13 @@ export default function Header() {
           {user?.account ? (
             <Tooltip>
               <TooltipTrigger className="flex min-w-0 items-center gap-2 rounded-lg border border-border/40 bg-muted/40 px-2.5 py-1.5 cursor-default focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]">
-                <div
-                  className="flex h-5 w-5 items-center justify-center rounded-md text-white text-[10px] font-bold shrink-0"
-                  style={{ backgroundColor: primaryColor }}
-                >
-                  {user.account.name.charAt(0)}
-                </div>
+                {user.account.logo && (
+                  <img
+                    src={`${api.baseUrl}/storage/${user.account.logo}`}
+                    alt={user.account.name}
+                    className="h-5 w-5 shrink-0 rounded-md object-cover"
+                  />
+                )}
                 {/* No cap below sm: the flex parent is already the binding
                     constraint there, so a fixed max-width only truncated earlier
                     than it had to. */}
@@ -147,18 +149,26 @@ export default function Header() {
           <Popover>
             <PopoverTrigger className="group flex shrink-0 items-center gap-2 rounded-lg px-1.5 py-1.5 transition-colors hover:bg-muted/40 cursor-pointer focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)] sm:px-2">
               {/* Avatar */}
-              <div
-                className="flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/10 transition-all group-hover:ring-white/20 sm:size-7"
-                style={{ backgroundColor: primaryColor }}
-              >
-                {user?.name ? getInitials(user.name) : <User className="h-3.5 w-3.5" />}
-              </div>
+              {user?.avatar ? (
+                <img
+                  src={`${api.baseUrl}/storage/${user.avatar}`}
+                  alt={user.name}
+                  className="size-8 shrink-0 rounded-full object-cover ring-2 ring-white/10 transition-all group-hover:ring-white/20 sm:size-7"
+                />
+              ) : (
+                <div
+                  className="flex size-8 shrink-0 items-center justify-center rounded-full text-[11px] font-bold text-white ring-2 ring-white/10 transition-all group-hover:ring-white/20 sm:size-7"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {user?.name ? getInitials(user.name) : <User className="h-3.5 w-3.5" />}
+                </div>
+              )}
               {/* Name + role (desktop) */}
-              <div className="hidden md:block text-left">
-                <p className="text-xs font-semibold text-foreground/80 leading-tight group-hover:text-foreground transition-colors">
+              <div className="hidden md:block min-w-0 max-w-[160px] text-left">
+                <p className="truncate text-xs font-semibold text-foreground/80 leading-tight group-hover:text-foreground transition-colors">
                   {user?.name}
                 </p>
-                <p className="text-[10px] text-muted-foreground capitalize leading-tight">
+                <p className="truncate text-[10px] text-muted-foreground capitalize leading-tight">
                   {userRoleLabel}
                 </p>
               </div>
@@ -179,12 +189,20 @@ export default function Header() {
                 }}
               >
                 <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-xl text-white text-base font-bold ring-2 ring-white/10 shrink-0"
-                    style={{ backgroundColor: primaryColor }}
-                  >
-                    {user?.name ? getInitials(user.name) : <User className="h-6 w-6" />}
-                  </div>
+                  {user?.avatar ? (
+                    <img
+                      src={`${api.baseUrl}/storage/${user.avatar}`}
+                      alt={user.name}
+                      className="h-12 w-12 shrink-0 rounded-xl object-cover ring-2 ring-white/10"
+                    />
+                  ) : (
+                    <div
+                      className="flex h-12 w-12 items-center justify-center rounded-xl text-white text-base font-bold ring-2 ring-white/10 shrink-0"
+                      style={{ backgroundColor: primaryColor }}
+                    >
+                      {user?.name ? getInitials(user.name) : <User className="h-6 w-6" />}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-foreground truncate">{user?.name}</p>
                     <p className="text-[11px] text-muted-foreground truncate">{user?.email}</p>

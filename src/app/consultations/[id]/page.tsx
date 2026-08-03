@@ -1,11 +1,14 @@
 'use client'
 
-import { use, useEffect, useState } from 'react'
+import { use, useEffect, useRef, useState } from 'react'
 import {
   useConsultation,
   useUpdateConsultationStatus,
   useCreateNote,
   useDeleteNote,
+  useUpdateNote,
+  useDeleteNotes,
+  useClearNotes,
   useCreateReminder,
   useDeleteReminder,
   useMarkReminderDone
@@ -16,8 +19,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import {
   User,
   Phone,
@@ -32,13 +44,18 @@ import {
   Plus,
   Edit,
   CheckCircle2,
-  MessageCircle
+  MessageCircle,
+  EllipsisVertical,
+  ListChecks,
+  X
 } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { cn, rawPhoneDigits, productCategoryNames } from '@/lib/utils'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { useConfirm } from '@/components/ui/confirm-dialog'
+import { isSuperAdmin } from '@/lib/auth/roles'
+import { useAuthStore } from '@/lib/stores/authStore'
 
 type PageParams = {
   id: string
@@ -46,6 +63,7 @@ type PageParams = {
 
 export default function ConsultationDetailPage({ params }: { params: Promise<PageParams> }) {
   const confirm = useConfirm()
+  const currentUser = useAuthStore((state) => state.user)
   const resolvedParams = use(params)
   const consultationId = parseInt(resolvedParams.id, 10)
 
@@ -57,13 +75,21 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
   const updateStatusMutation = useUpdateConsultationStatus(consultationId)
   const createNoteMutation = useCreateNote(consultationId)
   const deleteNoteMutation = useDeleteNote(consultationId)
+  const updateNoteMutation = useUpdateNote(consultationId)
+  const deleteNotesMutation = useDeleteNotes(consultationId)
+  const clearNotesMutation = useClearNotes(consultationId)
   const createReminderMutation = useCreateReminder(consultationId)
   const deleteReminderMutation = useDeleteReminder(consultationId)
   const markReminderDoneMutation = useMarkReminderDone(consultationId)
 
   const [noteBody, setNoteBody] = useState('')
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedNoteIds, setSelectedNoteIds] = useState<number[]>([])
+  const [editingNoteId, setEditingNoteId] = useState<number | null>(null)
+  const [editBody, setEditBody] = useState('')
   const [reminderMessage, setReminderMessage] = useState('')
   const [reminderDate, setReminderDate] = useState('')
+  const chatViewportRef = useRef<HTMLDivElement>(null)
   // Dinaikkan tiap status berpindah ke Request Survey; kartu survey memakainya
   // sebagai pemicu membuka form pengajuan secara otomatis.
   const [surveyPromptSignal, setSurveyPromptSignal] = useState(0)
@@ -78,6 +104,22 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
     // Bersihkan query supaya refresh halaman tidak membuka modal lagi.
     window.history.replaceState({}, '', window.location.pathname)
   }, [])
+
+  const noteCount = consultation?.timeline_notes?.length ?? 0
+
+  useEffect(() => {
+    const viewport = chatViewportRef.current
+    if (!viewport || noteCount === 0) return
+
+    const frame = window.requestAnimationFrame(() => {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: noteCount > 1 ? 'smooth' : 'auto',
+      })
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [noteCount])
 
   if (isLoading) {
     return <DetailPageSkeleton />
@@ -104,6 +146,14 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
   const surveyStageName = 'request survey'
   const isAtSurveyStage =
     (consultation.status_category?.name ?? '').trim().toLowerCase() === surveyStageName
+  const chatNotes = [...(consultation.timeline_notes ?? [])].sort(
+    (left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+  )
+  const canManageAnyChat = chatNotes.some(
+    (note) =>
+      note.user?.id === currentUser?.id
+      || Boolean(currentUser && isSuperAdmin(currentUser))
+  )
 
   const handleStatusChange = (statusIdStr: string) => {
     const statusId = parseInt(statusIdStr, 10)
@@ -127,13 +177,12 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
     })
   }
 
-  const handleNoteSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!noteBody.trim()) return
+  const submitNote = () => {
+    const body = noteBody.trim()
+    if (!body || createNoteMutation.isPending) return
 
-    createNoteMutation.mutate(noteBody, {
+    createNoteMutation.mutate(body, {
       onSuccess: () => {
-        toast.success('Catatan berhasil ditambahkan')
         setNoteBody('')
       },
       onError: (err: any) => {
@@ -142,10 +191,15 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
     })
   }
 
+  const handleNoteSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    submitNote()
+  }
+
   const handleNoteDelete = async (noteId: number) => {
     const isConfirmed = await confirm({
-      title: 'Hapus Catatan?',
-      description: 'Hapus catatan ini dari timeline?',
+      title: 'Hapus pesan?',
+      description: 'Pesan akan dihapus dari riwayat percakapan konsultasi.',
       actionLabel: 'Hapus',
       cancelLabel: 'Batal',
       variant: 'destructive',
@@ -154,13 +208,107 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
     if (isConfirmed) {
       deleteNoteMutation.mutate(noteId, {
         onSuccess: () => {
-          toast.success('Catatan berhasil dihapus')
+          toast.success('Pesan berhasil dihapus')
         },
         onError: () => {
-          toast.error('Gagal menghapus catatan')
+          toast.error('Gagal menghapus pesan')
         },
       })
     }
+  }
+
+  const toggleSelectedNote = (noteId: number) => {
+    setSelectedNoteIds((current) =>
+      current.includes(noteId)
+        ? current.filter((id) => id !== noteId)
+        : [...current, noteId]
+    )
+  }
+
+  const closeSelectionMode = () => {
+    setSelectionMode(false)
+    setSelectedNoteIds([])
+  }
+
+  const handleSelectedNotesDelete = async () => {
+    if (selectedNoteIds.length === 0) return
+
+    const isConfirmed = await confirm({
+      title: `Hapus ${selectedNoteIds.length} pesan?`,
+      description: 'Pesan yang dipilih akan dihapus permanen dari percakapan.',
+      actionLabel: 'Hapus pesan',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+    if (!isConfirmed) return
+
+    deleteNotesMutation.mutate(selectedNoteIds, {
+      onSuccess: (response) => {
+        closeSelectionMode()
+        toast.success(response.message)
+      },
+      onError: (err: any) => {
+        toast.error(err.message || 'Gagal menghapus pesan yang dipilih')
+      },
+    })
+  }
+
+  const startEditingNote = (noteId: number, body: string) => {
+    setEditingNoteId(noteId)
+    setEditBody(body)
+    closeSelectionMode()
+  }
+
+  const handleSelectedNoteEdit = () => {
+    if (selectedNoteIds.length !== 1) return
+
+    const note = chatNotes.find((item) => item.id === selectedNoteIds[0])
+    if (!note || note.user?.id !== currentUser?.id) return
+    startEditingNote(note.id, note.body)
+  }
+
+  const handleNoteUpdate = () => {
+    const body = editBody.trim()
+    if (!editingNoteId || !body || updateNoteMutation.isPending) return
+
+    updateNoteMutation.mutate(
+      { noteId: editingNoteId, body },
+      {
+        onSuccess: () => {
+          setEditingNoteId(null)
+          setEditBody('')
+          toast.success('Pesan berhasil diperbarui')
+        },
+        onError: (err: any) => {
+          toast.error(err.message || 'Gagal memperbarui pesan')
+        },
+      }
+    )
+  }
+
+  const handleClearNotes = async () => {
+    const clearingAll = Boolean(currentUser && isSuperAdmin(currentUser))
+    const isConfirmed = await confirm({
+      title: clearingAll ? 'Bersihkan seluruh chat?' : 'Hapus semua pesan Anda?',
+      description: clearingAll
+        ? 'Semua pesan dalam percakapan ini akan dihapus permanen.'
+        : 'Hanya pesan yang Anda kirim dalam percakapan ini yang akan dihapus.',
+      actionLabel: clearingAll ? 'Bersihkan chat' : 'Hapus pesan saya',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+    if (!isConfirmed) return
+
+    clearNotesMutation.mutate(undefined, {
+      onSuccess: (response) => {
+        closeSelectionMode()
+        setEditingNoteId(null)
+        toast.success(response.message)
+      },
+      onError: (err: any) => {
+        toast.error(err.message || 'Gagal membersihkan percakapan')
+      },
+    })
   }
 
   const handleReminderSubmit = (e: React.FormEvent) => {
@@ -465,140 +613,406 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
             </CardContent>
           </Card>
 
+          {/* Timeline Notes */}
+          <Card className="consultation-card overflow-hidden">
+              <CardHeader className="border-b border-border/55 pb-3">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex min-w-0 items-start gap-3">
+                  <span className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-[color-mix(in_srgb,var(--primary-theme)_10%,var(--card))] text-[var(--primary-theme)]">
+                    <MessageCircle className="size-4" />
+                  </span>
+                  <div className="min-w-0">
+                    <CardTitle className="text-sm font-semibold text-foreground/90">
+                      Percakapan & Catatan
+                    </CardTitle>
+                    <CardDescription className="mt-0.5 line-clamp-1 text-[11px] text-muted-foreground/70">
+                      Koordinasi tindak lanjut untuk {consultation.client_name || 'lead ini'}
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className="rounded-full border border-border/60 bg-muted/35 px-2 py-1 text-[10px] font-semibold tabular-nums text-muted-foreground">
+                    {chatNotes.length} pesan
+                  </span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          type="button"
+                          size="icon-xs"
+                          variant="ghost"
+                          className="size-8 rounded-lg text-muted-foreground"
+                          aria-label="Buka menu percakapan"
+                          title="Menu percakapan"
+                        />
+                      }
+                    >
+                      <EllipsisVertical className="size-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-52">
+                      <DropdownMenuItem
+                        disabled={!canManageAnyChat}
+                        onClick={() => {
+                          setSelectionMode(true)
+                          setSelectedNoteIds([])
+                          setEditingNoteId(null)
+                        }}
+                        className="py-2 text-xs"
+                      >
+                        <ListChecks className="size-4" />
+                        Pilih pesan
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        disabled={!canManageAnyChat || clearNotesMutation.isPending}
+                        onClick={() => void handleClearNotes()}
+                        className="py-2 text-xs"
+                      >
+                        <Trash2 className="size-4" />
+                        {currentUser && isSuperAdmin(currentUser)
+                          ? 'Bersihkan semua chat'
+                          : 'Hapus semua pesan saya'}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+              </CardHeader>
+
+              <CardContent className="p-0">
+              {selectionMode && (
+                <div className="flex min-h-12 items-center gap-2 border-b border-border/55 bg-muted/30 px-3 py-2 sm:px-4">
+                  <Button
+                    type="button"
+                    size="icon-xs"
+                    variant="ghost"
+                    onClick={closeSelectionMode}
+                    className="size-8 rounded-lg"
+                    title="Batal memilih"
+                    aria-label="Batal memilih pesan"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                  <span className="min-w-0 flex-1 text-xs font-semibold text-foreground/80">
+                    {selectedNoteIds.length} pesan dipilih
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={
+                      selectedNoteIds.length !== 1
+                      || chatNotes.find((note) => note.id === selectedNoteIds[0])?.user?.id !== currentUser?.id
+                    }
+                    onClick={handleSelectedNoteEdit}
+                    className="h-8 gap-1.5 rounded-lg px-2.5 text-[11px]"
+                  >
+                    <Edit className="size-3.5" />
+                    Edit
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={selectedNoteIds.length === 0 || deleteNotesMutation.isPending}
+                    onClick={() => void handleSelectedNotesDelete()}
+                    className="h-8 gap-1.5 rounded-lg px-2.5 text-[11px]"
+                  >
+                    {deleteNotesMutation.isPending ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="size-3.5" />
+                    )}
+                    Hapus
+                  </Button>
+                </div>
+              )}
+              <div
+                ref={chatViewportRef}
+                role="log"
+                aria-live="polite"
+                aria-label="Riwayat percakapan konsultasi"
+                className="max-h-[360px] min-h-[210px] space-y-4 overflow-y-auto scroll-smooth bg-background/20 px-3 py-4 sm:max-h-[410px] sm:px-4"
+              >
+                {chatNotes.length > 0 ? (
+                  chatNotes.map((note) => {
+                    const authorName = note.user?.name?.trim() || 'Tim'
+                    const isOwn = note.user?.id === currentUser?.id
+                    const canDelete = isOwn || Boolean(currentUser && isSuperAdmin(currentUser))
+                    const isSelected = selectedNoteIds.includes(note.id)
+                    const isEditing = editingNoteId === note.id
+                    const authorInitial = authorName.slice(0, 2).toUpperCase()
+
+                    return (
+                      <div
+                        key={note.id}
+                        className={cn(
+                          'flex min-w-0 items-center gap-2.5',
+                          isOwn ? 'justify-end' : 'justify-start'
+                        )}
+                      >
+                        {selectionMode && canDelete && (
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => toggleSelectedNote(note.id)}
+                            aria-label={`Pilih pesan dari ${authorName}`}
+                            className={cn(
+                              'mx-1 size-5 border-border/80',
+                              isSelected && 'border-[var(--primary-theme)] bg-[var(--primary-theme)]'
+                            )}
+                          />
+                        )}
+                        {!isOwn && (
+                          <span
+                            aria-hidden="true"
+                            className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-[10px] font-black text-[var(--primary-theme)]"
+                          >
+                            {authorInitial}
+                          </span>
+                        )}
+
+                        <div className={cn('min-w-0 max-w-[82%] sm:max-w-[72%]', isOwn && 'items-end')}>
+                          <div className={cn('mb-1 flex items-center gap-2 px-1', isOwn && 'justify-end')}>
+                            <span className="truncate text-[10px] font-bold text-foreground/75">
+                              {isOwn ? 'Anda' : authorName}
+                            </span>
+                            <time className="shrink-0 text-[9px] tabular-nums text-muted-foreground/70">
+                              {new Date(note.created_at).toLocaleDateString('id-ID', {
+                                day: 'numeric',
+                                month: 'short',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </time>
+                          </div>
+
+                          <div className={cn('group flex items-end gap-1', isOwn && 'flex-row-reverse')}>
+                            <article
+                              className={cn(
+                                'min-w-0 border px-3 py-2.5 text-xs leading-relaxed text-foreground/90',
+                                isOwn
+                                  ? 'rounded-[14px] rounded-br-[4px] border-[color-mix(in_srgb,var(--primary-theme)_24%,var(--border))] bg-[color-mix(in_srgb,var(--primary-theme)_13%,var(--card))]'
+                                  : 'rounded-[14px] rounded-bl-[4px] border-border/55 bg-muted/55',
+                                isSelected && 'border-[var(--primary-theme)] bg-[color-mix(in_srgb,var(--primary-theme)_18%,var(--card))]'
+                              )}
+                            >
+                              {isEditing ? (
+                                <div className="min-w-[min(18rem,65vw)] space-y-2">
+                                  <Textarea
+                                    value={editBody}
+                                    maxLength={2000}
+                                    rows={3}
+                                    autoFocus
+                                    onChange={(event) => setEditBody(event.target.value)}
+                                    onKeyDown={(event) => {
+                                      if (
+                                        event.key === 'Enter'
+                                        && !event.shiftKey
+                                        && !event.nativeEvent.isComposing
+                                      ) {
+                                        event.preventDefault()
+                                        handleNoteUpdate()
+                                      }
+                                      if (event.key === 'Escape') {
+                                        setEditingNoteId(null)
+                                        setEditBody('')
+                                      }
+                                    }}
+                                    className="min-h-20 resize-none bg-background/70 text-xs"
+                                    aria-label="Edit isi pesan"
+                                  />
+                                  <div className="flex justify-end gap-1.5">
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setEditingNoteId(null)
+                                        setEditBody('')
+                                      }}
+                                      className="h-7 rounded-md px-2 text-[10px]"
+                                    >
+                                      Batal
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      onClick={handleNoteUpdate}
+                                      disabled={!editBody.trim() || updateNoteMutation.isPending}
+                                      className="h-7 rounded-md px-2 text-[10px]"
+                                    >
+                                      {updateNoteMutation.isPending && (
+                                        <Loader2 className="size-3 animate-spin" />
+                                      )}
+                                      Simpan
+                                    </Button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="whitespace-pre-wrap break-words">{note.body}</p>
+                              )}
+                            </article>
+
+                            {!selectionMode && !isEditing && canDelete && (
+                              <div className="flex shrink-0 items-center opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100">
+                                {isOwn && (
+                                  <Button
+                                    type="button"
+                                    size="icon-xs"
+                                    variant="ghost"
+                                    onClick={() => startEditingNote(note.id, note.body)}
+                                    className="size-7 rounded-lg text-muted-foreground/60 hover:text-foreground"
+                                    title="Edit pesan"
+                                    aria-label="Edit pesan"
+                                  >
+                                    <Edit className="size-3" />
+                                  </Button>
+                                )}
+                                <Button
+                                  type="button"
+                                  size="icon-xs"
+                                  variant="ghost"
+                                  onClick={() => handleNoteDelete(note.id)}
+                                  className="size-7 rounded-lg text-muted-foreground/60 hover:bg-red-500/10 hover:text-red-500"
+                                  title="Hapus pesan"
+                                  aria-label={`Hapus pesan dari ${authorName}`}
+                                >
+                                  <Trash2 className="size-3" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <div className="flex min-h-[190px] flex-col items-center justify-center px-6 text-center">
+                    <span className="grid size-10 place-items-center rounded-xl bg-muted text-muted-foreground">
+                      <MessageCircle className="size-5" />
+                    </span>
+                    <p className="mt-3 text-xs font-semibold text-foreground/80">Belum ada percakapan</p>
+                    <p className="mt-1 max-w-[28ch] text-[11px] leading-relaxed text-muted-foreground">
+                      Pesan pertama akan menjadi awal riwayat tindak lanjut konsumen.
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <form
+                onSubmit={handleNoteSubmit}
+                className="flex items-end gap-2 border-t border-border/55 bg-card/95 p-3"
+              >
+                <Textarea
+                  aria-label="Tulis pesan atau catatan"
+                  placeholder="Tulis pesan atau catatan..."
+                  value={noteBody}
+                  maxLength={2000}
+                  rows={1}
+                  onChange={(event) => setNoteBody(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === 'Enter'
+                      && !event.shiftKey
+                      && !event.nativeEvent.isComposing
+                    ) {
+                      event.preventDefault()
+                      submitNote()
+                    }
+                  }}
+                  className="max-h-24 min-h-10 resize-none rounded-[10px] border-border/70 bg-background/60 px-3 py-2.5 text-xs leading-relaxed focus-visible:border-[var(--primary-theme)] focus-visible:ring-[color-mix(in_srgb,var(--primary-theme)_18%,transparent)]"
+                />
+                <Button
+                  type="submit"
+                  disabled={!noteBody.trim() || createNoteMutation.isPending}
+                  className="consultation-primary-action size-10 shrink-0 rounded-[10px] p-0"
+                  title="Kirim pesan"
+                  aria-label="Kirim pesan"
+                >
+                  {createNoteMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Send className="size-4" />
+                  )}
+                </Button>
+              </form>
+              </CardContent>
+          </Card>
+
         </div>
 
-        {/* Timeline Notes log & Reminder Schedule */}
-        <div className="space-y-6">
+        <div className="space-y-5 lg:col-span-1 lg:self-start">
           <SurveyRequestCard
             consultation={consultation}
             isAtSurveyStage={isAtSurveyStage}
             autoOpenSignal={surveyPromptSignal}
           />
 
-          {/* Timeline Notes */}
-          <Card className="consultation-card">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold text-foreground/90">Catatan Aktivitas</CardTitle>
-              <CardDescription className="text-[11px] text-muted-foreground/70">
-                Log pembicaraan atau perkembangan pengerjaan interior
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <form onSubmit={handleNoteSubmit} className="flex gap-2">
-                <Input
-                  placeholder="Tambah catatan timeline baru..."
-                  value={noteBody}
-                  onChange={(e) => setNoteBody(e.target.value)}
-                  className="flex-1 text-xs"
-                />
-                <Button
-                  type="submit"
-                  size="xs"
-                  disabled={createNoteMutation.isPending}
-                  className="consultation-primary-action size-11 shrink-0 rounded-[10px] p-0 font-semibold"
-                >
-                  {createNoteMutation.isPending ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Send className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </form>
-
-              <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
-                {consultation.timeline_notes && consultation.timeline_notes.length > 0 ? (
-                  consultation.timeline_notes.map((note: any) => (
-                    <div
-                      key={note.id}
-                      className="group border border-border bg-muted/40 rounded-xl p-2.5 relative dark:border-zinc-800 dark:bg-zinc-950/40"
-                    >
-                      <div className="flex justify-between items-start">
-                        <span className="text-[10px] font-semibold text-amber-500">
-                          {note.user?.name}
-                        </span>
-                        <Button
-                          size="icon-xs"
-                          variant="ghost"
-                          onClick={() => handleNoteDelete(note.id)}
-                          className="opacity-0 group-hover:opacity-100 text-muted-foreground/70 hover:text-red-500 hover:bg-muted h-5 w-5 rounded-lg shrink-0 dark:hover:bg-zinc-800"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-foreground/80 mt-1">{note.body}</p>
-                      <p className="text-[9px] text-muted-foreground/70 text-right mt-1.5">
-                        {new Date(note.created_at).toLocaleDateString('id-ID', {
-                          day: 'numeric',
-                          month: 'short',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-muted-foreground/70 text-center py-4">Belum ada catatan aktivitas.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Reminders List */}
-          <Card className="consultation-card">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold text-foreground/90">Pengingat Terjadwal</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <form onSubmit={handleReminderSubmit} className="space-y-2">
+          <Card className="consultation-card overflow-hidden">
+            <CardHeader className="border-b border-border/55 pb-3">
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <Label htmlFor="rem-msg" className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Pesan Reminder</Label>
+                  <CardTitle className="text-sm font-semibold text-foreground/90">Pengingat</CardTitle>
+                  <CardDescription className="mt-0.5 text-[11px] text-muted-foreground/70">
+                    Follow-up berikutnya untuk lead ini.
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="rounded-full border-amber-400/30 bg-amber-500/10 px-2 py-1 text-[10px] font-bold text-amber-600 dark:text-amber-300">
+                  {consultation.reminders?.filter((rem: any) => !rem.is_read).length ?? 0} aktif
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-4">
+              <form onSubmit={handleReminderSubmit} className="rounded-xl border border-border/60 bg-muted/25 p-3 dark:bg-zinc-950/25">
+                <div className="space-y-2">
+                  <Label htmlFor="rem-msg" className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/70">Pesan Reminder</Label>
                   <Input
                     id="rem-msg"
                     placeholder="Hubungi klien untuk survey..."
                     value={reminderMessage}
                     onChange={(e) => setReminderMessage(e.target.value)}
-                    className="mt-1 text-xs"
+                    className="text-xs"
                   />
-                </div>
-                <div className="flex gap-2">
-                  <div className="flex-1">
+                  <div className="grid gap-2 sm:grid-cols-[1fr_auto] lg:grid-cols-1 2xl:grid-cols-[1fr_auto]">
                     <Input
                       type="datetime-local"
                       value={reminderDate}
                       onChange={(e) => setReminderDate(e.target.value)}
                       className="text-xs"
                     />
+                    <Button
+                      type="submit"
+                      size="xs"
+                      disabled={createReminderMutation.isPending}
+                      className="consultation-primary-action h-11 rounded-[10px] px-4 font-semibold sm:min-w-24"
+                    >
+                      {createReminderMutation.isPending ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                      )}
+                      Set
+                    </Button>
                   </div>
-                  <Button
-                    type="submit"
-                    size="xs"
-                    disabled={createReminderMutation.isPending}
-                    className="consultation-primary-action h-11 rounded-[10px] px-4 font-semibold"
-                  >
-                    {createReminderMutation.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Plus className="h-3.5 w-3.5 mr-1" />
-                    )}
-                    Set
-                  </Button>
                 </div>
               </form>
 
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
                 {consultation.reminders && consultation.reminders.length > 0 ? (
                   consultation.reminders.map((rem: any) => (
                     <div
                       key={rem.id}
                       className={cn(
-                        "flex items-center justify-between rounded-xl border p-2.5 bg-muted/40 dark:bg-zinc-950/40",
-                        rem.is_read ? "border-border dark:border-zinc-800" : "border-amber-500/20"
+                        "flex items-start justify-between gap-3 rounded-xl border p-3 bg-muted/35 dark:bg-zinc-950/35",
+                        rem.is_read ? "border-border/70 dark:border-zinc-800" : "border-amber-500/30 bg-amber-500/5"
                       )}
                     >
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-foreground/80">{rem.message}</p>
-                        <p className="text-[9px] text-muted-foreground/70 mt-0.5 flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
+                        <p className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[10px] text-muted-foreground/70">
+                          <Clock className="h-3 w-3 shrink-0" />
                           <span>
                             {new Date(rem.remind_at).toLocaleDateString('id-ID', {
                               day: 'numeric',
@@ -609,12 +1023,12 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                             })}
                           </span>
                           {rem.creator && (
-                            <span className="text-[9px] text-muted-foreground/60 italic ml-1">
+                            <span className="text-[10px] text-muted-foreground/60">
                               (oleh {rem.creator.name})
                             </span>
                           )}
                           {rem.is_read && (
-                            <span className="text-green-600 dark:text-green-400 font-semibold ml-1">(Selesai)</span>
+                            <span className="font-semibold text-green-600 dark:text-green-400">(Selesai)</span>
                           )}
                         </p>
                       </div>

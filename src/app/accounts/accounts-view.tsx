@@ -227,6 +227,7 @@ export default function AccountsPage() {
   const [description, setDescription] = useState('')
   const [targetLeads, setTargetLeads] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
+  const [logoPreview, setLogoPreview] = useState<string | null>(null)
   const [removeLogo, setRemoveLogo] = useState(false)
 
   // Trigger mutations
@@ -238,6 +239,7 @@ export default function AccountsPage() {
     setDescription('')
     setTargetLeads('')
     setLogoFile(null)
+    setLogoPreview(null)
     setRemoveLogo(false)
     setDialogOpen(true)
   }
@@ -248,6 +250,7 @@ export default function AccountsPage() {
     setDescription(acc.description || '')
     setTargetLeads(acc.target_leads ? String(acc.target_leads) : '')
     setLogoFile(null)
+    setLogoPreview(null)
     setRemoveLogo(false)
     setDialogOpen(true)
   }
@@ -371,9 +374,19 @@ export default function AccountsPage() {
                     id="acc-name"
                     placeholder="Contoh: Putra Interior Surabaya"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    onChange={(e) => setName(e.target.value.replace(/[<>]/g, ''))}
+                    maxLength={100}
+                    aria-invalid={name.length > 0 && name.length < 3}
                     className="h-10 rounded-lg border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
                   />
+                  <div className="flex items-center justify-between text-[10px]">
+                    {name.length > 0 && name.length < 3 ? (
+                      <span className="text-red-500">Nama akun minimal 3 karakter.</span>
+                    ) : (
+                      <span />
+                    )}
+                    <span className="text-muted-foreground/60">{name.length}/100</span>
+                  </div>
                 </div>
 
                 <div className="space-y-1.5">
@@ -389,10 +402,14 @@ export default function AccountsPage() {
                   <Label htmlFor="acc-target" className="text-xs font-semibold text-muted-foreground">Target Bulanan (Leads)</Label>
                   <Input
                     id="acc-target"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
                     placeholder="Contoh: 150"
                     value={targetLeads}
-                    onChange={(e) => setTargetLeads(e.target.value)}
+                    onChange={(e) => {
+                      const digits = e.target.value.replace(/[^0-9]/g, '')
+                      setTargetLeads(digits === '' ? '' : String(Math.min(Number(digits), 1000000)))
+                    }}
                     className="h-10 rounded-lg border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
                   />
                 </div>
@@ -403,7 +420,11 @@ export default function AccountsPage() {
                   <div className="flex flex-col gap-2">
                     {editAccount?.logo_path && !removeLogo && (
                       <div className="flex items-center gap-2 border border-border bg-muted p-2 rounded-xl dark:border-zinc-800 dark:bg-zinc-950">
-                        <Building className="h-6 w-6 text-muted-foreground/50" />
+                        <img
+                          src={`${api.baseUrl}/storage/${editAccount.logo_path}`}
+                          alt="Logo akun"
+                          className="h-10 w-10 shrink-0 rounded object-cover"
+                        />
                         <span className="text-[10px] text-muted-foreground truncate flex-1">Logo terunggah aktif</span>
                         <Button
                           type="button"
@@ -416,17 +437,33 @@ export default function AccountsPage() {
                         </Button>
                       </div>
                     )}
-                    <div className="flex items-center justify-center border-2 border-dashed border-border hover:border-amber-500/50 rounded-xl p-4 cursor-pointer bg-muted relative dark:border-zinc-800 dark:bg-zinc-950">
+                    <div className="relative overflow-hidden border-2 border-dashed border-border hover:border-amber-500/50 rounded-xl p-4 cursor-pointer bg-muted dark:border-zinc-800 dark:bg-zinc-950">
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          setLogoFile(file)
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onload = (evt) => setLogoPreview(evt.target?.result as string)
+                            reader.readAsDataURL(file)
+                          } else {
+                            setLogoPreview(null)
+                          }
+                        }}
                         className="absolute inset-0 opacity-0 cursor-pointer"
                       />
-                      <Upload className="h-5 w-5 text-muted-foreground/50 mr-2" />
-                      <span className="text-xs font-semibold text-muted-foreground truncate">
-                        {logoFile ? logoFile.name : 'Pilih file logo...'}
-                      </span>
+                      {logoPreview ? (
+                        <img src={logoPreview} alt="Preview logo" className="h-20 w-full object-contain" />
+                      ) : (
+                        <div className="flex min-w-0 items-center gap-2">
+                          <Upload className="shrink-0 h-5 w-5 text-muted-foreground/50" />
+                          <span className="text-xs font-semibold text-muted-foreground truncate">
+                            {logoFile ? logoFile.name : 'Pilih file logo...'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -13,6 +13,7 @@ import {
 import { useAuthStore } from '@/lib/stores/authStore'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/errors'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -96,7 +97,7 @@ export default function BugReportsView() {
         toast.success(`Laporan ${report.ticket_code} dihapus`)
         setSelected((cur) => (cur?.id === report.id ? null : cur))
       },
-      onError: (err: unknown) => toast.error(err instanceof Error ? err.message : 'Gagal menghapus laporan'),
+      onError: (err: unknown) => toast.error(getErrorMessage(err, 'Gagal menghapus laporan.')),
     })
   }
 
@@ -401,8 +402,7 @@ function BugReportDetailDialog({
         onSuccess: () => toast.success(`Status diubah ke "${statusMeta(next).label}"`),
         onError: (err: unknown) => {
           setLocalStatus(prev) // rollback
-          const msg = err instanceof Error ? err.message : 'Gagal memperbarui status'
-          toast.error(msg)
+          toast.error(getErrorMessage(err, 'Gagal memperbarui status.'))
         },
       },
     )
@@ -471,7 +471,6 @@ function BugReportDetailDialog({
                       className="group relative aspect-square overflow-hidden rounded-lg border border-border/70 dark:border-zinc-800"
                       title="Buka gambar ukuran penuh"
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={src}
                         alt={`Lampiran ${i + 1}`}

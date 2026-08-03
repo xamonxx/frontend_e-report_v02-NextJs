@@ -23,7 +23,6 @@ import {
 } from 'lucide-react'
 import Logo from '@/components/brand/logo'
 import { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
 import LoginBackground from '@/components/login/login-background'
 import BugReportWidget from '@/components/bug-report/bug-report-widget'
@@ -46,26 +45,6 @@ const forgotSchema = zod.object({
 })
 
 type ForgotFormValues = zod.infer<typeof forgotSchema>
-
-const cardVariants = {
-  hidden: { opacity: 0, y: 18, scale: 0.985 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.38, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
-  },
-}
-
-const containerVariants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0 } },
-}
-
-const itemVariants = {
-  hidden: { opacity: 1, y: 0 },
-  visible: { opacity: 1, y: 0 },
-}
 
 export default function LoginPage() {
   const loginMutation = useLogin()
@@ -171,18 +150,18 @@ export default function LoginPage() {
       <BugReportWidget />
 
       {/* Login card */}
-      <motion.div
+      <div
         // Below lg only the form column renders, so the card is capped near a
         // comfortable form measure. Without this it stretched to the full 980px
         // on tablets and the inputs became uncomfortably wide.
+        // Entrance dipindah ke surface di dalam (animate-in) agar tidak berebut
+        // properti `animation` dengan `animate-shake` di elemen ini — keduanya
+        // memakai shorthand yang sama dan akan saling menimpa bila satu elemen.
         className={cn('relative z-10 w-full max-w-[440px] lg:max-w-[980px]', isShaking && 'animate-shake')}
-        variants={cardVariants}
-        initial="hidden"
-        animate="visible"
       >
         {/* Outer ambient glow ring */}
         {/* Card surface — Solid sleek design for performance */}
-        <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.25)] backdrop-blur-2xl backdrop-saturate-150 sm:rounded-3xl dark:border-white/[0.16] dark:bg-slate-900/70 dark:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.55)]">
+        <div className="relative overflow-hidden rounded-2xl border border-white/70 bg-white/65 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.25)] backdrop-blur-2xl backdrop-saturate-150 duration-500 animate-in fade-in slide-in-from-bottom-3 sm:rounded-3xl dark:border-white/[0.16] dark:bg-slate-900/70 dark:shadow-[0_20px_48px_-12px_rgba(0,0,0,0.55)]">
 
           {/* Theme hairline */}
           {/* Inner top reflection (light mode only) */}
@@ -217,13 +196,8 @@ export default function LoginPage() {
               </div>
             </aside>
 
-          <motion.div
-            className="relative min-w-0 flex flex-col justify-center px-5 py-7 sm:px-10 sm:py-9 lg:px-12"
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            <motion.div className="mb-6 sm:mb-7" variants={itemVariants}>
+          <div className="relative min-w-0 flex flex-col justify-center px-5 py-7 sm:px-10 sm:py-9 lg:px-12">
+            <div className="mb-6 sm:mb-7">
               <div className="mb-4 flex sm:mb-5 lg:hidden">
                 <div className="relative flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-amber-400/30 bg-amber-400/10 shadow-[0_10px_24px_-16px_rgba(245,158,11,0.9)] backdrop-blur-md">
                   <div className="absolute inset-x-2 top-0 h-px bg-white/70" />
@@ -240,20 +214,12 @@ export default function LoginPage() {
               <p className="mt-2 text-[13px] text-slate-500 sm:text-sm dark:text-slate-400">
                 Masuk untuk mengelola laporan dan aktivitas tim.
               </p>
-            </motion.div>
+            </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Blocked alert - shows for 3 seconds only */}
-              <AnimatePresence>
-                {isBlocked && (
-                  <motion.div
-                    key="blocked-alert"
-                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    animate={{ opacity: 1, height: 'auto', marginBottom: 4 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    transition={{ duration: 0.22 }}
-                    className="overflow-hidden"
-                  >
+              {isBlocked && (
+                  <div className="duration-200 animate-in fade-in slide-in-from-top-1">
                     <div className="flex items-start gap-3 rounded-xl border border-orange-400/40 bg-orange-50/60 px-4 py-3.5 text-sm font-semibold text-orange-700 dark:border-orange-500/30 dark:bg-orange-500/10 dark:text-orange-400">
                       <div className="shrink-0 pt-0.5">
                         <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
@@ -265,31 +231,21 @@ export default function LoginPage() {
                         <div className="text-xs font-medium opacity-90">Terlalu banyak percobaan login gagal. Silakan coba lagi dalam 15 menit atau hubungi administrator.</div>
                       </div>
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+              )}
 
               {/* Auth error */}
-              <AnimatePresence>
-                {authError && !isBlocked && (
-                  <motion.div
-                    key="auth-error"
-                    initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    animate={{ opacity: 1, height: 'auto', marginBottom: 4 }}
-                    exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                    transition={{ duration: 0.22 }}
-                    className="overflow-hidden"
-                  >
+              {authError && !isBlocked && (
+                  <div className="duration-200 animate-in fade-in slide-in-from-top-1">
                     <div className="flex items-center gap-2.5 rounded-xl border border-red-400/25 bg-red-50 px-3.5 py-2.5 text-xs font-medium text-red-600 dark:border-red-500/20 dark:bg-red-500/8 dark:text-red-400">
                       <AlertCircle className="h-3.5 w-3.5 shrink-0" />
                       {authError}
                     </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                  </div>
+              )}
 
               {/* Email */}
-              <motion.div variants={itemVariants} className="space-y-1.5">
+              <div className="space-y-1.5">
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                   Email
                 </label>
@@ -317,10 +273,10 @@ export default function LoginPage() {
                 {errors.email && (
                   <p className="text-[11px] text-red-500 dark:text-red-400 pl-1">{errors.email.message}</p>
                 )}
-              </motion.div>
+              </div>
 
               {/* Password */}
-              <motion.div variants={itemVariants} className="space-y-1.5">
+              <div className="space-y-1.5">
                 <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-400">
                   Password
                 </label>
@@ -357,10 +313,10 @@ export default function LoginPage() {
                 {errors.password && (
                   <p className="text-[11px] text-red-500 dark:text-red-400 pl-1">{errors.password.message}</p>
                 )}
-              </motion.div>
+              </div>
 
               {/* Remember + Forgot */}
-              <motion.div variants={itemVariants} className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
                 <label className="flex cursor-pointer items-center gap-2.5 select-none">
                   <input
                     type="checkbox"
@@ -376,11 +332,11 @@ export default function LoginPage() {
                 >
                   Lupa password?
                 </button>
-              </motion.div>
+              </div>
 
               {/* Submit */}
-              <motion.div variants={itemVariants} className="pt-2">
-                <motion.button
+              <div className="pt-2">
+                <button
                   type="submit"
                   disabled={loginMutation.isPending}
                   className={cn(
@@ -390,7 +346,6 @@ export default function LoginPage() {
                     'active:scale-[0.985]',
                     'disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:shadow-md'
                   )}
-                  whileTap={{ scale: 0.985 }}
                 >
                   <span className="relative flex items-center justify-center gap-2">
                     {loginMutation.isPending ? (
@@ -402,12 +357,12 @@ export default function LoginPage() {
                       <><LogIn aria-hidden="true" strokeWidth={2.25} className="h-4 w-4 shrink-0" />Masuk ke E-Report</>
                     )}
                   </span>
-                </motion.button>
-              </motion.div>
+                </button>
+              </div>
             </form>
 
             {/* Footer */}
-            <motion.div variants={itemVariants} className="mt-6 text-center sm:mt-7">
+            <div className="mt-6 text-center sm:mt-7">
               <div className="flex items-center justify-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                 Akses aman untuk pengguna terdaftar
@@ -417,23 +372,15 @@ export default function LoginPage() {
               <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-400">
                 &copy; {new Date().getFullYear()} Putra Corporation &middot; E-Report
               </p>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Forgot password modal */}
-      <AnimatePresence>
-        {forgotOpen && (
-          <motion.div
-            key="forgot-overlay"
-            className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
+      {forgotOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto px-4 py-8 duration-200 animate-in fade-in">
             {/* Backdrop */}
             <div
               className="absolute inset-0 bg-slate-950/45 backdrop-blur-md"
@@ -441,15 +388,11 @@ export default function LoginPage() {
             />
 
             {/* Dialog */}
-            <motion.div
+            <div
               role="dialog"
               aria-modal="true"
               aria-labelledby="forgot-title"
-              className="relative w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/70 bg-white/75 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.28)] backdrop-blur-2xl backdrop-saturate-150 dark:border-white/[0.16] dark:bg-slate-900/75 dark:shadow-black/60"
-              initial={{ opacity: 0, y: 24, scale: 0.96 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.97 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] }}
+              className="relative w-full max-w-[440px] overflow-hidden rounded-3xl border border-white/70 bg-white/75 shadow-[0_16px_32px_-4px_rgba(15,23,42,0.28)] backdrop-blur-2xl backdrop-saturate-150 duration-300 animate-in fade-in zoom-in-95 slide-in-from-bottom-2 dark:border-white/[0.16] dark:bg-slate-900/75 dark:shadow-black/60"
             >
               <div className="relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-px bg-[color-mix(in_srgb,var(--primary-theme)_50%,transparent)]" />
@@ -588,25 +531,23 @@ export default function LoginPage() {
                     >
                       Batal
                     </button>
-                    <motion.button
+                    <button
                       type="submit"
                       className={cn(
                         'relative flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[var(--primary-theme)] px-4 text-sm font-bold text-slate-950 sm:flex-[1.5]',
-                        'shadow-[0_10px_24px_-14px_rgba(245,158,11,0.95)] transition-[filter,transform] duration-200 hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
+                        'shadow-[0_10px_24px_-14px_rgba(245,158,11,0.95)] transition-[filter,transform] duration-200 hover:brightness-105 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300'
                       )}
-                      whileTap={{ scale: 0.985 }}
                     >
                       <Send className="h-4 w-4" />
                       Kirim permintaan
-                    </motion.button>
+                    </button>
                   </div>
                 </form>
               </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          </div>
+      )}
     </div>
   )
 }

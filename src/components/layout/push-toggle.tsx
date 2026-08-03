@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { BellRing, BellOff, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { getErrorMessage } from '@/lib/api/errors'
 import {
   isPushSupported,
   getPushPermission,
@@ -47,7 +48,7 @@ export default function PushToggle() {
       }
     } catch (e) {
       if (getPushPermission() === 'denied') setDenied(true)
-      toast.error(e instanceof Error ? e.message : 'Gagal mengubah notifikasi perangkat.')
+      toast.error(getErrorMessage(e, 'Gagal mengubah notifikasi perangkat.'))
     } finally {
       setLoading(false)
     }

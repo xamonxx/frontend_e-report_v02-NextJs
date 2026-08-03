@@ -47,7 +47,8 @@ import {
   Download,
   Filter,
   Users,
-  PhoneOff
+  PhoneOff,
+  Info
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
@@ -441,62 +442,156 @@ export default function ReportAttendancesPage() {
 
       {/* Admin Quick Report Action Area */}
       {!isSuperAdmin && (
-        <Card className="gap-0 rounded-xl border-0 bg-card py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
-          <CardHeader className="p-4 pb-3">
-            <CardTitle className="text-sm font-semibold text-foreground/90">Kehadiran Laporan Hari Ini</CardTitle>
-            <CardDescription className="text-xs text-muted-foreground/70">
+        <Card className="relative gap-0 overflow-hidden rounded-2xl border-0 bg-card py-0 shadow-[0_18px_48px_-38px_rgba(2,8,23,0.72)] ring-1 ring-border/50">
+          {/* Aksen gradien tipis di header — pakai warna theme, tetap redup di
+              light maupun dark supaya tidak mengganggu keterbacaan teks. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[color-mix(in_srgb,var(--primary-theme)_10%,transparent)] to-transparent"
+          />
+          <CardHeader className="relative p-4 pb-3 sm:p-5 sm:pb-3.5">
+            <CardTitle className="text-sm font-bold text-foreground sm:text-base">Kehadiran Laporan Hari Ini</CardTitle>
+            <CardDescription className="mt-0.5 text-xs text-muted-foreground/80">
               Absen sebelum jam operasional berakhir demi integritas pencatatan leads.
             </CardDescription>
           </CardHeader>
-          <CardContent className="px-4 pb-4">
+          <CardContent className="relative px-4 pb-4 sm:px-5 sm:pb-5">
             {currentUserRecord?.has_reported ? (
-              <div className="flex items-center gap-3 rounded-lg bg-green-500/[0.07] p-4 ring-1 ring-green-500/20">
-                <CheckCircle className="h-8 w-8 text-green-600 shrink-0 dark:text-green-400" />
-                <div>
-                  <p className="text-xs font-semibold text-foreground/90">
-                    Anda sudah melakukan absensi hari ini!
-                  </p>
-                  <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                    Kategori Laporan: <span className="font-bold text-amber-500">{getCategoryLabel(currentUserRecord.report_category)}</span>
-                  </p>
-                </div>
-              </div>
+              (() => {
+                const meta = getStatusOption(currentUserRecord.report_category)
+                return (
+                  <div className="flex items-center gap-3.5 rounded-xl bg-emerald-500/[0.08] p-4 ring-1 ring-emerald-500/25">
+                    <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/25 dark:text-emerald-400">
+                      <CheckCircle className="size-6" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-foreground">
+                        Absensi hari ini sudah terkirim
+                      </p>
+                      <p className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px] text-muted-foreground">
+                        Kategori laporan:
+                        <span className={cn('inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 font-bold', meta.badge)}>
+                          <span className={cn('size-1.5 rounded-full', meta.bar)} />
+                          {getCategoryLabel(currentUserRecord.report_category)}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                )
+              })()
             ) : (
               <div className="space-y-4">
-                <div className="flex items-start gap-2.5 rounded-lg bg-amber-500/[0.07] p-3.5 ring-1 ring-amber-500/20">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-xs text-foreground/70 leading-relaxed">
+                <div className="flex items-start gap-2.5 rounded-xl bg-amber-500/[0.08] p-3.5 ring-1 ring-amber-500/25">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+                  <p className="text-xs leading-relaxed text-foreground/75">
                     Anda belum mengirimkan laporan harian untuk tanggal{' '}
                     <span className="font-bold text-foreground">{selectedDateLong}</span>
-                    . Silakan pilih salah satu kategori di bawah:
+                    . Pilih salah satu kategori di bawah:
                   </p>
                 </div>
 
-                <div className="grid gap-3 sm:grid-cols-3">
-                  <Button
-                    onClick={() => handleAdminSubmit('ada_wa')}
-                    disabled={submitPresenceMutation.isPending}
-                    className="flex h-20 flex-col items-center justify-center rounded-lg border-0 bg-muted/45 text-foreground ring-1 ring-border/45 transition-colors hover:bg-green-500/[0.08] hover:ring-green-500/25 focus:ring-2 focus:ring-green-500/30"
-                  >
-                    <Check className="h-5 w-5 text-green-600 mb-1 dark:text-green-400" />
-                    <span className="text-xs font-bold">Ada Chat WA Masuk</span>
-                  </Button>
-                  <Button
-                    onClick={() => handleAdminSubmit('nol_wa')}
-                    disabled={submitPresenceMutation.isPending}
-                    className="flex h-20 flex-col items-center justify-center rounded-lg border-0 bg-muted/45 text-foreground ring-1 ring-border/45 transition-colors hover:bg-amber-500/[0.08] hover:ring-amber-500/25 focus:ring-2 focus:ring-amber-500/30"
-                  >
-                    <AlertTriangle className="h-5 w-5 text-amber-500 mb-1 dark:text-amber-400" />
-                    <span className="text-xs font-bold">0 Chat WA Masuk</span>
-                  </Button>
-                  <Button
-                    onClick={() => handleAdminSubmit('libur_susulan')}
-                    disabled={submitPresenceMutation.isPending}
-                    className="flex h-20 flex-col items-center justify-center rounded-lg border-0 bg-muted/45 text-foreground ring-1 ring-border/45 transition-colors hover:bg-blue-500/[0.08] hover:ring-blue-500/25 focus:ring-2 focus:ring-blue-500/30"
-                  >
-                    <Coffee className="h-5 w-5 text-blue-600 mb-1 dark:text-blue-400" />
-                    <span className="text-xs font-bold">Libur / Susulan</span>
-                  </Button>
+                {/* Panduan di atas tombol — kategori sering tertukar, jadi
+                    aturan dibaca dulu sebelum memilih. Panel ini sengaja pakai
+                    surface --background (lebih dalam dari --card induk) supaya
+                    kontras berlapis: kartu induk, panel panduan lebih gelap,
+                    tombol lebih terang. */}
+                <div className="rounded-xl border border-border/60 bg-background/70 p-3.5 dark:bg-background/40">
+                  <p className="mb-2.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
+                    <Info className="size-3.5" />
+                    Panduan Pengisian
+                  </p>
+                  <ul className="space-y-2.5">
+                    {[
+                      {
+                        dot: 'bg-emerald-400',
+                        label: 'Ada Chat WA Masuk',
+                        text: 'Ada leads/chat konsumen masuk hari ini — termasuk input susulan leads dari hari kemarin.',
+                      },
+                      {
+                        dot: 'bg-amber-400',
+                        label: '0 Chat WA Masuk',
+                        text: 'Tidak ada leads masuk sama sekali. Klik untuk memberi laporan kehadiran saja.',
+                      },
+                      {
+                        dot: 'bg-blue-400',
+                        label: 'Libur / Susulan',
+                        text: 'Hanya saat menginput data konsumen dengan tanggal konsultasi hari kemarin atau tanggal tertentu.',
+                      },
+                    ].map((row) => (
+                      <li key={row.label} className="flex gap-2.5">
+                        <span className={cn('mt-1.5 size-2 shrink-0 rounded-full', row.dot)} />
+                        <p className="text-[11px] leading-relaxed text-muted-foreground">
+                          <span className="font-bold text-foreground/90">{row.label}:</span> {row.text}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="grid gap-2.5 sm:grid-cols-3">
+                  {([
+                    {
+                      category: 'ada_wa',
+                      Icon: Check,
+                      label: 'Ada Chat WA Masuk',
+                      helper: 'Ada leads masuk / susulan kemarin',
+                      accent: 'text-emerald-600 dark:text-emerald-400',
+                      chip: 'bg-emerald-500/12 ring-emerald-500/25',
+                      hover: 'hover:border-emerald-500/45 hover:bg-emerald-500/[0.08] focus-visible:ring-emerald-500/35',
+                    },
+                    {
+                      category: 'nol_wa',
+                      Icon: AlertTriangle,
+                      label: '0 Chat WA Masuk',
+                      helper: 'Tidak ada leads, absensi saja',
+                      accent: 'text-amber-600 dark:text-amber-400',
+                      chip: 'bg-amber-500/12 ring-amber-500/25',
+                      hover: 'hover:border-amber-500/45 hover:bg-amber-500/[0.08] focus-visible:ring-amber-500/35',
+                    },
+                    {
+                      category: 'libur_susulan',
+                      Icon: Coffee,
+                      label: 'Libur / Susulan',
+                      helper: 'Input konsumen tanggal lampau',
+                      accent: 'text-blue-600 dark:text-blue-400',
+                      chip: 'bg-blue-500/12 ring-blue-500/25',
+                      hover: 'hover:border-blue-500/45 hover:bg-blue-500/[0.08] focus-visible:ring-blue-500/35',
+                    },
+                  ] as const).map((opt) => {
+                    // mutation.variables menyimpan payload terakhir, jadi tombol
+                    // yang sedang diproses bisa menampilkan spinner sendiri tanpa
+                    // perlu state tambahan.
+                    const isThisPending =
+                      submitPresenceMutation.isPending &&
+                      submitPresenceMutation.variables?.report_category === opt.category
+                    return (
+                      <button
+                        key={opt.category}
+                        type="button"
+                        onClick={() => handleAdminSubmit(opt.category)}
+                        disabled={submitPresenceMutation.isPending}
+                        className={cn(
+                          // Tombol pakai --muted solid + shadow: lebih terang
+                          // dari kartu induk, jadi terbaca sebagai tile terangkat
+                          // yang jelas beda dari panel panduan yang lebih gelap.
+                          'group flex flex-col items-center gap-2.5 rounded-xl border border-border/50 bg-muted px-3 py-4 text-center shadow-sm outline-none transition-[transform,border-color,background-color,box-shadow] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md focus-visible:ring-2 disabled:pointer-events-none disabled:opacity-55',
+                          opt.hover
+                        )}
+                      >
+                        <span className={cn('grid size-11 shrink-0 place-items-center rounded-2xl ring-1 transition-transform duration-200 group-hover:scale-105', opt.chip)}>
+                          {isThisPending ? (
+                            <Loader2 className={cn('size-5 animate-spin', opt.accent)} />
+                          ) : (
+                            <opt.Icon className={cn('size-5', opt.accent)} />
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-xs font-bold text-foreground">{opt.label}</span>
+                          <span className="mt-0.5 block text-[10px] leading-snug text-muted-foreground">{opt.helper}</span>
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}

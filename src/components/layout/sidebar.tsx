@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useQueryClient } from '@tanstack/react-query'
-import { LayoutGroup, motion } from 'framer-motion'
 import { useSidebarStore } from '@/lib/stores/sidebarStore'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { cn } from '@/lib/utils'
@@ -47,20 +46,13 @@ const NAV_LINKS: { href: string; label: string; icon: LucideIcon; hint: string; 
   { href: '/geo-analytics', label: 'Analisis Wilayah', icon: Map, hint: 'Persebaran konsumen per wilayah', roles: ['super_admin'] },
   { href: '/surveys', label: 'Survey', icon: ClipboardCheck, hint: 'Penugasan dan hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { href: '/rekap-jadwal-surveyor', label: 'Rekap Jadwal', icon: CalendarClock, hint: 'Jadwal mingguan surveyor', roles: ['manager_surveyor'] },
-  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Daftar konsumen dan hasil survey', roles: ['manager_surveyor', 'surveyor'] },
+  { href: '/survey-consumers', label: 'Data Konsumen Survey', icon: UsersRound, hint: 'Daftar konsumen dan hasil survey', roles: ['admin', 'manager_surveyor', 'surveyor'] },
   { href: '/accounts', label: 'Akun', icon: Building2, hint: 'Manajemen akun', roles: ['super_admin'] },
   { href: '/master-data', label: 'Master Data', icon: Database, hint: 'Kategori, status & data referensi', roles: ['super_admin'] },
   { href: '/report-attendances', label: 'Absensi', icon: CalendarCheck, hint: 'Laporan absensi harian', roles: ['admin'] },
   { href: '/audit-logs', label: 'Audit Log', icon: History, hint: 'Log aktivitas sistem', roles: ['super_admin'] },
   { href: '/settings', label: 'Pengaturan', icon: Settings, hint: 'Pengaturan akun & preferensi' },
 ]
-
-const activeNavTransition = {
-  type: 'spring',
-  stiffness: 380,
-  damping: 30,
-  mass: 0.85,
-} as const
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -118,7 +110,6 @@ export default function Sidebar() {
         </div>
 
         {/* Navigation Links */}
-        <LayoutGroup id="desktop-sidebar-nav">
           <nav className="flex-1 space-y-1 px-2.5 py-5 overflow-y-auto">
             {NAV_LINKS.map((link) => {
               if (!canAccess(user, link.roles)) return null
@@ -146,15 +137,13 @@ export default function Sidebar() {
                     >
                       {isActive && (
                         <>
-                          <motion.span
-                            layoutId="sidebar-active-surface"
-                            transition={activeNavTransition}
-                            className="pointer-events-none absolute inset-0 rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_6%,var(--sidebar))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary-theme)_10%,transparent)] backdrop-blur-sm backdrop-saturate-125"
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute inset-0 rounded-lg bg-[color-mix(in_srgb,var(--primary-theme)_6%,var(--sidebar))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--primary-theme)_10%,transparent)] backdrop-blur-sm backdrop-saturate-125 duration-200 animate-in fade-in"
                           />
-                          <motion.span
-                            layoutId="sidebar-active-rail"
-                            transition={activeNavTransition}
-                            className="pointer-events-none absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full"
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute left-0 top-1/2 h-7 w-[3px] -translate-y-1/2 rounded-r-full duration-200 animate-in fade-in"
                             style={{
                               backgroundColor: userThemeColor,
                               boxShadow: `0 0 12px ${userThemeColor}58`,
@@ -162,10 +151,11 @@ export default function Sidebar() {
                           />
                         </>
                       )}
-                      <motion.span
-                        animate={{ y: isActive ? -1 : 0, scale: isActive ? 1.04 : 1 }}
-                        transition={activeNavTransition}
-                        className="relative z-10 flex shrink-0 items-center justify-center"
+                      <span
+                        className={cn(
+                          'relative z-10 flex shrink-0 items-center justify-center transition-transform duration-200',
+                          isActive && '-translate-y-px scale-105'
+                        )}
                       >
                         <Icon
                           className={cn(
@@ -179,7 +169,7 @@ export default function Sidebar() {
                           )}
                           style={{ color: isActive ? userThemeColor : undefined }}
                         />
-                      </motion.span>
+                      </span>
                       <span
                         className={cn(
                           'relative z-10 whitespace-nowrap transition-[opacity,color] duration-300',
@@ -200,7 +190,6 @@ export default function Sidebar() {
               )
             })}
           </nav>
-        </LayoutGroup>
 
         {/* User Footer */}
         <div className="border-t border-sidebar-border/60 p-3 bg-sidebar/20">

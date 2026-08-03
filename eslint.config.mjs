@@ -18,6 +18,10 @@ const eslintConfig = defineConfig([
       "@typescript-eslint/no-unused-vars": "warn",
       "@typescript-eslint/no-unused-expressions": "warn",
       "@next/next/no-html-link-for-pages": "off",
+      // Logo/avatar disajikan dari host API yang di-resolve saat runtime
+      // (localhost / IP LAN / domain produksi), jadi next/image remotePatterns
+      // tak bisa mencocokkan host yang berubah-ubah. <img> disengaja.
+      "@next/next/no-img-element": "off",
     }
   },
   globalIgnores([
@@ -25,6 +29,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    "public/sw-*.js",
+    "public/workbox-*.js",
+    "public/worker-*.js",
   ]),
 ]);
 

@@ -29,11 +29,9 @@ export function useNeedsCategories() {
       const res = await api.get<{ data: NeedsCategory[] }>('/master-data/needs-categories', undefined, signal)
       return res.data
     },
-    // Master data (dropdown) bisa diubah super admin dan dipakai lintas
-    // perangkat/sesi (PWA), jadi jangan cache terlalu lama: selalu revalidasi
-    // saat form dibuka supaya kategori yang baru ditambahkan langsung muncul.
-    staleTime: 30 * 1000,
-    refetchOnMount: 'always',
+    // Mutation master data meng-invalidate key ini. Cache singkat mencegah
+    // setiap pindah halaman mengulang request dropdown yang sama.
+    staleTime: 5 * 60 * 1000,
   })
 }
 
@@ -52,10 +50,10 @@ export function useStatusCategories() {
         return sortStatuses(res.data)
       }
     },
-    // Dropdown status harus sinkron dengan tabel master data setiap form dibuka.
-    staleTime: 0,
-    refetchOnMount: 'always',
-    refetchOnWindowFocus: true,
+    // Mutation status meng-invalidate key ini; tidak perlu refetch pada setiap
+    // mount/focus karena halaman operasional sering berpindah tab.
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
   })
 }
 
