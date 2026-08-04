@@ -35,9 +35,8 @@ next-dev.err.log
 next-dev.log
 
 
-# env files (can opt-in for committing if needed)
+# env files — semua di-ignore, termasuk .env.production (berisi secret Reverb prod)
 .env*
-!.env.production
 
 # vercel
 .vercel
