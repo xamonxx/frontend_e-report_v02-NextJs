@@ -68,6 +68,13 @@ const nextConfig = {
         source: '/broadcasting/auth',
         destination: `${apiUrl}/broadcasting/auth`,
       },
+      {
+        // Aset publik Laravel (avatar, logo akun) di /storage/*. Saat mode
+        // same-origin, api.baseUrl kosong sehingga <img src="/storage/..">
+        // di-request ke origin FE — harus di-proxy ke backend, kalau tidak 404.
+        source: '/storage/:path*',
+        destination: `${apiUrl}/storage/:path*`,
+      },
     ]
   },
   async headers() {
