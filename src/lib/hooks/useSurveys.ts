@@ -119,7 +119,7 @@ export function useRequestSurvey(consultationId: number) {
 export function useAssignSurvey(id: number) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { surveyor_id: number; scheduled_at: string; location_notes?: string }) =>
+    mutationFn: (data: { surveyor_id: number; scheduled_at: string; location_notes?: string; loan_reason?: string }) =>
       api.patch<ApiResponse<Survey>>(`/surveys/${id}/assign`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })
@@ -177,7 +177,7 @@ export function useUpdateSurveyMaps(id: number, consultationId?: number) {
 export function useRescheduleAssignment(id: number) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (data: { surveyor_id: number; scheduled_at: string; location_notes?: string; manager_notes?: string }) =>
+    mutationFn: (data: { surveyor_id: number; scheduled_at: string; location_notes?: string; manager_notes?: string; loan_reason?: string }) =>
       api.patch<ApiResponse<Survey>>(`/surveys/${id}/reschedule-assignment`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.surveys.all })

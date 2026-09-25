@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/errors'
+import { useAuthStore } from '@/lib/stores/authStore'
 
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
@@ -62,6 +63,8 @@ export function SurveyAssignmentForm({
 }: SurveyAssignmentFormProps) {
   const { data: surveyorsResponse, isLoading: isSurveyorsLoading } = useSurveyors()
   const surveyors = surveyorsResponse?.data ?? []
+  const user = useAuthStore((s) => s.user)
+  const isSuperAdmin = user?.role === 'super_admin'
   const assignMutation = useAssignSurvey(survey.id)
   const rescheduleMutation = useRescheduleAssignment(survey.id)
   const isReschedule = survey.state === 'scheduled'
@@ -80,6 +83,7 @@ export function SurveyAssignmentForm({
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [locationNotes, setLocationNotes] = useState(survey.location_notes ?? '')
   const [managerNotes, setManagerNotes] = useState('')
+  const [loanReason, setLoanReason] = useState('')
 
   const availabilityDate = scheduledDate || undefined
   const excludeSurveyId = isReschedule ? survey.id : undefined
@@ -154,6 +158,24 @@ export function SurveyAssignmentForm({
     if (!scheduledTime) setScheduledTime('09:00')
   }
 
+  // Team F sudah boleh pinjam surveyor tim mana pun tanpa syarat tambahan
+  // (lihat SurveyController::BORROWABLE_TEAM) - alasan pinjaman cuma perlu
+  // buat tim lain (A-E), dan cuma Super Admin yang bisa membuatnya (backend
+  // menolak manager biasa). accountTeam pakai survey.account (account_group
+  // SAAT INI) - sumber yang sama persis dipakai eligibility check backend,
+  // BUKAN consultation.account_group yang cuma snapshot saat konsul dibuat.
+  const selectedSurveyor = surveyorId
+    ? surveyors.find((item) => String(item.id) === surveyorId)
+    : undefined
+  const accountTeam = survey.account?.account_group
+  const needsLoanReason = Boolean(
+    isSuperAdmin
+    && selectedSurveyor?.survey_team
+    && accountTeam
+    && accountTeam !== 'F'
+    && selectedSurveyor.survey_team !== accountTeam
+  )
+
   const submit = () => {
     if (!surveyorId) {
       toast.error('Pilih surveyor terlebih dahulu.')
@@ -172,6 +194,10 @@ export function SurveyAssignmentForm({
       toast.error('Surveyor sudah memiliki jadwal pada jam tersebut.')
       return
     }
+    if (needsLoanReason && !loanReason.trim()) {
+      toast.error('Isi alasan pinjaman surveyor lintas tim (wajib untuk persetujuan).')
+      return
+    }
 
     const mutation = isReschedule ? rescheduleMutation : assignMutation
     mutation.mutate(
@@ -180,6 +206,7 @@ export function SurveyAssignmentForm({
         scheduled_at: scheduledAt,
         location_notes: locationNotes || undefined,
         ...(isReschedule ? { manager_notes: managerNotes || undefined } : {}),
+        ...(needsLoanReason ? { loan_reason: loanReason.trim() } : {}),
       },
       {
         onSuccess: () => {
@@ -344,6 +371,23 @@ export function SurveyAssignmentForm({
           </section>
         )}
 
+        {needsLoanReason && (
+          <section className="rounded-lg border border-amber-500/30 bg-amber-500/[0.06] px-3 py-2.5">
+            <Label className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+              Alasan pinjaman surveyor lintas tim (wajib)
+            </Label>
+            <p className="mt-0.5 text-[12px] leading-5 text-muted-foreground">
+              {selectedSurveyor?.name} dari Team {selectedSurveyor?.survey_team} akan ditugaskan ke akun Team {accountTeam}. Ini tercatat sebagai persetujuan Super Admin dan tersimpan di riwayat survey.
+            </p>
+            <Textarea
+              value={loanReason}
+              onChange={(event) => setLoanReason(event.target.value)}
+              placeholder="Mis. Team ini kekurangan surveyor minggu ini"
+              className="mt-2 min-h-16 rounded-lg border-amber-500/30 bg-background text-sm placeholder:text-muted-foreground/70 focus-visible:border-amber-500/50 focus-visible:ring-amber-500/20"
+            />
+          </section>
+        )}
+
         <section className={cn('grid gap-3', isReschedule && 'md:grid-cols-2')}>
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-muted-foreground">Catatan lokasi (opsional)</Label>
@@ -386,7 +430,7 @@ export function SurveyAssignmentForm({
         <Button
           type="button"
           onClick={submit}
-          disabled={isPending || !surveyorId || hasTimeConflict}
+          disabled={isPending || !surveyorId || hasTimeConflict || (needsLoanReason && !loanReason.trim())}
           className="h-10 rounded-lg bg-cyan-500 px-5 text-sm font-bold text-slate-950 hover:bg-cyan-400 max-sm:w-full"
         >
           {isPending && <Loader2 className="mr-2 size-4 animate-spin" />}

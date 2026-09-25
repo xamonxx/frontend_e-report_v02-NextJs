@@ -155,6 +155,8 @@ export type Survey = {
   requester?: SurveyorItem | null
   result_status?: SurveyStatusItem | null
   activity_logs?: SurveyActivity[]
+  /** account_group akun SAAT INI (beda dari consultation.account_group yang snapshot). */
+  account?: { id: number; account_group?: AccountGroup | null } | null
 }
 
 export type AuthUser = {
