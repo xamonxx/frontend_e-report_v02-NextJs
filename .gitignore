@@ -61,3 +61,10 @@ next-env.d.ts
 !/scripts/*.py
 /public/sw-v2.js
 /public/sw-v2.js.map
+
+# Claude Code local config + tool-generated audit output
+.claude/
+.audit-current.json
+
+# MapLibre worker files copied at build time (scripts/copy-maplibre-worker.mjs)
+/public/maplibre/*.mjs
