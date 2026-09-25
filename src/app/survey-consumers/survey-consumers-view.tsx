@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useSurveys, useSurveyors } from "@/lib/hooks/useSurveys";
 import { useAccounts } from "@/lib/hooks/useMasterData";
-import type { Survey, SurveyState } from "@/types";
+import { SURVEY_TEAM_LABELS, type Survey, type SurveyState } from "@/types";
 import { isAdmin, isSurveyor } from "@/lib/auth/roles";
 import { useAuthStore } from "@/lib/stores/authStore";
 import { Button } from "@/components/ui/button";
@@ -523,6 +523,11 @@ function SurveyRow({ survey, onOpen }: { survey: Survey; onOpen: () => void }) {
         <p className="inline-flex items-center gap-1.5 text-foreground/80">
           <UserRound className="h-3.5 w-3.5 text-muted-foreground" />
           {survey.surveyor?.name ?? "Belum ditentukan"}
+          {survey.surveyor?.survey_team && (
+            <span className="text-[10px] font-semibold text-muted-foreground">
+              · {SURVEY_TEAM_LABELS[survey.surveyor.survey_team]}
+            </span>
+          )}
         </p>
       </td>
       <td className="px-5 py-3.5 align-top">
@@ -587,6 +592,9 @@ function SurveyMobileCard({
           </p>
           <p className="truncate text-foreground/85">
             {survey.surveyor?.name ?? "Belum ditentukan"}
+            {survey.surveyor?.survey_team && (
+              <span className="text-muted-foreground"> · {SURVEY_TEAM_LABELS[survey.surveyor.survey_team]}</span>
+            )}
           </p>
         </div>
         <div className="col-span-2">
@@ -754,7 +762,14 @@ function SurveyDetailDialog({
           <div className="space-y-6 px-5 py-6">
             <DetailSection title="Informasi Survey">
               <DetailItem label="Akun" value={c?.account?.name ?? "-"} />
-              <DetailItem label="Surveyor" value={survey.surveyor?.name ?? "Belum ditentukan"} />
+              <DetailItem
+                label="Surveyor"
+                value={
+                  survey.surveyor
+                    ? `${survey.surveyor.name}${survey.surveyor.survey_team ? ` · ${SURVEY_TEAM_LABELS[survey.surveyor.survey_team]}` : ""}`
+                    : "Belum ditentukan"
+                }
+              />
               <DetailItem label="WhatsApp" value={c?.phone ?? "-"} />
               <DetailItem label="Telepon Darurat" value={c?.emergency_phone ?? "Tidak dicantumkan"} />
               <DetailItem label="Jadwal" value={formatDate(survey.scheduled_at || survey.requested_at)} />

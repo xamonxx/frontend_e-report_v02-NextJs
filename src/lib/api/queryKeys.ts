@@ -33,8 +33,6 @@ export const queryKeys = {
       [...queryKeys.surveys.all, 'recap', filters] as const,
     availability: (date?: string, excludeSurveyId?: number) =>
       [...queryKeys.surveys.all, 'availability', date, excludeSurveyId] as const,
-    assignmentSuggestions: (id: number, date?: string, time?: string) =>
-      [...queryKeys.surveys.all, 'assignment-suggestions', id, date, time] as const,
   },
   bugReports: {
     all: ['bug-reports'] as const,
@@ -50,6 +48,7 @@ export const queryKeys = {
     statusCategories: ['master-data', 'status-categories'] as const,
     surveyors: ['master-data', 'surveyors'] as const,
     surveyStatuses: ['master-data', 'survey-statuses'] as const,
+    reminderCronJobs: ['master-data', 'reminder-cron-jobs'] as const,
   },
   wilayah: {
     provinces: ['wilayah', 'provinces'] as const,

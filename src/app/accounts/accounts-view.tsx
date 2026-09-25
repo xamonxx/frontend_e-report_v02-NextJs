@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import {
   useAccountsList,
   useAccountCategories,
@@ -34,6 +34,8 @@ import { api } from '@/lib/api/client'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { ArsipTab } from '@/app/accounts/arsip-tab'
+import { ACCOUNT_GROUP_LABELS, type AccountGroup } from '@/types'
 
 /** Ringkasan progress target satu akun, dipakai tabel maupun kartu mobile. */
 function accountProgress(acc: AccountItem) {
@@ -87,82 +89,11 @@ function GroupBadge({ value }: { value?: string | null }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-600 shadow-sm dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-300">
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-amber-500 shadow-[0_0_6px_rgba(245,158,11,0.65)]" />
-      {value || 'Umum'}
+      {value ? ACCOUNT_GROUP_LABELS[value as AccountGroup] ?? value : 'Belum ditentukan'}
     </span>
   )
 }
 
-/**
- * Input grup akun dengan auto-suggest: menampilkan grup yang sudah ada
- * (kolom `description` akun lain) sambil tetap mengizinkan ketik grup baru.
- */
-function GroupCombobox({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: string[] }) {
-  const [open, setOpen] = useState(false)
-  const wrapRef = useRef<HTMLDivElement>(null)
-  const q = value.trim().toLowerCase()
-  const filtered = options.filter((o) => o.toLowerCase().includes(q))
-  const hasExact = options.some((o) => o.toLowerCase() === q)
-  const showAdd = q.length > 0 && !hasExact
-
-  useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [])
-
-  const pick = (v: string) => {
-    onChange(v)
-    setOpen(false)
-  }
-
-  return (
-    <div ref={wrapRef} className="relative">
-      <Input
-        id="acc-desc"
-        placeholder="Ketik atau pilih grup, mis. PC, NPP"
-        value={value}
-        autoComplete="off"
-        onChange={(e) => { onChange(e.target.value); setOpen(true) }}
-        onFocus={() => setOpen(true)}
-        className="h-10 rounded-lg border-border bg-background text-xs text-foreground focus-visible:ring-amber-500/50 dark:border-zinc-800 dark:bg-zinc-950"
-      />
-      {open && (filtered.length > 0 || showAdd) && (
-        <div className="absolute left-0 right-0 z-50 mt-1 max-h-48 overflow-y-auto rounded-lg border border-border bg-popover p-1 shadow-[0_18px_50px_-24px_rgba(0,0,0,0.55)] dark:border-zinc-800 dark:bg-zinc-950">
-          {filtered.map((o) => {
-            const active = o.toLowerCase() === q
-            return (
-              <button
-                key={o}
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => pick(o)}
-                className={cn(
-                  'flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-muted dark:hover:bg-zinc-800/70',
-                  active ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-foreground/90',
-                )}
-              >
-                <span className="truncate">{o}</span>
-              </button>
-            )
-          })}
-          {showAdd && (
-            <button
-              type="button"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => pick(value.trim())}
-              className="flex w-full items-center gap-1.5 rounded-md px-2.5 py-1.5 text-left text-xs font-semibold text-amber-600 transition-colors hover:bg-amber-500/10 dark:text-amber-400"
-            >
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate">Tambah &quot;{value.trim()}&quot; sebagai grup baru</span>
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
 
 function AdminBadges({ acc }: { acc: AccountItem }) {
   if (!acc.admins || acc.admins.length === 0) {
@@ -185,6 +116,7 @@ function AdminBadges({ acc }: { acc: AccountItem }) {
 
 export default function AccountsPage() {
   const confirm = useConfirm()
+  const [activeTab, setActiveTab] = useState<'accounts' | 'arsip'>('accounts')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
   const [category, setCategory] = useState('')
@@ -195,7 +127,7 @@ export default function AccountsPage() {
     setPage(1)
   }, [debouncedSearch, category])
 
-  // Category filter options (kolom description)
+  // Pilihan grup berasal dari account_group akun aktif.
   const { data: categoryOptions } = useAccountCategories()
 
   // API query
@@ -225,6 +157,7 @@ export default function AccountsPage() {
   // Form values state
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [accountGroup, setAccountGroup] = useState('')
   const [targetLeads, setTargetLeads] = useState('')
   const [logoFile, setLogoFile] = useState<File | null>(null)
   const [logoPreview, setLogoPreview] = useState<string | null>(null)
@@ -237,6 +170,7 @@ export default function AccountsPage() {
     setEditAccount(null)
     setName('')
     setDescription('')
+    setAccountGroup('')
     setTargetLeads('')
     setLogoFile(null)
     setLogoPreview(null)
@@ -248,6 +182,7 @@ export default function AccountsPage() {
     setEditAccount(acc)
     setName(acc.name)
     setDescription(acc.description || '')
+    setAccountGroup(acc.account_group || '')
     setTargetLeads(acc.target_leads ? String(acc.target_leads) : '')
     setLogoFile(null)
     setLogoPreview(null)
@@ -263,7 +198,12 @@ export default function AccountsPage() {
     }
 
     const formData = new FormData()
+    if (!accountGroup) {
+      toast.error('Team akun wajib dipilih.')
+      return
+    }
     formData.append('name', name)
+    formData.append('account_group', accountGroup)
     formData.append('description', description)
     if (targetLeads) {
       formData.append('target_leads', targetLeads)
@@ -390,12 +330,20 @@ export default function AccountsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="acc-desc" className="text-xs font-semibold text-muted-foreground">Grup / Tagline</Label>
-                  <GroupCombobox
-                    value={description}
-                    onChange={setDescription}
-                    options={categoryOptions ?? []}
+                  <Label className="text-xs font-semibold text-muted-foreground">Grup / Team *</Label>
+                  <CustomSelect
+                    value={accountGroup}
+                    onChange={setAccountGroup}
+                    placeholder="Pilih Team"
+                    options={Object.entries(ACCOUNT_GROUP_LABELS)
+                      .filter(([value]) => ['A', 'B', 'C', 'D', 'E', 'F'].includes(value) || value === accountGroup)
+                      .map(([value, label]) => ({ value, label }))}
                   />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="acc-desc" className="text-xs font-semibold text-muted-foreground">Deskripsi / Tagline</Label>
+                  <Input id="acc-desc" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={120} />
                 </div>
 
                 <div className="space-y-1.5">
@@ -497,6 +445,37 @@ export default function AccountsPage() {
         </Dialog>
       </div>
 
+      {/* Tabs navigation */}
+      <div role="tablist" aria-label="Bagian akun" className="grid w-full grid-cols-2 gap-1 overflow-hidden rounded-xl border border-border/70 bg-card p-1 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 lg:w-fit">
+        {([
+          { key: 'accounts' as const, label: 'Daftar Akun' },
+          { key: 'arsip' as const, label: 'Arsip' },
+        ]).map((tab) => {
+          const active = activeTab === tab.key
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'rounded-lg px-4 py-2 text-xs font-semibold transition-colors',
+                active
+                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              )}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
+      </div>
+
+      {activeTab === 'arsip' && <ArsipTab />}
+
+      {activeTab === 'accounts' && (
+      <>
       {/* Toolbar: pencarian + filter grup, dibungkus kartu supaya tidak
           mengambang lepas dari daftar yang dikendalikannya. */}
       <div className="flex flex-col gap-2 rounded-2xl border border-border/70 bg-card p-3 shadow-sm sm:flex-row sm:items-center dark:border-zinc-800 dark:bg-zinc-900">
@@ -530,7 +509,7 @@ export default function AccountsPage() {
             placeholder="Semua Grup"
             options={[
               { value: '', label: 'Semua Grup' },
-              ...(categoryOptions || []).map((cat) => ({ value: cat, label: cat })),
+              ...(categoryOptions || []).map((cat) => ({ value: cat, label: ACCOUNT_GROUP_LABELS[cat as AccountGroup] ?? cat })),
             ]}
             className="h-11 w-full sm:w-56 rounded-xl border border-border/60 bg-muted px-3 text-sm text-foreground focus:outline-none focus-visible:border-amber-500/50 focus-visible:ring-2 focus-visible:ring-amber-500/15 dark:border-zinc-800 dark:bg-zinc-900"
           />
@@ -626,7 +605,7 @@ export default function AccountsPage() {
                   </div>
                 </div>
 
-                <GroupBadge value={acc.description} />
+                <GroupBadge value={acc.account_group} />
 
                 <div className="grid grid-cols-3 gap-3 text-xs">
                   <div className="text-left">
@@ -678,7 +657,7 @@ export default function AccountsPage() {
                         </div>
                       </td>
                       <td className="px-5 py-3.5 align-middle">
-                        <GroupBadge value={acc.description} />
+                        <GroupBadge value={acc.account_group} />
                       </td>
                       <td className="px-5 py-3.5 align-middle font-semibold text-foreground/90">{total}</td>
                       <td className="px-5 py-3.5 align-middle font-bold text-blue-500">{acc.surveys_count || 0}</td>
@@ -743,6 +722,8 @@ export default function AccountsPage() {
             </Button>
           </nav>
         </div>
+      )}
+      </>
       )}
     </div>
   )

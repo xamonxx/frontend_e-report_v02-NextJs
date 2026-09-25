@@ -70,8 +70,10 @@ export function SurveyRealtimeListener() {
     let refreshTimer: ReturnType<typeof setTimeout> | null = null
     const pendingSurveyIds = new Set<number>()
     const surveyChannels: string[] = []
-    if (isManagerSurveyor(user) || isSuperAdmin(user)) {
+    if (isSuperAdmin(user)) {
       surveyChannels.push('survey.managers')
+    } else if (isManagerSurveyor(user) && user.survey_team) {
+      surveyChannels.push(`survey.managers.${user.survey_team}`)
     }
     if (isSurveyor(user)) {
       surveyChannels.push(`survey.surveyor.${user.id}`)

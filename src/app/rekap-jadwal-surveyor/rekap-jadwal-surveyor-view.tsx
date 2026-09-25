@@ -20,13 +20,15 @@ import {
 import { useFileDownload } from '@/lib/hooks/useFileDownload'
 import { useSurveyorScheduleRecap } from '@/lib/hooks/useSurveyorScheduleRecap'
 import { useSurveyors } from '@/lib/hooks/useSurveys'
+import { useAuthStore } from '@/lib/stores/authStore'
+import { isManagerSurveyor } from '@/lib/auth/roles'
 import { Calendar } from '@/components/ui/calendar'
 import { CustomSelect } from '@/components/ui/custom-select'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { ACCOUNT_GROUP_LABELS, type AccountGroup, type SurveyorItem, type SurveyorRecapDay, type SurveyorRecapScheduleItem, type SurveyorRecapSummary } from '@/types'
+import { ACCOUNT_GROUP_LABELS, SURVEY_TEAM_LABELS, type AccountGroup, type SurveyorItem, type SurveyorRecapDay, type SurveyorRecapScheduleItem, type SurveyorRecapSummary, type SurveyTeam } from '@/types'
 
 /** Tanggal disimpan sebagai yyyy-MM-dd; parse balik dengan jam tengah hari
  *  supaya pergeseran zona waktu tidak memindahkannya sehari. */
@@ -55,8 +57,12 @@ const calendarWeekOfMonth = (date: Date) => {
 }
 
 export default function RekapJadwalSurveyorView() {
+  const user = useAuthStore((state) => state.user)
+  const managerMode = isManagerSurveyor(user)
+  const ownTeam = managerMode ? user?.survey_team ?? '' : ''
   const [weekDate, setWeekDate] = useState(() => format(new Date(), 'yyyy-MM-dd'))
-  const [accountGroup, setAccountGroup] = useState<AccountGroup | ''>('')
+  const [selectedAccountGroup, setAccountGroup] = useState<AccountGroup | ''>(() => ownTeam)
+  const accountGroup = managerMode ? ownTeam : selectedAccountGroup
   const [surveyorId, setSurveyorId] = useState<string>('')
   const [datePickerOpen, setDatePickerOpen] = useState(false)
 
@@ -65,10 +71,6 @@ export default function RekapJadwalSurveyorView() {
   const { data: surveyorsResponse } = useSurveyors()
   const surveyors = surveyorsResponse?.data ?? []
 
-  // Tanpa filter per-akun: API-nya menerima `account`, tapi daftar akunnya
-  // hanya tersedia lewat /master-data/accounts yang ber-middleware role:admin
-  // dan memfilter ke account_id user â€” sementara manager surveyor adalah tim
-  // pusat tanpa account_id. Filter grup sudah menutup kebutuhan ini.
   const filters = {
     week_date: weekDate,
     account_group: accountGroup || undefined,
@@ -79,8 +81,9 @@ export default function RekapJadwalSurveyorView() {
   const report = response?.data
   const currentWeekDate = format(new Date(), 'yyyy-MM-dd')
   const activeFilterCount = Number(Boolean(accountGroup)) + Number(Boolean(surveyorId))
-  const hasCustomFilters = activeFilterCount > 0 || weekDate !== currentWeekDate
+  const hasCustomFilters = accountGroup !== ownTeam || Boolean(surveyorId) || weekDate !== currentWeekDate
   const weeklyLoads = report ? buildWeeklyLoads(surveyors, report.summary) : []
+  const surveyorTeamById = new Map(surveyors.map((surveyor) => [surveyor.id, surveyor.survey_team ?? null]))
 
   const shiftWeek = (days: number) => {
     setWeekDate(format(addDays(toDate(weekDate), days), 'yyyy-MM-dd'))
@@ -88,7 +91,7 @@ export default function RekapJadwalSurveyorView() {
 
   const resetFilters = () => {
     setWeekDate(currentWeekDate)
-    setAccountGroup('')
+    setAccountGroup(ownTeam)
     setSurveyorId('')
   }
 
@@ -104,7 +107,8 @@ export default function RekapJadwalSurveyorView() {
     const end = addDays(start, 6)
     const groupLabel = accountGroup ? ACCOUNT_GROUP_LABELS[accountGroup] : ''
     const surveyorName = surveyorId ? surveyors.find((surveyor) => String(surveyor.id) === surveyorId)?.name : ''
-    const filterSuffix = surveyorName || groupLabel ? `_${safeFilePart(surveyorName || groupLabel)}` : ''
+    const filterLabel = [groupLabel, surveyorName].filter(Boolean).join('_')
+    const filterSuffix = filterLabel ? `_${safeFilePart(filterLabel)}` : ''
 
     return `REKAP_JADWAL_${dateRangeLabel(start, end)}_M${calendarWeekOfMonth(start)}${filterSuffix}.xlsx`
   }
@@ -117,6 +121,11 @@ export default function RekapJadwalSurveyorView() {
             Survey - Rekap Mingguan
           </p>
           <h1 className="text-2xl font-black tracking-tight text-foreground">Rekap Jadwal Surveyor</h1>
+          {managerMode && (
+            <p className="mt-2 text-base font-bold text-[var(--primary-theme)]">
+              {ownTeam ? SURVEY_TEAM_LABELS[ownTeam] : 'Team belum diatur'}
+            </p>
+          )}
           <p className="mt-1 text-xs text-muted-foreground">
             Berapa kali tiap surveyor dijadwalkan turun dalam satu minggu.
           </p>
@@ -135,7 +144,7 @@ export default function RekapJadwalSurveyorView() {
           <button
             type="button"
             onClick={() => download(exportPath, exportParams, 'Rekap jadwal berhasil diunduh.', buildExportFilename())}
-            disabled={isDownloading(exportPath)}
+            disabled={isDownloading(exportPath) || (managerMode && !ownTeam)}
             className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-lg bg-[var(--primary-theme)] px-3 text-xs font-bold text-[var(--primary-theme-foreground)] transition-[filter,transform] hover:brightness-105 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:cursor-wait disabled:opacity-60"
           >
             <FileSpreadsheet className="size-3.5" />
@@ -212,9 +221,10 @@ export default function RekapJadwalSurveyorView() {
             </Label>
             <CustomSelect
               value={accountGroup}
-              onChange={(v) => setAccountGroup(v as AccountGroup | '')}
-              placeholder="Semua grup"
-              options={[
+              onChange={(v) => { if (!managerMode) setAccountGroup(v as AccountGroup | '') }}
+              disabled={managerMode}
+              placeholder={managerMode ? 'Team belum diatur' : 'Semua grup'}
+              options={managerMode ? (ownTeam ? [{ value: ownTeam, label: SURVEY_TEAM_LABELS[ownTeam] }] : []) : [
                 { value: '', label: 'Semua grup' },
                 ...Object.entries(ACCOUNT_GROUP_LABELS).map(([value, label]) => ({ value, label })),
               ]}
@@ -261,7 +271,7 @@ export default function RekapJadwalSurveyorView() {
           <RecommendationPanel weeklyLoads={weeklyLoads} days={report.days} />
 
           <WeekGrid days={report.days} isFetching={isFetching} />
-          <SummaryTable summary={report.summary} total={report.total} />
+          <SummaryTable summary={report.summary} total={report.total} surveyorTeamById={surveyorTeamById} />
         </>
       )}
     </div>
@@ -271,6 +281,7 @@ export default function RekapJadwalSurveyorView() {
 type WeeklyLoad = {
   surveyorId: number
   surveyorName: string
+  surveyorTeam: SurveyTeam | null
   count: number
 }
 
@@ -282,14 +293,18 @@ function buildWeeklyLoads(
   const fromSurveyors = surveyors.map((surveyor) => ({
     surveyorId: surveyor.id,
     surveyorName: surveyor.name,
+    surveyorTeam: surveyor.survey_team ?? null,
     count: counts.get(surveyor.id)?.count ?? 0,
   }))
 
+  // Surveyor yang sudah dihapus/nonaktif: tetap muncul di rekap historis,
+  // tapi timnya tidak diketahui lagi (bukan bagian dari roster aktif).
   const missingFromSurveyors = summary
     .filter((item) => !fromSurveyors.some((load) => load.surveyorId === item.surveyorId))
     .map((item) => ({
       surveyorId: item.surveyorId,
       surveyorName: item.surveyorName,
+      surveyorTeam: null,
       count: item.count,
     }))
 
@@ -308,13 +323,13 @@ function SummaryCards({ total, weeklyLoads }: { total: number; weeklyLoads: Week
       <MetricCard
         icon={CalendarClock}
         label="Paling kosong"
-        value={quietest?.surveyorName ?? '-'}
+        value={quietest ? `${quietest.surveyorName}${quietest.surveyorTeam ? ` (${SURVEY_TEAM_LABELS[quietest.surveyorTeam]})` : ''}` : '-'}
         hint={quietest ? `${quietest.count} jadwal minggu ini` : 'Belum ada data'}
       />
       <MetricCard
         icon={Users}
         label="Tersibuk"
-        value={busiest?.surveyorName ?? '-'}
+        value={busiest ? `${busiest.surveyorName}${busiest.surveyorTeam ? ` (${SURVEY_TEAM_LABELS[busiest.surveyorTeam]})` : ''}` : '-'}
         hint={busiest ? `${busiest.count} jadwal minggu ini` : 'Belum ada data'}
       />
     </section>
@@ -386,7 +401,9 @@ function RecommendationPanel({
           <div className="mt-2 flex flex-wrap gap-2">
             {recommended.map((item) => (
               <span key={item.surveyorId} className="rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_24%,var(--border))]">
-                {item.surveyorName} <span className="text-muted-foreground">({item.count})</span>
+                {item.surveyorName}
+                {item.surveyorTeam && <span className="font-normal text-muted-foreground"> · {SURVEY_TEAM_LABELS[item.surveyorTeam]}</span>}
+                {' '}<span className="text-muted-foreground">({item.count})</span>
               </span>
             ))}
           </div>
@@ -396,7 +413,9 @@ function RecommendationPanel({
           <div className="mt-2 flex flex-wrap gap-2">
             {busiest.map((item) => (
               <span key={item.surveyorId} className="rounded-full bg-muted px-3 py-1.5 text-xs font-bold text-foreground/85">
-                {item.surveyorName} <span className="text-muted-foreground">({item.count})</span>
+                {item.surveyorName}
+                {item.surveyorTeam && <span className="font-normal text-muted-foreground"> · {SURVEY_TEAM_LABELS[item.surveyorTeam]}</span>}
+                {' '}<span className="text-muted-foreground">({item.count})</span>
               </span>
             ))}
           </div>
@@ -599,9 +618,11 @@ function ScheduleItemCard({
 function SummaryTable({
   summary,
   total,
+  surveyorTeamById,
 }: {
   summary: { surveyorId: number; surveyorName: string; count: number }[]
   total: number
+  surveyorTeamById: Map<number, SurveyTeam | null>
 }) {
   const busiest = summary[0]?.count ?? 0
 
@@ -627,28 +648,33 @@ function SummaryTable({
           </p>
         ) : (
           <div className="grid gap-x-8 sm:grid-cols-2 xl:grid-cols-4">
-            {summary.map((item) => (
-              <div
-                key={item.surveyorId}
-                className="flex min-w-0 items-center justify-between gap-3 border-b border-border/25 py-3 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0 xl:[&:nth-last-child(-n+4)]:border-b-0"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <span
-                    className={cn(
-                      'size-1.5 shrink-0 rounded-full',
-                      item.count === busiest ? 'bg-[var(--primary-theme)]' : 'bg-muted-foreground/35'
-                    )}
-                    aria-hidden="true"
-                  />
-                  <p className="min-w-0 truncate text-xs font-semibold text-foreground/85" title={item.surveyorName}>
-                    {item.surveyorName}
-                  </p>
+            {summary.map((item) => {
+              const team = surveyorTeamById.get(item.surveyorId) ?? null
+
+              return (
+                <div
+                  key={item.surveyorId}
+                  className="flex min-w-0 items-center justify-between gap-3 border-b border-border/25 py-3 last:border-b-0 sm:[&:nth-last-child(-n+2)]:border-b-0 xl:[&:nth-last-child(-n+4)]:border-b-0"
+                >
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={cn(
+                        'size-1.5 shrink-0 rounded-full',
+                        item.count === busiest ? 'bg-[var(--primary-theme)]' : 'bg-muted-foreground/35'
+                      )}
+                      aria-hidden="true"
+                    />
+                    <p className="min-w-0 truncate text-xs font-semibold text-foreground/85" title={item.surveyorName}>
+                      {item.surveyorName}
+                      {team && <span className="font-normal text-muted-foreground"> · {SURVEY_TEAM_LABELS[team]}</span>}
+                    </p>
+                  </div>
+                  <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-bold tabular-nums text-foreground/90 dark:bg-[#0b1220]">
+                    {item.count}
+                  </span>
                 </div>
-                <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-bold tabular-nums text-foreground/90 dark:bg-[#0b1220]">
-                  {item.count}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

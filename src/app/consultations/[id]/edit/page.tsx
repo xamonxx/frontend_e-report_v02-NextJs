@@ -176,6 +176,16 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
   }, [consultation])
 
   const updateMutation = useUpdateConsultation(consultationId)
+  // Sama seperti halaman create: kalau status diubah ke Request Survey dan
+  // lead belum punya survey aktif, arahkan ke halaman detail dengan modal
+  // pengajuan terbuka - supaya lead tidak menggantung di tahap ini tanpa
+  // diteruskan ke Manager Surveyor.
+  const isRequestSurveyStatus =
+    (statuses?.find((s) => s.id === selectedStatus)?.name ?? '').trim().toLowerCase() === 'request survey'
+  const statusOptions = [
+    { value: '', label: 'Pilih Status' },
+    ...(statuses || []).map((st) => ({ value: st.id.toString(), label: st.name })),
+  ]
   const requiresProductDetails = selectedNeeds.some((id) => {
     const selected = needs?.find((item) => item.id === id)
     return selected?.name.toLowerCase().includes('lain')
@@ -239,6 +249,12 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
     updateMutation.mutate(payload as any, {
       onSuccess: () => {
         toast.success('Data lead konsultasi berhasil diperbarui!')
+
+        if (isRequestSurveyStatus && !consultation?.active_survey) {
+          router.push(`/consultations/${consultationId}?prompt_survey=1`)
+          return
+        }
+
         router.push('/consultations')
       },
       onError: (err: unknown) => {
@@ -294,6 +310,24 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
       </div>
 
       <form onSubmit={handleSubmit}>
+        {/* Mobile only: Status Lead dipindah ke paling atas supaya tidak
+            terkubur di bawah form - di desktop field ini sudah kelihatan
+            langsung lewat sidebar kanan, jadi disembunyikan di sini. */}
+        <Card className="consultation-card mb-5 xl:hidden">
+          <CardHeader>
+            <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Status Lead *</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CustomSelect
+              value={selectedStatus ? selectedStatus.toString() : ''}
+              onChange={(val) => setSelectedStatus(val ? parseInt(val, 10) : undefined)}
+              placeholder="Pilih Status"
+              options={statusOptions}
+              className="h-11 w-full text-xs"
+            />
+          </CardContent>
+        </Card>
+
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_420px] xl:gap-8 min-[1440px]:grid-cols-[minmax(0,1fr)_460px]">
           <div className="min-w-0 space-y-6">
             <Card className="consultation-card">
@@ -539,7 +573,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
               </Card>
             )}
 
-            <Card className="consultation-card">
+            <Card className="consultation-card hidden xl:block">
               <CardHeader>
                 <CardTitle className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Status Lead *</CardTitle>
               </CardHeader>
@@ -548,13 +582,7 @@ export default function EditConsultationPage({ params }: { params: Promise<PageP
                   value={selectedStatus ? selectedStatus.toString() : ''}
                   onChange={(val) => setSelectedStatus(val ? parseInt(val, 10) : undefined)}
                   placeholder="Pilih Status"
-                  options={[
-                    { value: "", label: "Pilih Status" },
-                    ...(statuses || []).map((st) => ({
-                      value: st.id.toString(),
-                      label: st.name
-                    }))
-                  ]}
+                  options={statusOptions}
                   className="h-11 w-full text-xs"
                 />
               </CardContent>

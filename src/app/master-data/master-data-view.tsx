@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { motion, Reorder, useDragControls } from 'framer-motion'
-import type { StatusCategory, SurveyStatusItem } from '@/types'
+import { SURVEY_TEAM_LABELS, type SurveyTeam, type StatusCategory, type SurveyStatusItem } from '@/types'
 import {
   useCategoriesList,
   useCreateCategory,
@@ -187,6 +187,8 @@ export default function MasterDataPage() {
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false)
   const [role, setRole] = useState<'admin' | 'super_admin' | 'surveyor' | 'manager_surveyor'>('admin')
   const [accountId, setAccountId] = useState('')
+  const [surveyTeam, setSurveyTeam] = useState<SurveyTeam | ''>('')
+  const requiresSurveyTeam = role === 'surveyor' || role === 'manager_surveyor'
 
   const updateCatMutation = useUpdateCategory(editingId || 0)
   const updateStatMutation = useUpdateStatus(editingId || 0)
@@ -266,6 +268,7 @@ export default function MasterDataPage() {
     setShowPasswordConfirm(false)
     setRole('admin')
     setAccountId('')
+    setSurveyTeam('')
     setOpenModal(true)
   }
 
@@ -292,6 +295,7 @@ export default function MasterDataPage() {
     setPassword('')
     setPasswordConfirm('')
     setRole(usr.role)
+    setSurveyTeam(usr.survey_team ?? '')
     setAccountId(usr.account_id ? String(usr.account_id) : '')
     setOpenModal(true)
   }
@@ -372,7 +376,11 @@ export default function MasterDataPage() {
       )
     } else if (modalType === 'user') {
       if (!name.trim() || !email.trim()) return
-      const payload: any = { name, email, role }
+      if (requiresSurveyTeam && !surveyTeam) {
+        toast.error('Pilih team survey untuk Surveyor atau Manager Surveyor.')
+        return
+      }
+      const payload: any = { name, email, role, survey_team: requiresSurveyTeam ? surveyTeam : null }
       if (role === 'admin' && accountId) {
         payload.account_id = parseInt(accountId, 10)
       }
@@ -685,22 +693,22 @@ export default function MasterDataPage() {
         </Card>
 
         {catMeta && catMeta.last_page > 1 && (
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-[10px] text-muted-foreground/70">
               Menampilkan <span className="font-semibold text-muted-foreground">{catResponse?.data?.length ?? 0}</span> dari <span className="font-semibold text-muted-foreground">{catMeta.total}</span> kategori.
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between gap-2 sm:justify-end">
               <Button
                 variant="outline"
                 size="xs"
                 disabled={categoriesPage <= 1}
                 onClick={() => setCategoriesPage((p) => Math.max(1, p - 1))}
-                className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+                className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 shrink-0 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
               >
                 <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
                 Sebelumnya
               </Button>
-              <span className="text-xs font-semibold text-muted-foreground px-2">
+              <span className="shrink-0 text-xs font-semibold text-muted-foreground px-2">
                 Halaman {catMeta.current_page} dari {catMeta.last_page}
               </span>
               <Button
@@ -708,7 +716,7 @@ export default function MasterDataPage() {
                 size="xs"
                 disabled={categoriesPage >= catMeta.last_page}
                 onClick={() => setCategoriesPage((p) => Math.min(catMeta.last_page, p + 1))}
-                className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+                className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 shrink-0 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
               >
                 Selanjutnya
                 <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
@@ -872,7 +880,14 @@ export default function MasterDataPage() {
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--primary-theme)_11%,transparent)] text-[10px] font-bold text-[var(--primary-theme)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_25%,transparent)]">
                               {usr.name.charAt(0).toUpperCase()}
                             </div>
-                            <span className="truncate max-w-[92px] sm:max-w-[160px]">{usr.name}</span>
+                            <div className="min-w-0">
+                              <span className="block truncate max-w-[92px] sm:max-w-[160px]">{usr.name}</span>
+                              {(usr.role === 'surveyor' || usr.role === 'manager_surveyor') && (
+                                <span className="block text-[10px] font-medium text-muted-foreground">
+                                  {usr.survey_team ? SURVEY_TEAM_LABELS[usr.survey_team] : 'Team belum diatur'}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="max-w-[150px] truncate text-xs text-muted-foreground py-3.5 font-semibold">
@@ -1176,6 +1191,21 @@ export default function MasterDataPage() {
                       </Select>
                     </div>
 
+                    {requiresSurveyTeam && (
+                      <div className="space-y-1.5">
+                        <Label htmlFor="usr-survey-team" className="text-xs font-semibold text-muted-foreground">Team Survey *</Label>
+                        <Select value={surveyTeam} onValueChange={(value) => setSurveyTeam(value as SurveyTeam)} required>
+                          <SelectTrigger id="usr-survey-team" aria-required="true" className="h-10 rounded-lg border-border/60 bg-background/50 text-sm text-foreground focus:ring-1 focus:ring-[var(--primary-theme)]">
+                            <SelectValue placeholder="Pilih Team" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(SURVEY_TEAM_LABELS).map(([value, label]) => (
+                              <SelectItem key={value} value={value}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     {role === 'admin' && (
                       <div className="space-y-1.5">
                         <Label htmlFor="usr-account" className="text-xs font-semibold text-muted-foreground">Tautan Akun</Label>

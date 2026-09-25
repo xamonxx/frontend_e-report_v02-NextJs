@@ -3,12 +3,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api/client'
 import { queryKeys } from '@/lib/api/queryKeys'
-import type { PaginatedResponse } from '@/types'
+import type { AccountGroup, PaginatedResponse } from '@/types'
 
 export type AccountItem = {
   id: number
   name: string
   description: string | null
+  account_group: AccountGroup | null
   target_leads: number | null
   logo_path: string | null
   logo_url?: string | null
@@ -34,7 +35,7 @@ export function useAccountsList(filters: {
 }
 
 /**
- * Daftar grup akun unik (kolom `description`) untuk dropdown filter.
+ * Daftar grup akun unik (kolom `account_group`) untuk dropdown filter.
  * Nama endpoint/hook masih "categories" mengikuti API; di UI istilahnya "Grup".
  */
 export function useAccountCategories() {

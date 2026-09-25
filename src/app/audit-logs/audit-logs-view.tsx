@@ -1,13 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { useAuditLogs } from '@/lib/hooks/useAuditLogs'
-import { useUsersList } from '@/lib/hooks/useMasterData'
+import {
+  useCreateReminderCronJob,
+  useDeleteReminderCronJob,
+  useReminderCronJobsList,
+  useToggleReminderCronJob,
+  useUpdateReminderCronJob,
+  useUsersList,
+} from '@/lib/hooks/useMasterData'
 import { useOnlineUsers } from '@/lib/hooks/useOnlineUsers'
 import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { TimeSearchSelect } from '@/components/ui/time-search-select'
 import {
   Select,
   SelectContent,
@@ -25,7 +36,7 @@ import { format, parseISO } from 'date-fns'
 import {
   Search, Calendar, Loader2, ChevronLeft, ChevronRight,
   ShieldCheck, RefreshCw, Trash2, Clock, Users, Globe,
-  Activity, ArrowRightLeft, Cpu, FileText, User, SlidersHorizontal
+  Activity, ArrowRightLeft, BellRing, Cpu, Edit2, FileText, Plus, User, SlidersHorizontal
 } from 'lucide-react'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
@@ -34,9 +45,12 @@ import { useClearLogs } from '@/lib/hooks/useDebug'
 import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/errors'
 import { useConfirm } from '@/components/ui/confirm-dialog'
+import { SURVEY_TIME_OPTIONS } from '@/lib/survey-scheduling'
+import type { ReminderCronJob } from '@/types'
 
 export default function AuditLogsPage() {
   const confirm = useConfirm()
+  const [activeTab, setActiveTab] = useState<'logs' | 'reminder-jobs'>('logs')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
   const [actionFilter, setActionFilter] = useState('')
@@ -145,7 +159,7 @@ export default function AuditLogsPage() {
             Pantau seluruh aktivitas transaksi, login, penambahan data, dan perubahan log keamanan sistem.
           </p>
         </div>
-        {isSuperAdmin && (
+        {isSuperAdmin && activeTab === 'logs' && (
           <Button
             variant="destructive"
             size="sm"
@@ -161,6 +175,45 @@ export default function AuditLogsPage() {
           </Button>
         )}
       </div>
+
+      <div role="tablist" aria-label="Audit dan pengingat" className="grid w-full grid-cols-2 gap-1 rounded-xl border border-border/60 bg-card/45 p-1 shadow-sm lg:w-fit">
+        {([
+          { key: 'logs', label: 'Log Aktivitas', icon: FileText },
+          { key: 'reminder-jobs', label: 'Pengingat Absensi', icon: BellRing },
+        ] as const).map((tab) => {
+          const active = activeTab === tab.key
+          const Icon = tab.icon
+
+          return (
+            <button
+              key={tab.key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setActiveTab(tab.key)}
+              className={cn(
+                'relative flex min-w-0 items-center justify-center rounded-lg px-3 py-2.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary-theme)] sm:px-4',
+                active ? 'text-[var(--primary-theme)]' : 'text-muted-foreground hover:bg-muted/45 hover:text-foreground'
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId="audit-log-active-tab"
+                  transition={{ type: 'spring', stiffness: 380, damping: 30, mass: 0.85 }}
+                  className="pointer-events-none absolute inset-0 rounded-lg border border-white/15 bg-[color-mix(in_srgb,var(--primary-theme)_16%,transparent)] ring-1 ring-[color-mix(in_srgb,var(--primary-theme)_30%,transparent)]"
+                />
+              )}
+              <span className="relative z-10 flex min-w-0 items-center gap-2">
+                <Icon className="size-4 shrink-0" />
+                <span className="truncate">{tab.label}</span>
+              </span>
+            </button>
+          )
+        })}
+      </div>
+
+      {activeTab === 'logs' && (
+        <>
 
       {/* ── Online Users Panel ──────────────────────────────── */}
       <section className="overflow-hidden rounded-xl bg-card/75 ring-1 ring-border/60">
@@ -528,6 +581,10 @@ export default function AuditLogsPage() {
           </div>
         </div>
       )}
+        </>
+      )}
+
+      {activeTab === 'reminder-jobs' && <ReminderCronJobsPanel />}
 
       {/* ── Detail Dialog ────────────────────────────────────── */}
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
@@ -651,4 +708,280 @@ export default function AuditLogsPage() {
       </Dialog>
     </div>
   )
+}
+
+function ReminderCronJobsPanel() {
+  const confirm = useConfirm()
+  const { data: response, isLoading, isError, refetch } = useReminderCronJobsList()
+  const jobs = response?.data ?? []
+  const createJob = useCreateReminderCronJob()
+  const toggleJob = useToggleReminderCronJob()
+  const deleteJob = useDeleteReminderCronJob()
+
+  const [modalType, setModalType] = useState<'create' | 'edit' | null>(null)
+  const [editingJob, setEditingJob] = useState<ReminderCronJob | null>(null)
+  const [name, setName] = useState('')
+  const [timeOfDay, setTimeOfDay] = useState('13:00')
+  const [message, setMessage] = useState('')
+  const [isActive, setIsActive] = useState(true)
+  const updateJob = useUpdateReminderCronJob(editingJob?.id ?? 0)
+  const isSaving = createJob.isPending || updateJob.isPending
+
+  const openCreate = () => {
+    setEditingJob(null)
+    setName('Pengingat Absensi Admin')
+    setTimeOfDay('13:00')
+    setMessage('')
+    setIsActive(true)
+    setModalType('create')
+  }
+
+  const openEdit = (job: ReminderCronJob) => {
+    setEditingJob(job)
+    setName(job.name)
+    setTimeOfDay(job.time_of_day.slice(0, 5))
+    setMessage(job.message ?? '')
+    setIsActive(job.is_active)
+    setModalType('edit')
+  }
+
+  const closeModal = () => {
+    if (isSaving) return
+    setModalType(null)
+    setEditingJob(null)
+  }
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault()
+
+    if (!name.trim() || !timeOfDay) {
+      toast.error('Nama dan jam pengiriman wajib diisi.')
+      return
+    }
+
+    const payload = {
+      name: name.trim(),
+      time_of_day: timeOfDay,
+      message: message.trim() || null,
+      is_active: isActive,
+    }
+    const mutation = modalType === 'edit' ? updateJob : createJob
+
+    mutation.mutate(payload, {
+      onSuccess: (result) => {
+        toast.success(result.message)
+        setModalType(null)
+        setEditingJob(null)
+      },
+      onError: (error) => toast.error(getErrorMessage(error, 'Cron job pengingat gagal disimpan.')),
+    })
+  }
+
+  const handleToggle = (job: ReminderCronJob) => {
+    toggleJob.mutate(job.id, {
+      onSuccess: (result) => toast.success(result.message),
+      onError: (error) => toast.error(getErrorMessage(error, 'Status cron job gagal diubah.')),
+    })
+  }
+
+  const handleDelete = async (job: ReminderCronJob) => {
+    const confirmed = await confirm({
+      title: 'Hapus Cron Job?',
+      description: `Cron job "${job.name}" akan dihapus permanen.`,
+      actionLabel: 'Hapus',
+      cancelLabel: 'Batal',
+      variant: 'destructive',
+    })
+    if (!confirmed) return
+
+    deleteJob.mutate(job.id, {
+      onSuccess: (result) => toast.success(result.message),
+      onError: (error) => toast.error(getErrorMessage(error, 'Cron job pengingat gagal dihapus.')),
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">Cron Job Pengingat Absensi</h2>
+          <p className="mt-1 text-xs text-muted-foreground">Atur waktu dan pesan pengingat harian untuk admin yang belum melakukan absensi.</p>
+        </div>
+        <Button onClick={openCreate} className="h-9 self-start bg-[var(--primary-theme)] px-3 text-white hover:brightness-110 sm:self-auto">
+          <Plus className="size-4" />
+          Cron Job Baru
+        </Button>
+      </div>
+
+      <section className="overflow-hidden rounded-xl bg-card/75 ring-1 ring-border/60">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="border-b border-border/45 bg-muted/25">
+              <TableRow className="border-border/40 hover:bg-transparent">
+                <TableHead className="min-w-[180px] py-3.5 pl-5 text-[10px] font-bold uppercase text-muted-foreground">Nama</TableHead>
+                <TableHead className="w-[110px] py-3.5 text-[10px] font-bold uppercase text-muted-foreground">Jam (WIB)</TableHead>
+                <TableHead className="min-w-[240px] py-3.5 text-[10px] font-bold uppercase text-muted-foreground">Pesan</TableHead>
+                <TableHead className="w-[110px] py-3.5 text-[10px] font-bold uppercase text-muted-foreground">Status</TableHead>
+                <TableHead className="w-[160px] py-3.5 text-[10px] font-bold uppercase text-muted-foreground">Terakhir Terkirim</TableHead>
+                <TableHead className="w-[110px] py-3.5 pr-5 text-right text-[10px] font-bold uppercase text-muted-foreground">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center">
+                    <Loader2 className="mx-auto size-5 animate-spin text-[var(--primary-theme)]" />
+                  </TableCell>
+                </TableRow>
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center">
+                    <p className="mb-3 text-xs font-medium text-muted-foreground">Data cron job gagal dimuat.</p>
+                    <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
+                      <RefreshCw className="size-3.5" /> Muat Ulang
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ) : jobs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-32 text-center text-xs font-medium text-muted-foreground">
+                    Belum ada cron job pengingat.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                jobs.map((job) => {
+                  const isToggling = toggleJob.isPending && toggleJob.variables === job.id
+                  const isDeleting = deleteJob.isPending && deleteJob.variables === job.id
+
+                  return (
+                    <TableRow key={job.id} className="border-border/35 odd:bg-background/10">
+                      <TableCell className="py-3 pl-5 text-xs font-semibold text-foreground">{job.name}</TableCell>
+                      <TableCell className="py-3 text-xs font-semibold tabular-nums text-foreground/80">{job.time_of_day.slice(0, 5)}</TableCell>
+                      <TableCell className="max-w-sm py-3 text-xs text-muted-foreground">
+                        <span className="line-clamp-2" title={job.message ?? 'Pesan default'}>
+                          {job.message || '(pesan default)'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={job.is_active}
+                            disabled={isToggling}
+                            onCheckedChange={() => handleToggle(job)}
+                            aria-label={`${job.is_active ? 'Nonaktifkan' : 'Aktifkan'} ${job.name}`}
+                          />
+                          <span className="text-[11px] font-medium text-muted-foreground">{job.is_active ? 'Aktif' : 'Nonaktif'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-3 text-xs text-muted-foreground">
+                        {job.last_sent_date ? formatReminderSentDate(job.last_sent_date) : 'Belum pernah'}
+                      </TableCell>
+                      <TableCell className="py-3 pr-5">
+                        <div className="flex justify-end gap-1">
+                          <Button type="button" variant="ghost" size="icon-sm" onClick={() => openEdit(job)} title="Edit cron job">
+                            <Edit2 className="size-3.5" />
+                            <span className="sr-only">Edit {job.name}</span>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-sm"
+                            disabled={isDeleting}
+                            onClick={() => handleDelete(job)}
+                            title="Hapus cron job"
+                            className="text-red-600 hover:bg-red-500/10 hover:text-red-600 dark:text-red-400"
+                          >
+                            {isDeleting ? <Loader2 className="size-3.5 animate-spin" /> : <Trash2 className="size-3.5" />}
+                            <span className="sr-only">Hapus {job.name}</span>
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        <p className="border-t border-border/45 px-5 py-3 text-[11px] leading-relaxed text-muted-foreground">
+          Notifikasi hanya terkirim ke admin yang belum absen hari ini dan sudah mengaktifkan lonceng notifikasi.
+        </p>
+      </section>
+
+      <Dialog open={modalType !== null} onOpenChange={(open) => !open && closeModal()}>
+        <DialogContent className="w-[calc(100%-1rem)] rounded-xl border-border/60 bg-card text-foreground sm:max-w-lg">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>{modalType === 'edit' ? 'Edit Cron Job Pengingat' : 'Cron Job Pengingat Baru'}</DialogTitle>
+              <DialogDescription>Jadwal menggunakan zona waktu Asia/Jakarta (WIB).</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="reminder-job-name" className="text-xs font-semibold text-muted-foreground">Nama</Label>
+              <Input
+                id="reminder-job-name"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={160}
+                placeholder="Pengingat Absensi Admin"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-muted-foreground">Jam Pengiriman</Label>
+              <TimeSearchSelect
+                value={timeOfDay}
+                onChange={setTimeOfDay}
+                options={SURVEY_TIME_OPTIONS}
+                placeholder="Pilih jam pengiriman"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="reminder-job-message" className="text-xs font-semibold text-muted-foreground">Pesan</Label>
+              <Textarea
+                id="reminder-job-message"
+                value={message}
+                onChange={(event) => setMessage(event.target.value)}
+                maxLength={2000}
+                placeholder="Jangan lupa lakukan absensi hari ini, {tanggal}."
+                className="min-h-24 resize-y"
+              />
+              <p className="text-[11px] leading-relaxed text-muted-foreground">
+                Gunakan <code className="rounded bg-muted px-1 py-0.5">{'{tanggal}'}</code> untuk menyisipkan tanggal hari ini otomatis. Kosongkan untuk pesan default.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
+              <div>
+                <Label htmlFor="reminder-job-active" className="text-xs font-semibold text-foreground">Aktifkan jadwal</Label>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Job aktif diperiksa scheduler setiap menit.</p>
+              </div>
+              <Switch id="reminder-job-active" checked={isActive} onCheckedChange={setIsActive} aria-label="Aktifkan jadwal" />
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-border/50 pt-4">
+              <Button type="button" variant="ghost" onClick={closeModal} disabled={isSaving}>Batal</Button>
+              <Button type="submit" disabled={isSaving || !name.trim() || !timeOfDay} className="bg-[var(--primary-theme)] text-white hover:brightness-110">
+                {isSaving && <Loader2 className="size-4 animate-spin" />}
+                {modalType === 'edit' ? 'Simpan Perubahan' : 'Buat Cron Job'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
+
+function formatReminderSentDate(value: string): string {
+  const date = new Date(`${value.slice(0, 10)}T00:00:00`)
+  if (Number.isNaN(date.getTime())) return value
+
+  return date.toLocaleDateString('id-ID', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })
 }

@@ -42,7 +42,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { useAuthStore } from '@/lib/stores/authStore'
 import { cn } from '@/lib/utils'
-import type { AttendanceNotification, SurveyNotification } from '@/types'
+import { ACCOUNT_GROUP_LABELS, SURVEY_TEAM_LABELS, type AttendanceNotification, type SurveyNotification } from '@/types'
 
 import PushToggle from './push-toggle'
 import { HEADER_ACTION_CLASS } from './header-action'
@@ -215,7 +215,10 @@ function SurveyNotificationItem({
                 {notification.surveyor_name && (
                   <span className="inline-flex min-w-0 items-center gap-1.5">
                     <UserRound className="size-3 shrink-0 text-muted-foreground/60" />
-                    <span className="truncate">{notification.surveyor_name}</span>
+                    <span className="truncate">
+                      {notification.surveyor_name}
+                      {notification.surveyor_team && ` · ${SURVEY_TEAM_LABELS[notification.surveyor_team]}`}
+                    </span>
                   </span>
                 )}
               </div>
@@ -313,7 +316,10 @@ function AttendanceNotificationItem({
                 {notification.account_name && (
                   <span className="inline-flex min-w-0 items-center gap-1.5">
                     <Inbox className="size-3 shrink-0 text-muted-foreground/60" />
-                    <span className="truncate">{notification.account_name}</span>
+                    <span className="truncate">
+                      {notification.account_name}
+                      {notification.account_group && ` · ${ACCOUNT_GROUP_LABELS[notification.account_group]}`}
+                    </span>
                   </span>
                 )}
                 {notification.report_date_label && (

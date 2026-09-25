@@ -47,6 +47,7 @@ import {
   MessageCircle,
   EllipsisVertical,
   ListChecks,
+  Building2,
   X
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -428,7 +429,7 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-6">
+        <div className="order-1 space-y-6 lg:order-none lg:col-span-2">
           {/* Metadata Card */}
           <Card className="consultation-card">
             <CardHeader>
@@ -444,6 +445,17 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                     <p className="text-xs text-foreground/80 font-medium">{consultation.client_name}</p>
                   </div>
                 </div>
+
+                {/* Nama Akun */}
+                {consultation.account?.name && (
+                  <div className="flex items-start gap-3">
+                    <Building2 className="h-4 w-4 text-muted-foreground/70 mt-0.5" />
+                    <div>
+                      <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase">Nama Akun</p>
+                      <p className="text-xs text-foreground/80 font-medium">{consultation.account.name}</p>
+                    </div>
+                  </div>
+                )}
 
                 {/* No. Telepon / WhatsApp */}
                 <div className="flex items-start gap-3">
@@ -598,7 +610,8 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
             </CardContent>
           </Card>
 
-          {/* Product requirements detail box */}
+          {/* Product requirements + additional notes, grouped in one card so
+              two short free-text fields don't each drag their own header. */}
           <Card className="consultation-card">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-foreground/90">Detail & Kebutuhan Produk</CardTitle>
@@ -606,10 +619,19 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
                 Deskripsi pengerjaan produk interior yang diajukan klien.
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-xl border border-border bg-muted/40 p-4 min-h-[120px] text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap dark:border-zinc-800 dark:bg-zinc-950/40">
+            <CardContent className="space-y-4">
+              <div className="rounded-xl border border-border bg-muted/40 p-4 min-h-[100px] text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap dark:border-zinc-800 dark:bg-zinc-950/40">
                 {consultation.product_details || 'Tidak ada detail produk khusus yang dicantumkan.'}
               </div>
+
+              {consultation.notes && (
+                <div className="border-t border-border/40 pt-4 dark:border-zinc-800/40">
+                  <p className="mb-2 text-[10px] font-semibold uppercase text-muted-foreground/70">Keterangan Tambahan</p>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4 text-xs text-foreground/80 leading-relaxed whitespace-pre-wrap dark:border-zinc-800 dark:bg-zinc-950/40">
+                    {consultation.notes}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -942,7 +964,11 @@ export default function ConsultationDetailPage({ params }: { params: Promise<Pag
 
         </div>
 
-        <div className="space-y-5 lg:col-span-1 lg:self-start">
+        {/* Mobile: order-first pindahkan Status Survey + Pengingat ke atas,
+            di atas seluruh form kiri, supaya tidak terkubur di bawah scroll.
+            Desktop (lg:): lg:order-none kembalikan ke DOM order asli,
+            col-span-1 taruh lagi jadi sidebar kanan seperti sebelumnya. */}
+        <div className="order-first space-y-5 lg:order-none lg:col-span-1 lg:self-start">
           <SurveyRequestCard
             consultation={consultation}
             isAtSurveyStage={isAtSurveyStage}

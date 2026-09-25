@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react'
 import { useConsultations, useDeleteConsultation, useImportConsultations } from '@/lib/hooks/useConsultations'
 import { useAccounts, useStatusCategories } from '@/lib/hooks/useMasterData'
+import { useAccountGroups } from '@/lib/hooks/useReportAttendances'
+import { useTeamAccountFilter } from '@/lib/hooks/useTeamAccountFilter'
 import { useNotificationCount } from '@/lib/hooks/useNotifications'
+import { ACCOUNT_GROUP_LABELS } from '@/types'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import {
@@ -132,6 +135,10 @@ export default function ConsultationsPage() {
   const [barPeriodOpen, setBarPeriodOpen] = useState(false)
   const [barDateOpen, setBarDateOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [teamExportOpen, setTeamExportOpen] = useState(false)
+  const teamFilter = useTeamAccountFilter()
+  const { data: accountGroupsResponse } = useAccountGroups()
+  const accountGroups = accountGroupsResponse?.data ?? []
 
   // Column header filter popovers
   const [statusPopOpen, setStatusPopOpen] = useState(false)
@@ -706,7 +713,8 @@ export default function ConsultationsPage() {
           </div>
 
           </div>{/* end icons row */}
-          <div className="grid min-w-0 grid-cols-[0.55fr_1fr] gap-1.5 w-full sm:gap-2 xl:ml-auto xl:w-auto xl:flex xl:items-center">
+          <div className="flex min-w-0 flex-col gap-1.5 w-full sm:gap-2 xl:ml-auto xl:w-auto xl:flex-row xl:items-center">
+            <div className="grid min-w-0 grid-cols-[0.55fr_1fr] gap-1.5 sm:gap-2 xl:flex xl:w-auto xl:items-center xl:gap-2">
             <div className="min-w-0 xl:flex xl:w-auto xl:items-center xl:gap-2">
               <Popover open={exportOpen} onOpenChange={setExportOpen}>
                 <PopoverTrigger className={cn(secondaryFileActionClass, 'consultation-export-action w-full px-3 xl:hidden')}>
@@ -841,6 +849,86 @@ export default function ConsultationsPage() {
               <Plus className="h-4 w-4 mr-1.5" />
               Lead Baru
             </Link>
+            </div>
+            {isSuperAdmin && (
+              <Popover
+                open={teamExportOpen}
+                onOpenChange={(open) => {
+                  setTeamExportOpen(open)
+                  if (!open) teamFilter.reset()
+                }}
+              >
+                <PopoverTrigger className={cn(secondaryFileActionClass, 'w-full px-3 xl:order-first xl:w-auto')}>
+                  <FileSpreadsheet className="size-3.5 shrink-0" />
+                  Excel per Team
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-64 p-1.5">
+                  {!teamFilter.team ? (
+                    <>
+                      <p className="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                        Pilih Team
+                      </p>
+                      {accountGroups.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => teamFilter.setTeam(option.value)}
+                          className="flex h-8 w-full items-center gap-2 rounded-lg px-2.5 text-left text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted"
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => teamFilter.reset()}
+                        className="mb-1 flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-muted-foreground hover:text-foreground"
+                      >
+                        ← Kembali
+                      </button>
+                      <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                        Pilih akun (opsional)
+                      </p>
+                      <div className="max-h-52 overflow-y-auto">
+                        {teamFilter.accountsInTeam.map((account) => (
+                          <label
+                            key={account.id}
+                            className="flex h-8 w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 text-left text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={teamFilter.accountIds.has(account.id)}
+                              onChange={() => teamFilter.toggleAccount(account.id)}
+                              className="size-3.5 shrink-0"
+                            />
+                            <span className="truncate">{account.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTeamExportOpen(false)
+                          download(
+                            '/export/leads/excel',
+                            { ...leadsExportParams, ...teamFilter.exportParams },
+                            'Excel leads berhasil diunduh.'
+                          )
+                          teamFilter.reset()
+                        }}
+                        disabled={isDownloading('/export/leads/excel')}
+                        className="mt-1 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-2.5 text-[11px] font-bold text-zinc-950 transition-colors hover:bg-amber-400 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Export {teamFilter.accountIds.size ? `${teamFilter.accountIds.size} Akun` : 'Team Ini'}
+                      </button>
+                    </>
+                  )}
+                </PopoverContent>
+              </Popover>
+            )}
           </div>
         </div>{/* end flex-col */}
       </div>
@@ -1009,7 +1097,10 @@ export default function ConsultationsPage() {
                       {isSuperAdmin && (
                         <span className="inline-flex min-w-0 items-center gap-1 truncate rounded-full border border-border/60 px-2.5 py-1 text-[9px] font-semibold text-muted-foreground">
                           <Building2 className="size-3 shrink-0" />
-                          <span className="truncate">{lead.account?.name || '-'}</span>
+                          <span className="truncate">
+                            {lead.account?.name || '-'}
+                            {lead.account_group ? ` · ${ACCOUNT_GROUP_LABELS[lead.account_group]}` : ''}
+                          </span>
                         </span>
                       )}
                     </div>
@@ -1486,6 +1577,11 @@ export default function ConsultationsPage() {
                         <span className="text-[11px] text-foreground/80 font-medium dark:text-zinc-300">
                           {lead.account?.name || '—'}
                         </span>
+                        {lead.account_group && (
+                          <span className="ml-1.5 text-[10px] text-muted-foreground">
+                            ({ACCOUNT_GROUP_LABELS[lead.account_group]})
+                          </span>
+                        )}
                       </TableCell>
                     )}
 
@@ -1536,22 +1632,22 @@ export default function ConsultationsPage() {
 
       {/* Pagination controls */}
       {meta && meta.last_page > 1 && (
-        <div className="flex items-center justify-between pt-2">
+        <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-[10px] text-muted-foreground/70">
             Menampilkan <span className="font-semibold text-muted-foreground">{consultations.length}</span> dari <span className="font-semibold text-muted-foreground">{meta.total}</span> leads terdaftar.
           </p>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
             <Button
               variant="outline"
               size="xs"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 shrink-0 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-0.5" />
               Sebelumnya
             </Button>
-            <span className="text-xs font-semibold text-muted-foreground px-2">
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground px-2">
               Halaman {meta.current_page} dari {meta.last_page}
             </span>
             <Button
@@ -1559,7 +1655,7 @@ export default function ConsultationsPage() {
               size="xs"
               disabled={page >= meta.last_page}
               onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))}
-              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
+              className="border-border bg-card hover:bg-muted text-foreground/80 disabled:opacity-30 rounded-xl h-8 shrink-0 transition-all duration-250 cursor-pointer dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:bg-zinc-800/50 dark:text-zinc-300"
             >
               Selanjutnya
               <ChevronRight className="h-3.5 w-3.5 ml-0.5" />

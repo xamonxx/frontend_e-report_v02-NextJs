@@ -39,7 +39,7 @@ import {
   useSurveyHistory,
   useCancelSurvey,
 } from '@/lib/hooks/useSurveys'
-import type { Survey, SurveyActivity, SurveyState } from '@/types'
+import { SURVEY_TEAM_LABELS, type Survey, type SurveyActivity, type SurveyState } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -259,13 +259,20 @@ function DetailLine({ label, value, children }: {
   value?: React.ReactNode
   children?: React.ReactNode
 }) {
+  const content = children ?? value
+  // Baris tanpa data betulan cuma menampilkan "-" - sembunyikan saja, jangan
+  // dipaksa tampil kosong.
+  if (content === undefined || content === null || content === '' || content === '-') {
+    return null
+  }
+
   return (
     <div className="grid min-w-0 gap-1 border-b border-border/50 py-3 last:border-b-0 sm:grid-cols-[144px_minmax(0,1fr)] sm:gap-4">
       <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground/65">
         {label}
       </span>
       <div className="min-w-0 text-xs font-semibold leading-relaxed text-foreground/90">
-        {children ?? value ?? '-'}
+        {content}
       </div>
     </div>
   )
@@ -347,6 +354,11 @@ export default function SurveysView() {
         <h1 className="text-2xl font-black tracking-tight text-foreground sm:text-3xl">
           Survey Lokasi
         </h1>
+        {isManagerSurveyor(user) && (
+          <p className="mt-2 text-base font-bold text-[var(--primary-theme)]">
+            {user?.survey_team ? SURVEY_TEAM_LABELS[user.survey_team] : 'Team belum diatur'}
+          </p>
+        )}
         <p className="mt-1 max-w-xl text-xs font-medium leading-relaxed text-muted-foreground/75 sm:text-sm">
           {surveyorMode
             ? 'Jadwal survey yang ditugaskan & pengisian hasil.'
@@ -680,6 +692,20 @@ function SurveyCard({
                 {compactNeedsLabel(categories)}
               </p>
             </div>
+            {survey.state === 'completed' && survey.result_status && (
+              <div
+                className="flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2"
+                style={{
+                  borderColor: `${survey.result_status.color}45`,
+                  backgroundColor: `${survey.result_status.color}12`,
+                }}
+              >
+                <ClipboardCheck className="size-4 shrink-0" style={{ color: survey.result_status.color }} />
+                <p className="truncate text-xs font-bold" style={{ color: survey.result_status.color }}>
+                  {survey.result_status.name}
+                </p>
+              </div>
+            )}
           </section>
 
           <div className="mt-auto space-y-2 border-t border-border/60 pt-3 xl:pt-2.5">
@@ -851,7 +877,14 @@ function SurveyDetailDialog({ survey, onClose }: { survey: Survey; onClose: () =
             <div className="mt-2">
               <DetailLine label="Nama Akun" value={displayValue(c?.account?.name)} />
               <DetailLine label="Admin" value={displayValue(adminName)} />
-              <DetailLine label="Surveyor" value={displayValue(survey.surveyor?.name)} />
+              <DetailLine
+                label="Surveyor"
+                value={
+                  survey.surveyor
+                    ? `${survey.surveyor.name}${survey.surveyor.survey_team ? ` · ${SURVEY_TEAM_LABELS[survey.surveyor.survey_team]}` : ''}`
+                    : undefined
+                }
+              />
               <DetailLine label="Ditugaskan Oleh" value={displayValue(survey.assigner?.name)} />
             </div>
           </section>

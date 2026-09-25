@@ -17,7 +17,7 @@ import { TimeSearchSelect } from '@/components/ui/time-search-select'
 import { Textarea } from '@/components/ui/textarea'
 import { useRequestSurvey, useRescheduleSurvey, useUpdateSurveyMaps } from '@/lib/hooks/useSurveys'
 import { cn, formatApiError } from '@/lib/utils'
-import type { Consultation, SurveyState } from '@/types'
+import { SURVEY_TEAM_LABELS, type Consultation, type SurveyState } from '@/types'
 
 const STATE_LABEL: Record<SurveyState, { text: string; className: string }> = {
   requested: { text: 'Menunggu penjadwalan', className: 'text-amber-600 dark:text-amber-400' },
@@ -266,7 +266,11 @@ export default function SurveyRequestCard({ consultation, isAtSurveyStage, autoO
                 <SurveyFact
                   icon={<UserRoundCheck className="h-4 w-4" />}
                   label="Surveyor"
-                  value={survey.surveyor?.name ?? 'Belum ditentukan'}
+                  value={
+                    survey.surveyor
+                      ? `${survey.surveyor.name}${survey.surveyor.survey_team ? ` · ${SURVEY_TEAM_LABELS[survey.surveyor.survey_team]}` : ''}`
+                      : 'Belum ditentukan'
+                  }
                 />
                 <SurveyFact
                   icon={<CalendarClock className="h-4 w-4" />}

@@ -9,7 +9,6 @@ import type {
   SurveyStatusItem,
   SurveyorItem,
   SurveyorAvailability,
-  SurveyorAssignmentSuggestion,
   SurveyActivity,
   PaginatedResponse,
   ApiResponse,
@@ -62,19 +61,6 @@ export function useSurveyorAvailability(date?: string, excludeSurveyId?: number)
         signal
       ),
     enabled: Boolean(date),
-  })
-}
-
-export function useSurveyorAssignmentSuggestions(surveyId: number, date?: string, time?: string) {
-  return useQuery({
-    queryKey: queryKeys.surveys.assignmentSuggestions(surveyId, date, time),
-    queryFn: ({ signal }) =>
-      api.get<ApiResponse<SurveyorAssignmentSuggestion[]>>(
-        `/surveys/${surveyId}/assignment-suggestions`,
-        { date, time, limit: 5 },
-        signal
-      ),
-    enabled: Boolean(surveyId && date),
   })
 }
 

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api/client'
 import { queryKeys } from '@/lib/api/queryKeys'
-import type { NeedsCategory, StatusCategory, SurveyStatusItem, PaginatedResponse } from '@/types'
+import type { NeedsCategory, ReminderCronJob, StatusCategory, SurveyStatusItem, SurveyTeam, PaginatedResponse } from '@/types'
 
 // ── Read-only selectors for dropdowns ────────────────────────────
 
@@ -125,11 +125,13 @@ export function useAllDetailedDistricts() {
   })
 }
 
+export type MasterDataAccount = { id: number; name: string; account_group: string | null }
+
 export function useAccounts() {
   return useQuery({
     queryKey: queryKeys.accounts.all,
     queryFn: async ({ signal }) => {
-      const res = await api.get<{ data: any[] }>('/master-data/accounts', undefined, signal)
+      const res = await api.get<{ data: MasterDataAccount[] }>('/master-data/accounts', undefined, signal)
       return res.data
     },
     staleTime: 5 * 60 * 1000, // 5 min caching
@@ -305,6 +307,63 @@ export function useReorderSurveyStatuses() {
   })
 }
 
+// ── Super Admin Reminder Cron Job CRUD ──────────────────────────
+
+export type ReminderCronJobPayload = {
+  name: string
+  time_of_day: string
+  message: string | null
+  is_active: boolean
+}
+
+function invalidateReminderCronJobs(queryClient: ReturnType<typeof useQueryClient>) {
+  queryClient.invalidateQueries({ queryKey: queryKeys.masterData.reminderCronJobs })
+}
+
+export function useReminderCronJobsList() {
+  return useQuery({
+    queryKey: queryKeys.masterData.reminderCronJobs,
+    queryFn: ({ signal }) =>
+      api.get<{ data: ReminderCronJob[] }>('/master-data/reminder-cron-jobs', undefined, signal),
+  })
+}
+
+export function useCreateReminderCronJob() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: ReminderCronJobPayload) =>
+      api.post<{ message: string; data: ReminderCronJob }>('/master-data/reminder-cron-jobs', data),
+    onSuccess: () => invalidateReminderCronJobs(queryClient),
+  })
+}
+
+export function useUpdateReminderCronJob(id: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: ReminderCronJobPayload) =>
+      api.put<{ message: string; data: ReminderCronJob }>(`/master-data/reminder-cron-jobs/${id}`, data),
+    onSuccess: () => invalidateReminderCronJobs(queryClient),
+  })
+}
+
+export function useToggleReminderCronJob() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.patch<{ message: string; data: ReminderCronJob }>(`/master-data/reminder-cron-jobs/${id}/toggle`),
+    onSuccess: () => invalidateReminderCronJobs(queryClient),
+  })
+}
+
+export function useDeleteReminderCronJob() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) =>
+      api.delete<{ message: string }>(`/master-data/reminder-cron-jobs/${id}`),
+    onSuccess: () => invalidateReminderCronJobs(queryClient),
+  })
+}
+
 // ── Super Admin Users Management CRUD ───────────────────────────
 
 export type UserItem = {
@@ -312,6 +371,7 @@ export type UserItem = {
   name: string
   email: string
   role: 'admin' | 'super_admin' | 'surveyor' | 'manager_surveyor'
+  survey_team: SurveyTeam | null
   account_id: number | null
   created_at: string
   updated_at: string

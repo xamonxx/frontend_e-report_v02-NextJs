@@ -245,3 +245,29 @@ export function useMarkReminderDone(consultationId: number) {
     },
   })
 }
+
+/**
+ * Hook to list soft-deleted (archived) consultations, tab Arsip.
+ */
+export function useTrashedConsultations(filters: { search?: string; page?: number } = {}) {
+  return useQuery({
+    queryKey: ['consultations', 'trashed', filters],
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<Consultation>>('/consultations/trashed', filters as any, signal),
+    placeholderData: (previousData) => previousData,
+  })
+}
+
+/**
+ * Hook to restore an archived (soft-deleted) consultation.
+ */
+export function useRestoreConsultation() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.post<ApiResponse<Consultation>>(`/consultations/${id}/restore`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultations', 'trashed'] })
+      invalidateConsultationDependents(queryClient)
+    },
+  })
+}

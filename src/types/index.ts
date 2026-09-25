@@ -29,10 +29,23 @@ export const UserRole = {
 } as const
 export type UserRole = (typeof UserRole)[keyof typeof UserRole]
 
+export const SURVEY_TEAM_LABELS = {
+  A: 'Team A',
+  B: 'Team B',
+  C: 'Team C',
+  D: 'Team D',
+  E: 'Team E',
+  F: 'Team F',
+} as const
+export type SurveyTeam = keyof typeof SURVEY_TEAM_LABELS
+
 export const ACCOUNT_GROUP_LABELS = {
-  PC: 'PC',
-  NPP1: 'NPP 1',
-  NPP2: 'NPP 2',
+  A: 'Team A',
+  B: 'Team B',
+  C: 'Team C',
+  D: 'Team D',
+  E: 'Team E',
+  F: 'Team F',
 } as const
 export type AccountGroup = keyof typeof ACCOUNT_GROUP_LABELS
 
@@ -95,28 +108,11 @@ export type SurveyFilters = {
   sort?: 'nearest' | 'latest'
 }
 
-export type SurveyorItem = { id: number; name: string }
+export type SurveyorItem = { id: number; name: string; survey_team?: SurveyTeam | null }
 export type SurveyorAvailability = SurveyorItem & {
   email: string
   schedule_count: number
   schedules: string[]
-}
-export type SurveyorAssignmentSuggestion = {
-  surveyor_id: number
-  surveyor_name: string
-  email: string
-  rank: number
-  score: number
-  is_available: boolean
-  has_conflict: boolean
-  day_load: number
-  busy_times: string[]
-  province_count: number
-  city_count: number
-  completed_count: number
-  deal_count: number
-  deal_rate: number
-  reasons: string[]
 }
 export type SurveyActivity = {
   id: number
@@ -166,6 +162,7 @@ export type AuthUser = {
   name: string
   email: string
   role: UserRole
+  survey_team: SurveyTeam | null
   account_id: number | null
   account: { id: number; name: string; logo: string | null } | null
   primary_color: string | null
@@ -189,7 +186,10 @@ export type Consultation = {
   consultation_date: string | null
   created_at: string
   updated_at: string
+  deleted_at?: string | null
   account_id?: number
+  /** Snapshot grup akun saat konsul dibuat; tidak berubah walau accounts.account_group berubah kemudian. */
+  account_group?: AccountGroup | null
   status_category_id?: number
   account: { id: number; name: string; admins?: { id: number; name: string }[] } | null
   status_category: { id: number; name: string; css_class: string } | null
@@ -280,6 +280,18 @@ export type StatusCategory = {
   sort_order: number
 }
 
+export type ReminderCronJob = {
+  id: number
+  name: string
+  type: 'attendance_reminder'
+  time_of_day: string
+  message: string | null
+  is_active: boolean
+  last_sent_date: string | null
+  created_at: string
+  updated_at: string
+}
+
 // ── Notifications ────────────────────────────────────────────
 export type NotificationCount = {
   unread_notes: number
@@ -314,6 +326,7 @@ export type SurveyNotification = {
   location?: string | null
   schedule_label?: string | null
   surveyor_name?: string | null
+  surveyor_team?: SurveyTeam | null
 }
 
 export type NoteNotification = {
@@ -345,6 +358,7 @@ export type AttendanceNotification = {
   created_human?: string
   admin_name: string
   account_name?: string | null
+  account_group?: AccountGroup | null
   report_date?: string | null
   report_date_label?: string | null
   report_category: string
