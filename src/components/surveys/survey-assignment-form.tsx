@@ -120,6 +120,16 @@ export function SurveyAssignmentForm({
   })
 
   const surveyorOptions = sortedSurveyors.map((surveyor) => {
+    // Tim kosong sengaja tidak menampilkan status jadwal - ini kondisi setup
+    // yang belum lengkap (survey_team belum diatur di Kelola Master Data),
+    // bukan sesuatu yang wajar ditutupi dengan angka jadwal seolah normal.
+    if (!surveyor.survey_team) {
+      return {
+        value: String(surveyor.id),
+        label: `${surveyor.name} — tim belum ditetapkan`,
+      }
+    }
+
     const itemAvailability = availabilityMap.get(surveyor.id)
     const busyTimes = Array.from(new Set(
       (itemAvailability?.schedules ?? [])
@@ -127,13 +137,15 @@ export function SurveyAssignmentForm({
         .filter(Boolean)
     ))
     const conflict = Boolean(scheduledTime && busyTimes.includes(scheduledTime))
+    // "pada tanggal dipilih", bukan "hari ini" - availability selalu dihitung
+    // dari scheduledDate yang sedang difilter, yang bisa saja bukan hari ini.
     const status = conflict
-      ? `bentrok ${scheduledTime}`
-      : `${itemAvailability?.schedule_count ?? 0} jadwal hari ini`
+      ? `bentrok ${scheduledTime} WIB`
+      : `${itemAvailability?.schedule_count ?? 0} jadwal pada tanggal dipilih`
 
     return {
       value: String(surveyor.id),
-      label: `${surveyor.name} - ${status}`,
+      label: `${surveyor.name} (${surveyor.survey_team}) — ${status}`,
     }
   })
 
