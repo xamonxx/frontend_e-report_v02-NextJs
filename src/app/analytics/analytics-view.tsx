@@ -763,22 +763,25 @@ export default function AnalyticsPage() {
                     const totalStatus = statusData.reduce((acc: number, curr: any) => acc + curr.count, 0)
                     return (
                       <ChartBox>
-                        <BarChart data={statusData} margin={{ top: 15, right: 10, left: -20, bottom: 20 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" opacity={0.5} vertical={false} />
-                          <XAxis
+                        <BarChart
+                          layout="vertical"
+                          data={statusData}
+                          margin={{ top: 0, right: 36, left: 0, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" opacity={0.5} horizontal={false} />
+                          <XAxis type="number" stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
+                          <YAxis
+                            type="category"
                             dataKey="name"
                             stroke="#94a3b8"
-                            fontSize={8}
+                            fontSize={9}
                             tickLine={false}
                             axisLine={false}
-                            interval={0}
-                            angle={-15}
-                            textAnchor="end"
-                            height={30}
+                            width={100}
+                            tickFormatter={(v: string) => v.length > 15 ? v.slice(0, 15) + '…' : v}
                           />
-                          <YAxis stroke="#94a3b8" fontSize={9} tickLine={false} axisLine={false} />
                           <Tooltip content={renderBarTooltip} />
-                          <Bar dataKey="count" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                          <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={16} isAnimationActive={false}>
                             {statusData.map((entry: any, index: number) => (
                               <Cell key={`cell-${index}`} fill={entry.color || '#94a3b8'} />
                             ))}
@@ -788,20 +791,27 @@ export default function AnalyticsPage() {
                                 const { x, y, width, height, value } = props
                                 if (value === undefined || value === null || value === 0) return null
                                 const pct = totalStatus > 0 ? ((value / totalStatus) * 100).toFixed(1) : '0.0'
-                                if (height < 14) return null
+                                if (width < 24) return null
                                 return (
                                   <text
-                                    x={x + width / 2}
-                                    y={y + 12}
+                                    x={x + 6}
+                                    y={y + height / 2}
                                     fill="#ffffff"
                                     fontSize="9px"
                                     fontWeight="bold"
-                                    textAnchor="middle"
+                                    textAnchor="start"
+                                    dominantBaseline="central"
                                   >
                                     {pct}%
                                   </text>
                                 )
                               }}
+                            />
+                            <LabelList
+                              dataKey="count"
+                              position="right"
+                              formatter={(value: any) => String(value)}
+                              style={{ fontSize: '9px', fill: '#94a3b8' }}
                             />
                           </Bar>
                         </BarChart>
@@ -903,8 +913,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Lower Grid: Insights + Funnel / branch stats */}
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Funnel & System Insights */}
+          <div className="grid items-start gap-6 md:grid-cols-2">
             <div className="space-y-6">
               {/* Funnel Analysis — Modern Redesign */}
               <Card className="min-w-0 overflow-hidden rounded-2xl border-border bg-card shadow-sm dark:border-zinc-900/60 dark:bg-[#111827] dark:shadow-[0_18px_60px_rgba(0,0,0,0.22)]">
@@ -1034,7 +1043,6 @@ export default function AnalyticsPage() {
               </Card>
             </div>
 
-            {/* Branch and Admin Rankings */}
             <div className="space-y-6">
               {/* Account Ranking (Super Admin Only) */}
               {isSuperAdmin && (
@@ -1081,7 +1089,7 @@ export default function AnalyticsPage() {
                                     )}>
                                       {originalIndex + 1}
                                     </span>
-                                    <span className="min-w-0 break-words leading-tight">{ranking.name}</span>
+                                    <span className="min-w-0 truncate" title={ranking.name}>{ranking.name}</span>
                                   </div>
                                 </td>
                                 <td className="py-3 px-1 text-center text-muted-foreground font-semibold sm:px-2">{ranking.total}</td>
@@ -1192,7 +1200,7 @@ export default function AnalyticsPage() {
                                   <span className="h-5 w-5 rounded-full bg-muted text-muted-foreground text-[10px] font-bold flex items-center justify-center shrink-0 border border-border dark:bg-zinc-900 dark:border-zinc-800">
                                     {ranking.name.slice(0, 2).toUpperCase()}
                                   </span>
-                                  <span className="min-w-0 break-words leading-tight">{ranking.name}</span>
+                                  <span className="min-w-0 truncate" title={ranking.name}>{ranking.name}</span>
                                 </div>
                               </td>
                               <td className="py-3 px-1 text-muted-foreground/70 break-words leading-tight sm:px-2">{ranking.account || '-'}</td>
@@ -1254,6 +1262,7 @@ export default function AnalyticsPage() {
                 </Card>
               )}
             </div>
+          </div>
 
             {/* ── Analitik Tim Survey (super_admin only) ──────────── */}
             {isSuperAdmin && (
@@ -1299,7 +1308,7 @@ export default function AnalyticsPage() {
                                 )}>
                                   {index + 1}
                                 </span>
-                                <span className="min-w-0 break-words leading-tight">{r.name}</span>
+                                <span className="min-w-0 truncate" title={r.name}>{r.name}</span>
                               </div>
                             </td>
                             <td className="py-3 px-1 text-right font-bold text-foreground/80 sm:px-2">{r.completed}</td>
@@ -1410,7 +1419,6 @@ export default function AnalyticsPage() {
               </div>
             </div>
             )}
-          </div>
         </div>
       )}
     </div>
