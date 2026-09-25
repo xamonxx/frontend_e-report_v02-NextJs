@@ -88,7 +88,10 @@ export function useLogin() {
         return api.post<{ user: AuthUser; message: string }>('/auth/login', credentials)
       }
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
+      // Batalkan request sesi lama dan hapus data sebelum pengguna baru aktif.
+      await queryClient.cancelQueries()
+      queryClient.clear()
       // Set user in zustand store
       setUser(data.user)
       localStorage.setItem('e_report_logged_in', 'true')
