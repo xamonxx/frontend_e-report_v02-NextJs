@@ -66,5 +66,10 @@ next-env.d.ts
 .claude/
 .audit-current.json
 
+# TestSprite local run state/artifacts (screenshots, DOM dumps, credentials file)
+/testsprite_tests/
+.testsprite/
+.testsprite-qa-credentials
+
 # MapLibre worker files copied at build time (scripts/copy-maplibre-worker.mjs)
 /public/maplibre/*.mjs
