@@ -1,12 +1,16 @@
 'use client'
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import maplibregl from 'maplibre-gl'
+import * as maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import type { Map as MlMap, Marker as MlMarker, StyleSpecification } from 'maplibre-gl'
 import pointOnFeature from '@turf/point-on-feature'
 import { Layers } from 'lucide-react'
 import type { GeoCity, GeoRegion, RegionFeatureCollection } from '@/lib/hooks/useGeoAnalytics'
+
+// Next.js does not emit MapLibre's worker dependency graph automatically.
+// The predev/prebuild hook copies the matching worker modules to public/.
+maplibregl.setWorkerUrl('/maplibre/maplibre-gl-worker.mjs')
 
 // CATATAN PENTING: halaman ini WAJIB dijalankan dengan Webpack (`npm run
 // dev:webpack`), bukan Turbopack. Turbopack men-drop Web Worker inline MapLibre
