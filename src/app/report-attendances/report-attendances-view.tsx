@@ -53,6 +53,7 @@ import {
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useFileDownload } from '@/lib/hooks/useFileDownload'
+import { useTeamAccountFilter } from '@/lib/hooks/useTeamAccountFilter'
 
 type AttendanceStatusFilter = 'all' | 'ada_wa' | 'nol_wa' | 'libur_susulan' | 'belum_laporan'
 
@@ -148,7 +149,18 @@ export default function ReportAttendancesPage() {
   const [rangeStartOpen, setRangeStartOpen] = useState(false)
   const [rangeEndOpen, setRangeEndOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [exportFormat, setExportFormat] = useState<'calendar' | 'log'>('calendar')
+  const exportPath = exportFormat === 'calendar' ? '/report-attendances/export' : '/report-attendances/export-log'
+  // Rentang tanggal export sendiri, terpisah dari filter tabel di layar —
+  // disinkronkan ke rentang yang sedang aktif tiap popover dibuka, tapi user
+  // bisa custom sebelum export (sebelumnya mode Harian selalu ekspor satu
+  // bulan penuh karena cuma kirim `date` tanpa rentang eksplisit).
+  const [exportRangeStart, setExportRangeStart] = useState(today)
+  const [exportRangeEnd, setExportRangeEnd] = useState(today)
+  const [exportRangeStartOpen, setExportRangeStartOpen] = useState(false)
+  const [exportRangeEndOpen, setExportRangeEndOpen] = useState(false)
   const { download, isDownloading } = useFileDownload()
+  const teamFilter = useTeamAccountFilter()
 
   const isRecap = viewMode === 'recap'
 
@@ -161,11 +173,7 @@ export default function ReportAttendancesPage() {
   const { data: accountGroupsResponse } = useAccountGroups()
   const accountGroups = accountGroupsResponse?.data ?? []
 
-  // Filter tanggal yang sedang aktif — dipakai bersama oleh tabel dan export
-  // supaya file yang diunduh selalu mengikuti apa yang terlihat di layar.
-  const exportDateParams = isRecap
-    ? { start_date: rangeStart, end_date: rangeEnd }
-    : { date: selectedDate }
+  const exportDateParams = { start_date: exportRangeStart, end_date: exportRangeEnd }
 
   const submitPresenceMutation = useSubmitAttendance()
   const upsertPresenceMutation = useUpsertAttendanceBySuperAdmin()
@@ -675,7 +683,18 @@ export default function ReportAttendancesPage() {
             <div className="flex items-center gap-2">
               {/* Satu tombol export; grup dipilih di dalam. Daftar grup datang
                   dari server, jadi grup baru muncul sendiri tanpa ubah kode. */}
-              <Popover open={exportOpen} onOpenChange={setExportOpen}>
+              <Popover
+                open={exportOpen}
+                onOpenChange={(open) => {
+                  setExportOpen(open)
+                  if (open) {
+                    setExportRangeStart(isRecap ? rangeStart : selectedDate)
+                    setExportRangeEnd(isRecap ? rangeEnd : selectedDate)
+                  } else {
+                    teamFilter.reset()
+                  }
+                }}
+              >
                 <PopoverTrigger
                   type="button"
                   className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[color-mix(in_srgb,var(--primary-theme)_30%,var(--border))] bg-[color-mix(in_srgb,var(--primary-theme)_9%,var(--card))] px-3 text-[11px] font-bold text-[var(--primary-theme)] shadow-sm transition-[transform,box-shadow,background-color] hover:bg-[color-mix(in_srgb,var(--primary-theme)_16%,var(--card))] hover:shadow-md active:scale-95"
@@ -683,45 +702,156 @@ export default function ReportAttendancesPage() {
                   <Download className="h-3.5 w-3.5" />
                   Export Excel
                 </PopoverTrigger>
-                <PopoverContent align="end" className="w-60 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
-                  <p className="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
-                    Pilih grup akun
-                  </p>
-                  {[
-                    ...accountGroups.map((group) => ({
-                      key: group.value,
-                      label: group.label,
-                      helper: group.subtitle,
-                      params: { account_group: group.value },
-                    })),
-                    {
-                      key: '__all__',
-                      label: 'Semua Grup',
-                      helper: 'Seluruh akun dalam satu lembar',
-                      params: {},
-                    },
-                  ].map((option) => (
-                    <button
-                      key={option.key}
-                      type="button"
-                      onClick={() => {
-                        setExportOpen(false)
-                        download(
-                          '/report-attendances/export',
-                          { ...exportDateParams, ...option.params },
-                          'Rekap absensi berhasil diunduh.'
-                        )
-                      }}
-                      disabled={isDownloading('/report-attendances/export')}
-                      className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] disabled:cursor-wait disabled:opacity-60"
-                    >
-                      <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
-                      <span className="min-w-0">
-                        <span className="block truncate font-semibold text-foreground/90">{option.label}</span>
-                        <span className="block truncate text-[10px] text-muted-foreground">{option.helper}</span>
-                      </span>
-                    </button>
-                  ))}
+                <PopoverContent align="end" className="w-64 border-border/70 bg-card p-1.5 shadow-2xl dark:border-slate-800 dark:bg-slate-950">
+                  {!teamFilter.team ? (
+                    <>
+                      <p className="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                        Format export
+                      </p>
+                      <div className="mb-2 grid grid-cols-2 gap-1 px-1">
+                        <button
+                          type="button"
+                          onClick={() => setExportFormat('calendar')}
+                          className={`rounded-lg px-2 py-1.5 text-left text-[11px] transition-colors ${
+                            exportFormat === 'calendar'
+                              ? 'bg-[var(--primary-theme)] font-bold text-primary-foreground'
+                              : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                          }`}
+                        >
+                          <span className="block font-semibold">Rekap Kalender</span>
+                          <span className="block text-[9px] opacity-80">Satu baris/akun, kolom/tanggal</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setExportFormat('log')}
+                          className={`rounded-lg px-2 py-1.5 text-left text-[11px] transition-colors ${
+                            exportFormat === 'log'
+                              ? 'bg-[var(--primary-theme)] font-bold text-primary-foreground'
+                              : 'bg-muted/50 text-muted-foreground hover:bg-muted'
+                          }`}
+                        >
+                          <span className="block font-semibold">Log Harian</span>
+                          <span className="block text-[9px] opacity-80">Satu baris/akun/tanggal</span>
+                        </button>
+                      </div>
+                      <p className="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                        Rentang tanggal export
+                      </p>
+                      <div className="mb-2 flex items-center gap-1.5 px-1">
+                        {([
+                          { label: 'Dari', value: exportRangeStart, set: setExportRangeStart, open: exportRangeStartOpen, setOpen: setExportRangeStartOpen },
+                          { label: 'Sampai', value: exportRangeEnd, set: setExportRangeEnd, open: exportRangeEndOpen, setOpen: setExportRangeEndOpen },
+                        ] as const).map((field) => (
+                          <Popover key={field.label} open={field.open} onOpenChange={field.setOpen}>
+                            <PopoverTrigger
+                              type="button"
+                              className="flex h-8 flex-1 items-center justify-between gap-1 rounded-lg border border-border/55 bg-muted/40 px-2 text-left text-[10px] font-semibold text-foreground/80 transition-colors hover:border-[color-mix(in_srgb,var(--primary-theme)_28%,var(--border))]"
+                            >
+                              <span className="truncate">
+                                <span className="text-muted-foreground/70">{field.label} </span>
+                                {toLabel(field.value)}
+                              </span>
+                              <Calendar className="h-3 w-3 shrink-0 text-muted-foreground/70" />
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 border border-border bg-popover dark:border-zinc-800" align="start">
+                              <CalendarComponent
+                                mode="single"
+                                selected={field.value ? parseISO(field.value) : undefined}
+                                onSelect={(date) => {
+                                  if (date) {
+                                    field.set(format(date, 'yyyy-MM-dd'))
+                                    field.setOpen(false)
+                                  }
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        ))}
+                      </div>
+                      <p className="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                        Pilih grup akun
+                      </p>
+                      {accountGroups.map((group) => (
+                        <button
+                          key={group.value}
+                          type="button"
+                          onClick={() => teamFilter.setTeam(group.value)}
+                          className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))]"
+                        >
+                          <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                          <span className="min-w-0">
+                            <span className="block truncate font-semibold text-foreground/90">{group.label}</span>
+                            <span className="block truncate text-[10px] text-muted-foreground">{group.subtitle}</span>
+                          </span>
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExportOpen(false)
+                          download(
+                            exportPath,
+                            { ...exportDateParams },
+                            'Rekap absensi berhasil diunduh.'
+                          )
+                        }}
+                        disabled={isDownloading(exportPath)}
+                        className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))] disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <Download className="h-3.5 w-3.5 shrink-0 text-muted-foreground/70" />
+                        <span className="min-w-0">
+                          <span className="block truncate font-semibold text-foreground/90">Semua Grup</span>
+                          <span className="block truncate text-[10px] text-muted-foreground">Seluruh akun dalam satu lembar</span>
+                        </span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => teamFilter.reset()}
+                        className="mb-1 flex items-center gap-1 px-2 py-1 text-[10px] font-bold text-muted-foreground hover:text-foreground"
+                      >
+                        ← Kembali
+                      </button>
+                      <p className="px-2 pb-1.5 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+                        Pilih akun (opsional)
+                      </p>
+                      <div className="max-h-52 overflow-y-auto">
+                        {teamFilter.accountsInTeam.map((account) => (
+                          <label
+                            key={account.id}
+                            className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors hover:bg-[color-mix(in_srgb,var(--primary-theme)_8%,var(--card))]"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={teamFilter.accountIds.has(account.id)}
+                              onChange={() => teamFilter.toggleAccount(account.id)}
+                              className="size-3.5 shrink-0"
+                            />
+                            <span className="truncate font-medium text-foreground/90">{account.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setExportOpen(false)
+                          download(
+                            exportPath,
+                            { ...exportDateParams, ...teamFilter.exportParams },
+                            'Rekap absensi berhasil diunduh.'
+                          )
+                          teamFilter.reset()
+                        }}
+                        disabled={isDownloading(exportPath)}
+                        className="mt-1 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-[var(--primary-theme)] px-2.5 py-2 text-xs font-bold text-primary-foreground transition-colors hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Export {teamFilter.accountIds.size ? `${teamFilter.accountIds.size} Akun` : 'Grup Ini'}
+                      </button>
+                    </>
+                  )}
                 </PopoverContent>
               </Popover>
             </div>
