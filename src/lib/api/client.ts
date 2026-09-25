@@ -215,7 +215,7 @@ class ApiClient {
    * Download a file using the HttpOnly session cookie.
    * Used for Excel/PDF/CSV export endpoints.
    */
-  async downloadFile(path: string, params?: Record<string, string | number | undefined>, filename?: string): Promise<void> {
+  async downloadFile(path: string, params?: Record<string, string | number | undefined>, filename?: string): Promise<{ filename: string; truncated: boolean }> {
     // Prefix /api/v1 sama seperti request(); `path` dipakai seperti get() (mis. '/master-data/users/export').
     let url = `${this.baseUrl}/api/v1${path}`
 
@@ -275,6 +275,12 @@ class ApiClient {
     link.click()
     document.body.removeChild(link)
     window.URL.revokeObjectURL(blobUrl)
+
+    // Backend memotong rentang export >92 hari diam-diam (nama file sudah
+    // mencerminkan rentang sebenarnya sejak fix ini) - header ini yang
+    // memungkinkan UI ikut memberi tahu, bukan cuma nama file yang berubah
+    // tanpa penjelasan.
+    return { filename, truncated: response.headers.get('X-Recap-Range-Truncated') === '1' }
   }
 }
 

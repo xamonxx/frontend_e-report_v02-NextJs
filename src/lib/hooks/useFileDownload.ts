@@ -30,8 +30,11 @@ export function useFileDownload() {
 
       setPendingKey(path)
       try {
-        await api.downloadFile(path, params, filename)
+        const result = await api.downloadFile(path, params, filename)
         if (successMessage) toast.success(successMessage)
+        if (result.truncated) {
+          toast.warning('Rentang tanggal dipotong ke maksimal 92 hari (batas satu file export). Unduh per-bagian untuk rentang yang lebih panjang.')
+        }
       } catch (err: unknown) {
         const message =
           typeof err === 'object' && err !== null && 'message' in err

@@ -737,6 +737,9 @@ export default function ReportAttendancesPage() {
                       <p className="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
                         Rentang tanggal export
                       </p>
+                      <p className="px-2 pb-1.5 text-[10px] text-muted-foreground/70">
+                        Maksimal 92 hari per file — rentang lebih panjang otomatis dipotong.
+                      </p>
                       <div className="mb-2 flex items-center gap-1.5 px-1">
                         {([
                           { label: 'Dari', value: exportRangeStart, set: setExportRangeStart, open: exportRangeStartOpen, setOpen: setExportRangeStartOpen },
