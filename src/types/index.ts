@@ -294,6 +294,36 @@ export type ReminderCronJob = {
   updated_at: string
 }
 
+export type SurveyReminderSetting = {
+  enabled: boolean
+  lead_minutes: number
+  message_template: string | null
+  updated_by: string | null
+  updated_at: string | null
+}
+
+export type SurveyReminderPreview = {
+  affected_count: number
+  sample: {
+    survey_id: number
+    client_name: string
+    surveyor_name: string | null
+    scheduled_at: string | null
+    due_at: string
+  }[]
+}
+
+export type SurveyReminderDeliveryItem = {
+  id: number
+  survey_id: number
+  client_name: string
+  recipient_name: string | null
+  due_at: string | null
+  status: 'pending' | 'processing' | 'notified' | 'cancelled' | 'expired' | 'failed'
+  push_status: string
+  attempts: number
+}
+
 // ── Notifications ────────────────────────────────────────────
 export type NotificationCount = {
   unread_notes: number

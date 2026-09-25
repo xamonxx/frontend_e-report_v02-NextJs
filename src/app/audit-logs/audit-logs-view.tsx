@@ -6,9 +6,13 @@ import { useAuditLogs } from '@/lib/hooks/useAuditLogs'
 import {
   useCreateReminderCronJob,
   useDeleteReminderCronJob,
+  usePreviewSurveyReminderSetting,
   useReminderCronJobsList,
+  useSurveyReminderDeliveries,
+  useSurveyReminderSetting,
   useToggleReminderCronJob,
   useUpdateReminderCronJob,
+  useUpdateSurveyReminderSetting,
   useUsersList,
 } from '@/lib/hooks/useMasterData'
 import { useOnlineUsers } from '@/lib/hooks/useOnlineUsers'
@@ -36,7 +40,7 @@ import { format, parseISO } from 'date-fns'
 import {
   Search, Calendar, Loader2, ChevronLeft, ChevronRight,
   ShieldCheck, RefreshCw, Trash2, Clock, Users, Globe,
-  Activity, ArrowRightLeft, BellRing, Cpu, Edit2, FileText, Plus, User, SlidersHorizontal
+  Activity, ArrowRightLeft, BellRing, BellDot, Cpu, Edit2, Eye, FileText, Plus, User, SlidersHorizontal
 } from 'lucide-react'
 import { useDebounce } from 'use-debounce'
 import { cn } from '@/lib/utils'
@@ -46,11 +50,11 @@ import { toast } from 'sonner'
 import { getErrorMessage } from '@/lib/api/errors'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { SURVEY_TIME_OPTIONS } from '@/lib/survey-scheduling'
-import type { ReminderCronJob } from '@/types'
+import type { ReminderCronJob, SurveyReminderDeliveryItem } from '@/types'
 
 export default function AuditLogsPage() {
   const confirm = useConfirm()
-  const [activeTab, setActiveTab] = useState<'logs' | 'reminder-jobs'>('logs')
+  const [activeTab, setActiveTab] = useState<'logs' | 'reminder-jobs' | 'survey-reminders'>('logs')
   const [searchTerm, setSearchTerm] = useState('')
   const [debouncedSearch] = useDebounce(searchTerm, 400)
   const [actionFilter, setActionFilter] = useState('')
@@ -176,10 +180,11 @@ export default function AuditLogsPage() {
         )}
       </div>
 
-      <div role="tablist" aria-label="Audit dan pengingat" className="grid w-full grid-cols-2 gap-1 rounded-xl border border-border/60 bg-card/45 p-1 shadow-sm lg:w-fit">
+      <div role="tablist" aria-label="Audit dan pengingat" className="grid w-full grid-cols-3 gap-1 rounded-xl border border-border/60 bg-card/45 p-1 shadow-sm lg:w-fit">
         {([
           { key: 'logs', label: 'Log Aktivitas', icon: FileText },
           { key: 'reminder-jobs', label: 'Pengingat Absensi', icon: BellRing },
+          { key: 'survey-reminders', label: 'Pengingat Survey', icon: BellDot },
         ] as const).map((tab) => {
           const active = activeTab === tab.key
           const Icon = tab.icon
@@ -585,6 +590,7 @@ export default function AuditLogsPage() {
       )}
 
       {activeTab === 'reminder-jobs' && <ReminderCronJobsPanel />}
+      {activeTab === 'survey-reminders' && <SurveyReminderPanel />}
 
       {/* ── Detail Dialog ────────────────────────────────────── */}
       <Dialog open={!!selectedLog} onOpenChange={(open) => !open && setSelectedLog(null)}>
@@ -971,6 +977,237 @@ function ReminderCronJobsPanel() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+const LEAD_MINUTES_PRESETS = [
+  { value: 60, label: '1 jam' },
+  { value: 180, label: '3 jam' },
+  { value: 300, label: '5 jam' },
+  { value: 1440, label: '1 hari' },
+  { value: 'custom', label: 'Kustom' },
+] as const
+
+const DELIVERY_STATUS_LABELS: Record<string, { label: string; className: string }> = {
+  pending: { label: 'Menunggu', className: 'bg-blue-500/10 text-blue-600 dark:text-blue-300' },
+  processing: { label: 'Diproses', className: 'bg-amber-500/10 text-amber-600 dark:text-amber-300' },
+  notified: { label: 'Terkirim', className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300' },
+  cancelled: { label: 'Dibatalkan', className: 'bg-slate-500/10 text-slate-600 dark:text-slate-300' },
+  expired: { label: 'Kedaluwarsa', className: 'bg-slate-500/10 text-slate-600 dark:text-slate-300' },
+  failed: { label: 'Gagal', className: 'bg-rose-500/10 text-rose-600 dark:text-rose-300' },
+}
+
+function SurveyReminderPanel() {
+  const { data: settingResponse, isLoading } = useSurveyReminderSetting()
+  const setting = settingResponse?.data
+  const updateSetting = useUpdateSurveyReminderSetting()
+  const previewMutation = usePreviewSurveyReminderSetting()
+  const { data: historyResponse, isLoading: isHistoryLoading } = useSurveyReminderDeliveries({ page: 1 })
+  const deliveries = historyResponse?.data ?? []
+
+  const [enabled, setEnabled] = useState(false)
+  const [leadMinutes, setLeadMinutes] = useState(300)
+  const [customMinutes, setCustomMinutes] = useState('300')
+  const [messageTemplate, setMessageTemplate] = useState('')
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    if (!setting || hydrated) return
+    setEnabled(setting.enabled)
+    setLeadMinutes(setting.lead_minutes)
+    setCustomMinutes(String(setting.lead_minutes))
+    setMessageTemplate(setting.message_template ?? '')
+    setHydrated(true)
+  }, [setting, hydrated])
+
+  const isPreset = LEAD_MINUTES_PRESETS.some((p) => p.value === leadMinutes)
+  const selectValue = isPreset ? String(leadMinutes) : 'custom'
+
+  const handlePreview = () => {
+    previewMutation.mutate({ enabled: true, lead_minutes: leadMinutes })
+  }
+
+  const handleSave = () => {
+    if (leadMinutes < 1 || leadMinutes > 10080) {
+      toast.error('Waktu pengingat harus antara 1 menit dan 7 hari (10080 menit).')
+      return
+    }
+    updateSetting.mutate(
+      { enabled, lead_minutes: leadMinutes, message_template: messageTemplate.trim() || null },
+      {
+        onSuccess: (result) => toast.success(result.message),
+        onError: (error) => toast.error(getErrorMessage(error, 'Pengaturan pengingat survey gagal disimpan.')),
+      }
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex h-40 items-center justify-center text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-5">
+      <section className="rounded-xl bg-card/75 p-5 ring-1 ring-border/60">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-base font-semibold text-foreground">Pengingat Survey Otomatis</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Ingatkan surveyor lewat notifikasi aplikasi &amp; push sebelum jadwal survey final mereka.
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Label htmlFor="survey-reminder-enabled" className="text-xs font-semibold text-muted-foreground">
+              {enabled ? 'Aktif' : 'Nonaktif'}
+            </Label>
+            <Switch id="survey-reminder-enabled" checked={enabled} onCheckedChange={setEnabled} />
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">Ingatkan sebelum jadwal</Label>
+            <Select
+              value={selectValue}
+              onValueChange={(value) => {
+                if (value === 'custom') {
+                  setLeadMinutes(Number(customMinutes) || 1)
+                } else {
+                  setLeadMinutes(Number(value))
+                }
+              }}
+            >
+              <SelectTrigger className="h-10 rounded-lg text-sm">
+                <SelectValue>{LEAD_MINUTES_PRESETS.find((p) => String(p.value) === selectValue)?.label ?? 'Kustom'}</SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {LEAD_MINUTES_PRESETS.map((preset) => (
+                  <SelectItem key={preset.value} value={String(preset.value)}>{preset.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectValue === 'custom' && (
+              <div className="flex items-center gap-2 pt-1">
+                <Input
+                  type="number"
+                  min={1}
+                  max={10080}
+                  value={customMinutes}
+                  onChange={(event) => {
+                    setCustomMinutes(event.target.value)
+                    setLeadMinutes(Math.min(10080, Math.max(1, Number(event.target.value) || 1)))
+                  }}
+                  className="h-9 w-28 rounded-lg text-sm"
+                />
+                <span className="text-xs text-muted-foreground">menit sebelum jadwal</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-muted-foreground">Template pesan (opsional)</Label>
+            <Textarea
+              value={messageTemplate}
+              onChange={(event) => setMessageTemplate(event.target.value)}
+              placeholder="Survey konsumen {nama_konsumen} dijadwalkan {tanggal} pukul {jam}."
+              className="min-h-[72px] rounded-lg text-sm"
+            />
+            <p className="text-[11px] text-muted-foreground">Placeholder: {'{nama_konsumen}'}, {'{tanggal}'}, {'{jam}'}.</p>
+          </div>
+        </div>
+
+        {previewMutation.data && (
+          <div className="mt-4 rounded-lg border border-[var(--primary-theme)]/25 bg-[var(--primary-theme)]/5 p-3 text-xs">
+            <p className="font-semibold text-foreground">
+              {previewMutation.data.data.affected_count} survey terjadwal akan mendapat pengingat dengan pengaturan ini.
+            </p>
+            {previewMutation.data.data.sample.length > 0 && (
+              <ul className="mt-2 space-y-1 text-muted-foreground">
+                {previewMutation.data.data.sample.slice(0, 5).map((item) => (
+                  <li key={item.survey_id}>
+                    {item.client_name} ({item.surveyor_name ?? 'belum ditugaskan'}) — pengingat {format(parseISO(item.due_at), 'd MMM HH:mm')} WIB
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <div className="mt-5 flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handlePreview}
+            disabled={previewMutation.isPending}
+            className="h-9 rounded-lg px-3 text-sm"
+          >
+            {previewMutation.isPending ? <Loader2 className="mr-1.5 size-4 animate-spin" /> : <Eye className="mr-1.5 size-4" />}
+            Preview dampak
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={updateSetting.isPending}
+            className="h-9 rounded-lg bg-[var(--primary-theme)] px-4 text-sm text-white hover:brightness-110"
+          >
+            {updateSetting.isPending && <Loader2 className="mr-1.5 size-4 animate-spin" />}
+            Simpan Pengaturan
+          </Button>
+          {setting?.updated_by && (
+            <span className="text-[11px] text-muted-foreground">
+              Terakhir diubah oleh {setting.updated_by}
+              {setting.updated_at ? `, ${format(parseISO(setting.updated_at), 'd MMM yyyy HH:mm')}` : ''}
+            </span>
+          )}
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl bg-card/75 ring-1 ring-border/60">
+        <div className="border-b border-border/45 px-5 py-3.5">
+          <h3 className="text-sm font-semibold text-foreground">Riwayat Pengingat</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="border-b border-border/45 bg-muted/25">
+              <TableRow className="border-border/40 hover:bg-transparent">
+                <TableHead className="py-3 pl-5 text-[10px] font-bold uppercase text-muted-foreground">Konsumen</TableHead>
+                <TableHead className="py-3 text-[10px] font-bold uppercase text-muted-foreground">Surveyor</TableHead>
+                <TableHead className="py-3 text-[10px] font-bold uppercase text-muted-foreground">Jatuh Tempo</TableHead>
+                <TableHead className="py-3 text-[10px] font-bold uppercase text-muted-foreground">Status</TableHead>
+                <TableHead className="py-3 pr-5 text-[10px] font-bold uppercase text-muted-foreground">Push</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isHistoryLoading ? (
+                <TableRow><TableCell colSpan={5} className="h-28 text-center"><Loader2 className="mx-auto size-5 animate-spin text-muted-foreground" /></TableCell></TableRow>
+              ) : deliveries.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="h-28 text-center text-sm text-muted-foreground">Belum ada riwayat pengingat.</TableCell></TableRow>
+              ) : (
+                deliveries.map((delivery: SurveyReminderDeliveryItem) => {
+                  const statusMeta = DELIVERY_STATUS_LABELS[delivery.status] ?? { label: delivery.status, className: 'bg-muted text-muted-foreground' }
+                  return (
+                    <TableRow key={delivery.id} className="border-border/30">
+                      <TableCell className="py-3 pl-5 text-sm text-foreground">{delivery.client_name}</TableCell>
+                      <TableCell className="py-3 text-sm text-muted-foreground">{delivery.recipient_name ?? '-'}</TableCell>
+                      <TableCell className="py-3 text-sm text-muted-foreground">
+                        {delivery.due_at ? format(parseISO(delivery.due_at), 'd MMM HH:mm') : '-'}
+                      </TableCell>
+                      <TableCell className="py-3">
+                        <Badge className={cn('rounded-md border-0 text-[11px] font-semibold', statusMeta.className)}>{statusMeta.label}</Badge>
+                      </TableCell>
+                      <TableCell className="py-3 pr-5 text-xs text-muted-foreground">{delivery.push_status}</TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </section>
     </div>
   )
 }

@@ -49,6 +49,11 @@ export const queryKeys = {
     surveyors: ['master-data', 'surveyors'] as const,
     surveyStatuses: ['master-data', 'survey-statuses'] as const,
     reminderCronJobs: ['master-data', 'reminder-cron-jobs'] as const,
+    surveyReminderSetting: ['master-data', 'survey-reminder-settings'] as const,
+  },
+  surveyReminderDeliveries: {
+    all: ['survey-reminder-deliveries'] as const,
+    list: (params: Record<string, unknown>) => ['survey-reminder-deliveries', params] as const,
   },
   wilayah: {
     provinces: ['wilayah', 'provinces'] as const,

@@ -3,7 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/api/client'
 import { queryKeys } from '@/lib/api/queryKeys'
-import type { NeedsCategory, ReminderCronJob, StatusCategory, SurveyStatusItem, SurveyTeam, PaginatedResponse } from '@/types'
+import type { NeedsCategory, ReminderCronJob, StatusCategory, SurveyStatusItem, SurveyTeam, PaginatedResponse, SurveyReminderSetting, SurveyReminderPreview, SurveyReminderDeliveryItem } from '@/types'
 
 // ── Read-only selectors for dropdowns ────────────────────────────
 
@@ -426,5 +426,45 @@ export function useResetUserPassword() {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: Record<string, any> }) =>
       api.post<{ message: string }>(`/master-data/users/${id}/reset-password`, data),
+  })
+}
+
+// ── Super Admin: Pengingat Survey (B3) ──────────────────────────
+
+export type SurveyReminderSettingPayload = {
+  enabled: boolean
+  lead_minutes: number
+  message_template: string | null
+}
+
+export function useSurveyReminderSetting() {
+  return useQuery({
+    queryKey: queryKeys.masterData.surveyReminderSetting,
+    queryFn: ({ signal }) =>
+      api.get<{ data: SurveyReminderSetting }>('/master-data/survey-reminder-settings', undefined, signal),
+  })
+}
+
+export function useUpdateSurveyReminderSetting() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (data: SurveyReminderSettingPayload) =>
+      api.put<{ message: string; data: SurveyReminderSetting }>('/master-data/survey-reminder-settings', data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.masterData.surveyReminderSetting }),
+  })
+}
+
+export function usePreviewSurveyReminderSetting() {
+  return useMutation({
+    mutationFn: (data: Pick<SurveyReminderSettingPayload, 'enabled' | 'lead_minutes'>) =>
+      api.post<{ data: SurveyReminderPreview }>('/master-data/survey-reminder-settings/preview', data),
+  })
+}
+
+export function useSurveyReminderDeliveries(params: { status?: string; page?: number } = {}) {
+  return useQuery({
+    queryKey: queryKeys.surveyReminderDeliveries.list(params),
+    queryFn: ({ signal }) =>
+      api.get<PaginatedResponse<SurveyReminderDeliveryItem>>('/survey-reminder-deliveries', params as any, signal),
   })
 }

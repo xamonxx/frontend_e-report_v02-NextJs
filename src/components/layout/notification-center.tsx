@@ -123,6 +123,11 @@ const surveyNotificationMeta: Record<string, {
     label: 'Surveyor diganti',
     tone: 'border-slate-500/25 bg-slate-500/10 text-slate-700 dark:text-slate-300',
   },
+  schedule_reminder: {
+    icon: BellDot,
+    label: 'Pengingat jadwal',
+    tone: 'border-amber-500/25 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+  },
 }
 
 function SurveyNotificationItem({
