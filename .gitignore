@@ -37,6 +37,7 @@ next-dev.log
 
 # env files — semua di-ignore, termasuk .env.production (berisi secret Reverb prod)
 .env*
+!.env.docker.example
 
 # vercel
 .vercel

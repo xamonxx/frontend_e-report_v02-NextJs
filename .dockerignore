@@ -1,0 +1,13 @@
+/node_modules
+/.next/
+.env*
+**/.npmrc
+.git/
+/coverage/
+/artifacts/
+/testsprite_tests/
+/public/sw-v2.js
+/public/sw-v2.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
+/public/maplibre/*.mjs

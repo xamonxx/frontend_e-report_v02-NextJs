@@ -43,9 +43,9 @@ const withPWA = withPWAInit({
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // NOTE: 'output: standalone' sengaja TIDAK dipakai. Hostinger Web Apps
-  // menjalankan `next start` dengan build .next standar, jadi default Next
-  // paling kompatibel. (standalone hanya perlu untuk Docker / `node server.js`.)
+  // Hostinger tetap memakai build standar. Docker mengaktifkan standalone lewat
+  // build arg agar runtime image hanya membawa file yang benar-benar dibutuhkan.
+  output: process.env.DOCKER_STANDALONE === 'true' ? 'standalone' : undefined,
   allowedDevOrigins: ['100.105.166.15'],
   // Tree-shake barrel-heavy paket icon/util: hanya modul yang benar dipakai
   // yang ikut ke bundle. Kena semua halaman, murah, tanpa ubah kode komponen.

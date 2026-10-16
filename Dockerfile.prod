@@ -1,0 +1,59 @@
+# syntax=docker/dockerfile:1.7
+
+ARG NODE_IMAGE=node:22.23.3-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+FROM ${NODE_IMAGE} AS builder
+WORKDIR /app
+
+COPY --link package.json package-lock.json ./
+RUN npm ci && npm cache clean --force
+
+COPY --link . .
+
+# NEXT_PUBLIC_* di-inline ke bundle client saat build. API_PROXY_TARGET juga harus
+# ada di sini (bukan cuma runtime env_file) karena next.config.js `rewrites()`
+# di-bake ke .next/routes-manifest.json saat `next build` — `next start` TIDAK
+# memanggil ulang rewrites() dengan env runtime, jadi destination proxy beku
+# ke nilai saat build. Kalau ARG ini kosong/tidak di-set saat build, rewrites akan
+# diam-diam fallback ke default `http://localhost:8000` di next.config.js — salah
+# untuk topologi Docker (harus `http://backend:8000`).
+ARG API_PROXY_TARGET
+ARG DOCKER_STANDALONE=true
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_SAME_ORIGIN_API
+ARG NEXT_PUBLIC_REVERB_HOST
+ARG NEXT_PUBLIC_REVERB_PORT
+ARG NEXT_PUBLIC_REVERB_SCHEME
+ARG NEXT_PUBLIC_REVERB_APP_KEY
+ARG NEXT_PUBLIC_APP_NAME
+ENV API_PROXY_TARGET=$API_PROXY_TARGET \
+    DOCKER_STANDALONE=$DOCKER_STANDALONE \
+    NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
+    NEXT_PUBLIC_SAME_ORIGIN_API=$NEXT_PUBLIC_SAME_ORIGIN_API \
+    NEXT_PUBLIC_REVERB_HOST=$NEXT_PUBLIC_REVERB_HOST \
+    NEXT_PUBLIC_REVERB_PORT=$NEXT_PUBLIC_REVERB_PORT \
+    NEXT_PUBLIC_REVERB_SCHEME=$NEXT_PUBLIC_REVERB_SCHEME \
+    NEXT_PUBLIC_REVERB_APP_KEY=$NEXT_PUBLIC_REVERB_APP_KEY \
+    NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME \
+    NODE_ENV=production
+
+RUN npm run build \
+    # .next/cache (webpack persistent build cache) cuma berguna buat rebuild
+    # inkremental di environment yang sama — tidak dibutuhkan runtime sama sekali,
+    # tapi ukurannya bisa ratusan MB kalau ikut ter-copy ke stage runner.
+    && rm -rf .next/cache
+
+FROM ${NODE_IMAGE} AS runner
+WORKDIR /app
+ENV NODE_ENV=production \
+    HOSTNAME=0.0.0.0 \
+    PORT=3000
+
+LABEL org.opencontainers.image.source="https://github.com/xamonxx/frontend_e-report_v02-NextJs"
+
+COPY --link --from=builder --chown=1000:1000 /app/public ./public
+COPY --link --from=builder --chown=1000:1000 /app/.next/standalone ./
+COPY --link --from=builder --chown=1000:1000 /app/.next/static ./.next/static
+
+EXPOSE 3000
+USER node
+CMD ["node", "server.js"]
